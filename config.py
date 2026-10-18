@@ -114,3 +114,8 @@ Déduis le champ sémantique du mot secret et propose {n} NOUVEAUX mots, non \
 déjà testés, les plus susceptibles d'être le secret. Tu peux reprendre des \
 candidats ou proposer tes propres idées.
 Réponds UNIQUEMENT par un tableau JSON de chaînes, ex: ["mot1", "mot2"]."""
+
+
+def log(msg: str = "") -> None:
+    print(msg, flush=True)
+
