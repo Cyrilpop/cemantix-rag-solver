@@ -1113,7 +1113,7 @@ def weather_for_score(s: float, p: int | None) -> tuple[str, str]:
         return "🧊", "GLAC."
 
 
-def render_game_board(game, guesses, last_played=None, notice=None, view_mode="top"):
+def render_game_board(game, guesses, last_played=None, notice=None, view_mode="top", hints=None):
     clear_screen()
     tries_count = len(guesses)
     best_tuple = max(guesses.values(), key=lambda v: v[0], default=None)
@@ -1154,6 +1154,11 @@ def render_game_board(game, guesses, last_played=None, notice=None, view_mode="t
         log(f"Dernier coup : [{num:>3}] {BOLD}{w}{RESET} ({s*100:.2f}°C  {w_icon}  {w_lbl} {rk_str}){rec_str}")
         log(f"Thermomètre  : {gauge}  {w_icon}  {w_lbl}")
 
+    if hints:
+        log("\n💡  INDICES RAG DÉBLOQUÉS :")
+        for i, h in enumerate(hints, 1):
+            log(f"  • Indice #{i} : Explorez le champ de « {BOLD}{h}{RESET} »")
+
     if notice:
         log(f"\n{notice}")
 
@@ -1162,41 +1167,42 @@ def render_game_board(game, guesses, last_played=None, notice=None, view_mode="t
 
 def format_duel_cell(num: int, w: str, s: float, p: int | None, icon: str, lbl: str, is_last: bool = False) -> str:
     num_str = f" [{num:>2}] "
-    raw_w = f"{w[:12]:<12}"
+    raw_w = f"{w[:17]:<17}"
     w_str = f"{BOLD}{raw_w}{RESET} " if is_last else f"{raw_w} "
     score_val = f"{p}‰" if p else f"{s*100:5.2f}°C"
     score_str = f"{score_val:>8}  "
     meteo_str = f"{icon}  {lbl:<5}"
     cell = num_str + w_str + score_str + meteo_str
-    return pad_visible(cell, 38)
+    return pad_visible(cell, 43)
 
 
 def render_duel_board(game_human, guesses_human, last_human,
                       game_ai, guesses_ai, last_ai,
-                      turn_no: int, notice=None, stats: dict | None = None):
+                      turn_no: int, notice=None, stats: dict | None = None,
+                      hints=None):
     clear_screen()
-    log("=" * 79)
+    log("=" * 89)
     if stats and stats.get("match"):
-        diff_tag = f" [{stats.get('difficulty', 'moyen').upper()}]" if stats.get("difficulty") else ""
+        diff_tag = f" [{stats.get('difficulty', 'moyen').upper()}]" if stats.get('difficulty') else ""
         log(f"⚔️   DUEL CROISÉ — Manche #{stats['match']} (🧑   {stats['human']} — {stats['ai']}  🤖){diff_tag} — Tour #{turn_no}")
     else:
         log(f"⚔️   CÉMANTIX DUEL CROISÉ — 🧑   VOUS vs 🤖   IA RAG (Tour #{turn_no})")
-    log("=" * 79)
+    log("=" * 89)
 
     sec = game_ai.secret.upper()
-    if len(sec) <= 14:
+    if len(sec) <= 19:
         r_title = f"  🤖  IA RAG (Cible : {sec})"
-    elif len(sec) <= 18:
+    elif len(sec) <= 23:
         r_title = f"  🤖  IA (Cible : {sec})"
     else:
-        r_title = f"  🤖  IA : {sec[:16]}…"
-    col_l_title = pad_visible("  🧑  VOS ESSAIS (Cible : ???)", 38)
-    col_r_title = pad_visible(r_title, 38)
+        r_title = f"  🤖  IA : {sec[:21]}…"
+    col_l_title = pad_visible("  🧑  VOS ESSAIS (Cible : ???)", 43)
+    col_r_title = pad_visible(r_title, 43)
     log(f"{col_l_title} │ {col_r_title}")
 
-    col_head = pad_visible(" #   Mot            Score   Météo", 38)
+    col_head = pad_visible(" #    Mot                 Score   Météo", 43)
     log(f"{col_head} │ {col_head}")
-    log("─" * 38 + "─┼─" + "─" * 38)
+    log("─" * 43 + "─┼─" + "─" * 43)
 
     items_h = sorted(guesses_human.items(), key=lambda x: x[1][0], reverse=True)[:DUEL_TOP_WORDS]
     items_a = sorted(guesses_ai.items(), key=lambda x: x[1][0], reverse=True)[:DUEL_TOP_WORDS]
@@ -1208,30 +1214,36 @@ def render_duel_board(game_human, guesses_human, last_human,
             is_last = (last_human and w == last_human[0])
             c_left = format_duel_cell(num, w, s, p, icon, lbl, is_last=is_last)
         else:
-            c_left = pad_visible("  -", 38) if (i == 0 and not guesses_human) else " " * 38
+            c_left = pad_visible("  -", 43) if (i == 0 and not guesses_human) else " " * 43
 
         if i < len(items_a):
             w, (s, p, num, icon, lbl) = items_a[i]
             is_last = (last_ai and w == last_ai[0])
             c_right = format_duel_cell(num, w, s, p, icon, lbl, is_last=is_last)
         else:
-            c_right = pad_visible("  -", 38) if (i == 0 and not guesses_ai) else " " * 38
+            c_right = pad_visible("  -", 43) if (i == 0 and not guesses_ai) else " " * 43
 
         log(f"{c_left} │ {c_right}")
 
-    log("─" * 38 + "─┼─" + "─" * 38)
+    log("─" * 43 + "─┼─" + "─" * 43)
 
     lh_score = f"{last_human[2]}‰" if (last_human and last_human[2]) else (f"{last_human[1]*100:.1f}°C" if last_human else "")
     la_score = f"{last_ai[2]}‰" if (last_ai and last_ai[2]) else (f"{last_ai[1]*100:.1f}°C" if last_ai else "")
 
     lh_str = f"  Dernier : [{last_human[3]:>2}] {last_human[0]} ({lh_score})" if last_human else "  Dernier : -"
     la_str = f"  Dernier : [{last_ai[3]:>2}] {last_ai[0]} ({la_score})" if last_ai else "  Dernier : -"
-    log(f"{pad_visible(lh_str, 38)} │ {pad_visible(la_str, 38)}")
+    log(f"{pad_visible(lh_str, 43)} │ {pad_visible(la_str, 43)}")
 
     gh_str = f"  Jauge   : {make_gauge(last_human[1], last_human[2], game_human.p1000_threshold, width=10)}" if last_human else "  Jauge   : -"
     ga_str = f"  Jauge   : {make_gauge(last_ai[1], last_ai[2], game_ai.p1000_threshold, width=10)}" if last_ai else "  Jauge   : -"
-    log(f"{pad_visible(gh_str, 38)} │ {pad_visible(ga_str, 38)}")
-    log("=" * 79)
+    log(f"{pad_visible(gh_str, 43)} │ {pad_visible(ga_str, 43)}")
+    log("=" * 89)
+
+    if hints:
+        log("💡  INDICES RAG DÉBLOQUÉS :")
+        for i, h in enumerate(hints, 1):
+            log(f"  • Indice #{i} : Explorez le champ de « {BOLD}{h}{RESET} »")
+        log("=" * 89)
 
     if notice:
         log(f"\n{notice}")
@@ -1239,10 +1251,10 @@ def render_duel_board(game_human, guesses_human, last_human,
 
 def render_duel_debrief(game_human, guesses_human, game_ai, guesses_ai,
                         winner: str, turn_no: int, stats: dict):
-    """Affiche le tableau comparatif d'après-match côte à côte sur 79 colonnes."""
-    log("\n" + "=" * 79)
+    """Affiche le tableau comparatif d'après-match côte à côte sur 89 colonnes."""
+    log("\n" + "=" * 89)
     log(f"📊   DÉBRIEFING DU MATCH — MANCHE #{stats.get('match', 1)}")
-    log("=" * 79)
+    log("=" * 89)
 
     if winner == "human":
         win_str = f"  Vainqueur : 🥳  HUMAIN (en {turn_no} tours)"
@@ -1254,17 +1266,17 @@ def render_duel_debrief(game_human, guesses_human, game_ai, guesses_ai,
         win_str = f"  Résultat  : 🏳️  ABANDON (au tour #{turn_no})"
 
     score_str = f"  Score session : 🧑  {stats.get('human', 0)} — {stats.get('ai', 0)}  🤖"
-    log(f"{pad_visible(win_str, 38)} │ {pad_visible(score_str, 38)}")
-    log("─" * 38 + "─┼─" + "─" * 38)
+    log(f"{pad_visible(win_str, 43)} │ {pad_visible(score_str, 43)}")
+    log("─" * 43 + "─┼─" + "─" * 43)
 
     diff_tag = stats.get("difficulty", "moyen").upper()
     title_l = "  🧑  PARCOURS HUMAIN"
     title_r = f"  🤖  PARCOURS IA RAG [{diff_tag}]"
-    log(f"{pad_visible(title_l, 38)} │ {pad_visible(title_r, 38)}")
+    log(f"{pad_visible(title_l, 43)} │ {pad_visible(title_r, 43)}")
 
-    target_l = f"  • Cible        : {game_human.secret.upper()[:16]}"
-    target_r = f"  • Cible        : {game_ai.secret.upper()[:16]}"
-    log(f"{pad_visible(target_l, 38)} │ {pad_visible(target_r, 38)}")
+    target_l = f"  • Cible        : {game_human.secret.upper()[:21]}"
+    target_r = f"  • Cible        : {game_ai.secret.upper()[:21]}"
+    log(f"{pad_visible(target_l, 43)} │ {pad_visible(target_r, 43)}")
 
     h_won = (winner == "human" or game_human.secret in guesses_human)
     a_won = (winner == "ai" or game_ai.secret in guesses_ai)
@@ -1273,7 +1285,7 @@ def render_duel_debrief(game_human, guesses_human, game_ai, guesses_ai,
 
     stat_l = f"  • Statut       : TROUVÉ (Tour #{t_h})" if h_won else "  • Statut       : Non trouvé"
     stat_r = f"  • Statut       : TROUVÉ (Tour #{t_a})" if a_won else "  • Statut       : Non trouvé"
-    log(f"{pad_visible(stat_l, 38)} │ {pad_visible(stat_r, 38)}")
+    log(f"{pad_visible(stat_l, 43)} │ {pad_visible(stat_r, 43)}")
 
     def fmt_best(guesses):
         if not guesses:
@@ -1283,22 +1295,24 @@ def render_duel_debrief(game_human, guesses_human, game_ai, guesses_ai,
             return "-"
         w, (s, p, num, *_) = b
         sc = f"{p}‰" if p else f"{s*100:.1f}°C"
-        return f"[{num:>2}] {w[:10]} ({sc})"
+        max_w = 43 - 19 - len(f"[{num:>2}] ") - len(f" ({sc})")
+        return f"[{num:>2}] {w[:max_w]} ({sc})"
 
     bm_l = f"  • Meilleur mot : {fmt_best(guesses_human)}"
     bm_r = f"  • Meilleur mot : {fmt_best(guesses_ai)}"
-    log(f"{pad_visible(bm_l, 38)} │ {pad_visible(bm_r, 38)}")
+    log(f"{pad_visible(bm_l, 43)} │ {pad_visible(bm_r, 43)}")
 
     def fmt_spark(guesses):
         sparks = [(w, v[0], v[1], v[2]) for w, v in guesses.items() if (v[0] >= 0.15 or v[1] is not None)]
         if not sparks:
             return "-"
         first = min(sparks, key=lambda x: x[3])
-        return f"Tour #{first[3]} ({first[0][:10]})"
+        max_w = 43 - 20 - len(f"Tour #{first[3]} ()")
+        return f"Tour #{first[3]} ({first[0][:max_w]})"
 
     spk_l = f"  • 1ère étincelle: {fmt_spark(guesses_human)}"
     spk_r = f"  • 1ère étincelle: {fmt_spark(guesses_ai)}"
-    log(f"{pad_visible(spk_l, 38)} │ {pad_visible(spk_r, 38)}")
+    log(f"{pad_visible(spk_l, 43)} │ {pad_visible(spk_r, 43)}")
 
     def count_weather(guesses):
         hot = sum(1 for v in guesses.values() if v[1] and v[1] >= 900)
@@ -1311,8 +1325,8 @@ def render_duel_debrief(game_human, guesses_human, game_ai, guesses_ai,
 
     met_l = f"  • Météo        : 🔥 {hot_h:<2} 😎 {warm_h:<2} 🥶 {cold_h:<2}"
     met_r = f"  • Météo        : 🔥 {hot_a:<2} 😎 {warm_a:<2} 🥶 {cold_a:<2}"
-    log(f"{pad_visible(met_l, 38)} │ {pad_visible(met_r, 38)}")
-    log("─" * 38 + "─┼─" + "─" * 38 + "\n")
+    log(f"{pad_visible(met_l, 43)} │ {pad_visible(met_r, 43)}")
+    log("─" * 43 + "─┼─" + "─" * 43 + "\n")
 
 
 class RagDuelPlayer:
@@ -1421,9 +1435,10 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
     last_played = None
     notice = None
     view_mode = "top"
+    hints = []
 
     while True:
-        render_game_board(game, guesses, last_played=last_played, notice=notice, view_mode=view_mode)
+        render_game_board(game, guesses, last_played=last_played, notice=notice, view_mode=view_mode, hints=hints)
         notice = None
 
         try:
@@ -1490,6 +1505,7 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
             for w in cands_knn:
                 w_norm = store.normalize(w)
                 if (w_norm not in guesses
+                        and w_norm not in hints
                         and w_norm != game.secret
                         and len(w_norm) >= 4
                         and w_norm not in STOPWORDS
@@ -1505,7 +1521,8 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
             if valid_hints:
                 valid_hints.sort(key=lambda x: x[1])
                 chosen_hint = valid_hints[len(valid_hints) // 2][0]
-                notice = f"💡  [INDICE RAG] Piste sémantique vers le secret : explorez le champ de « {chosen_hint} »"
+                hints.append(chosen_hint)
+                notice = f"💡  Nouvel indice #{len(hints)} débloqué : « {chosen_hint} » !"
             else:
                 notice = "💡  Pas d'indice supplémentaire disponible pour le moment."
             continue
@@ -1536,7 +1553,7 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
         last_played = (norm, s, p, tries_count, w_icon, w_lbl, is_new_best)
 
         if p == 1000 or norm == game.secret:
-            render_game_board(game, guesses, last_played=last_played, view_mode="top")
+            render_game_board(game, guesses, last_played=last_played, view_mode="top", hints=hints)
             elapsed = time.time() - t0
             log("\n" + "🎉" * 25)
             log("🥳  VICTOIRE ! FÉLICITATIONS !")
@@ -1563,12 +1580,12 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
     stats["match"] += 1
 
     clear_screen()
-    log("=" * 79)
+    log("=" * 89)
     if stats["match"] > 1:
         log(f"⚔️   CÉMANTIX DUEL CROISÉ — MANCHE #{stats['match']} (Score : 🧑   {stats['human']} — {stats['ai']}  🤖)")
     else:
         log("⚔️   CÉMANTIX DUEL CROISÉ — NOUVEAU MATCH")
-    log("=" * 79)
+    log("=" * 89)
     log("L'IA a tiré son mot secret. Paramétrez la manche :\n")
 
     # Étape 1/2 : Niveau de difficulté de l'IA
@@ -1641,11 +1658,12 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
     turn_no = 0
     notice = None
     spy_credits = 1
+    hints = []
 
     while True:
         render_duel_board(game_human, guesses_human, last_human,
                           game_ai, ai_player.guesses, last_ai,
-                          turn_no + 1, notice=notice, stats=stats)
+                          turn_no + 1, notice=notice, stats=stats, hints=hints)
         notice = None
 
         try:
@@ -1741,7 +1759,7 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
             if ai_won:
                 render_duel_board(game_human, guesses_human, last_human,
                                   game_ai, ai_player.guesses, last_ai,
-                                  turn_no, notice=None, stats=stats)
+                                  turn_no, notice=None, stats=stats, hints=hints)
                 render_duel_debrief(game_human, guesses_human, game_ai, ai_player.guesses,
                                     winner="ai", turn_no=turn_no, stats=stats)
                 try:
@@ -1790,6 +1808,7 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
             for w in cands_knn:
                 w_norm = store.normalize(w)
                 if (w_norm not in guesses_human
+                        and w_norm not in hints
                         and w_norm != game_human.secret
                         and len(w_norm) >= 4
                         and w_norm not in STOPWORDS
@@ -1804,9 +1823,10 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
             if valid_hints:
                 valid_hints.sort(key=lambda x: x[1])
                 chosen_hint = valid_hints[len(valid_hints) // 2][0]
-                notice = f"💡  [INDICE RAG] Piste sémantique vers votre cible : « {chosen_hint} »"
+                hints.append(chosen_hint)
+                notice = f"💡  Nouvel indice #{len(hints)} débloqué : « {chosen_hint} » !"
             else:
-                notice = "💡  Pas d'indice supplémentaire disponible."
+                notice = "💡  Pas d'indice supplémentaire disponible pour le moment."
             continue
 
         norm_h = store.normalize(cmd)
@@ -1849,7 +1869,7 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
 
             render_duel_board(game_human, guesses_human, last_human,
                               game_ai, ai_player.guesses, last_ai,
-                              turn_no, notice=None, stats=stats)
+                              turn_no, notice=None, stats=stats, hints=hints)
             render_duel_debrief(game_human, guesses_human, game_ai, ai_player.guesses,
                                 winner=winner, turn_no=turn_no, stats=stats)
 
