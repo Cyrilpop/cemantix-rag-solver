@@ -198,10 +198,29 @@ Pour tester, évaluer et benchmarker vos algorithmes sans saturer l'API officiel
 
 ---
 
+### 4. Mode Jeu Interactif Solo (`--play` ou `--game`)
+
+Permet à un joueur humain de deviner le mot secret tiré au sort avec le calcul vectoriel officiel :
+- **Dashboard en temps réel :** Tableau récapitulatif Top 15 des meilleurs essais avec température, météo et rang en pourmille (‰).
+- **Thermomètre ASCII dynamique :** Jauge visuelle instantanée sous le dernier coup (`[████░░░░░░░░░░░░░░░░]`).
+- **Indices vectoriels RAG (`/indice`) :** Calcule un pont sémantique interpolé sans trahir directement le mot secret.
+- **Boucle continue :** Enchaînement instantané des parties sans rechargement de la base vectorielle.
+
+```bash
+# Lancer le mode jeu interactif :
+python cemantix_rag.py --play
+
+# Jouer avec un mot imposé pour s'entraîner :
+python cemantix_rag.py --play --secret "volcan"
+```
+
+---
+
 ## ⚙️ Options en Ligne de Commande
 
 | Option | Type | Défaut | Description |
 | :--- | :---: | :---: | :--- |
+| `--play`, `--game` | Flag | `False` | Active le mode jeu interactif solo dans le terminal. |
 | `--rag-only`, `--no-llm` | Flag | `False` | Active le mode 100% RAG mathématique pur (zéro appel LLM). |
 | `--battle [R]` | Entier | `0` | Lance un tournoi comparatif de $R$ round(s) par mot (défaut : 1). |
 | `--words <M>` | Entier | `1` | Nombre de mots secrets distincts à tester en battle (active le mode mock). |
