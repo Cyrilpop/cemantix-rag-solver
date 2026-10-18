@@ -4,15 +4,7 @@
 
 # 1. Modèles d'embeddings volumineux, matrices NumPy & bases vectorielles
 # Ces fichiers (~2.5 Go) sont téléchargés et indexés automatiquement au premier run.
-cemantix_data/*.bin
-cemantix_data/*.bin.part
-cemantix_data/*.npy
-cemantix_data/*.npz
-cemantix_data/chroma/
-cemantix_data/chroma_w2v/
-cemantix_data/fr_vocab.txt
-cemantix_data/words.txt
-cemantix_data/vecs.npy
+cemantix_data/*
 
 # Conserver le dictionnaire officiel de lemmes français (~500 Ko)
 !cemantix_data/lexique_fr.txt
