@@ -741,9 +741,33 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
 def run_game(args):
     store = VocabStore()
     secret_arg = getattr(args, "secret", None)
-    mode = "duel" if getattr(args, "duel", False) else "solo"
     init_diff = getattr(args, "difficulty", "moyen")
     duel_stats = {"human": 0, "ai": 0, "draws": 0, "match": 0, "difficulty": init_diff}
+
+    if getattr(args, "duel", False):
+        mode = "duel"
+    else:
+        clear_screen()
+        log("=" * 70)
+        log("🎮  CÉMANTIX INTERACTIF — CHOISISSEZ VOTRE MODE DE JEU")
+        log("=" * 70)
+        log("  [1] 🧑   Mode Solo        (Recherche sémantique libre, jauges & indices)")
+        log("  [2] ⚔️   Mode Duel Croisé (Vous vs IA RAG, 3 niveaux & espionnage)")
+        log("  [Q] 🚪  Quitter")
+        log("-" * 70)
+        try:
+            choice = input("Votre choix ([1] Solo / [2] Duel / [Q]uitter) [1] > ").strip().strip('\ufeff').lower()
+        except (KeyboardInterrupt, EOFError):
+            log("\n👋  Au revoir !")
+            return
+
+        if choice in ("2", "d", "duel", "/duel"):
+            mode = "duel"
+        elif choice in ("q", "quit", "quitter", "/quit", "/quitter", "exit", "/exit"):
+            log("\n👋  Au revoir !")
+            return
+        else:
+            mode = "solo"
 
     while True:
         if mode == "solo":

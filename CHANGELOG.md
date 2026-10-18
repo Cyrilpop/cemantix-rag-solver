@@ -18,6 +18,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - `cemantix_rag.py` : point d'entrée CLI épuré (~80 lignes) orchestrant les modules.
   - Mise à jour du `Dockerfile` et de la documentation (`README.md`).
 
+### Corrigé
+- **Menu d'accueil interactif (`--play`)** :
+  - Restauration de l'écran d'accueil permettant de choisir explicitement entre le mode Solo et le mode Duel croisé au lancement de `--play`.
+
 ### Ajouté
 - **Mode duel croisé interactif (`--duel`)** :
   - Duel en face-à-face « Bataille Navale sémantique » opposant Joueur Humain vs IA RAG.
