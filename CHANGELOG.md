@@ -17,6 +17,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Configuration d'avant-match guidée en deux étapes (niveau puis cible de l'IA).
   - Bascule dynamique du niveau en jeu via `/diff`, `/facile`, `/moyen`, `/expert` et option CLI `--difficulty` (`-d`).
   - Tableau de débriefing comparatif d'après-match (`render_duel_debrief`) : confrontation côte à côte des cibles, statut, meilleur mot atteint, première étincelle et répartition météo.
+   - Coup spécial d'espionnage sémantique (`/espion`) : 1 crédit par match permettant au joueur d'intercepter la projection Ridge de l'IA (disciplines surveillées, meilleure piste et alerte de proximité sémantique en temps réel), en consommant son tour de jeu.
   - Bascule instantanée en mémoire entre mode solo et duel via `/solo` et `/duel`.
 - **Mode jeu interactif solo (`--play` / `--game`)** :
   - Dashboard dynamique dans la console avec tableau récapitulatif Top 15 des meilleurs coups, météo et rang en pourmille (‰).

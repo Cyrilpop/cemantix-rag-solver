@@ -1640,6 +1640,7 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
     last_ai = None
     turn_no = 0
     notice = None
+    spy_credits = 1
 
     while True:
         render_duel_board(game_human, guesses_human, last_human,
@@ -1648,7 +1649,7 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
         notice = None
 
         try:
-            raw = input(f"Tour #{turn_no + 1} > Votre coup (ou /solo, /indice, /rejouer, /abandon) > ").strip().strip('\ufeff')
+            raw = input(f"Tour #{turn_no + 1} > Votre coup (ou /solo, /espion, /indice, /rejouer, /abandon) > ").strip().strip('\ufeff')
         except (KeyboardInterrupt, EOFError):
             log(f"\n👋  Duel interrompu. Votre mot secret était : « {BOLD}{game_human.secret.upper()}{RESET} ».")
             return None
@@ -1682,6 +1683,78 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
             ai_player.difficulty = "expert"
             notice = "✓   Niveau de l'IA basculé sur : EXPERT"
             continue
+        elif cmd in ("/espion", "espion", "/spy", "spy"):
+            if spy_credits <= 0:
+                notice = "⚠️   Coup d'espionnage déjà épuisé pour cette manche (1/1 max)."
+                continue
+            if not ai_player.guesses:
+                notice = "⚠️   L'IA n'a pas encore joué de coup à espionner."
+                continue
+
+            spy_credits -= 1
+            # 1. Quartier sémantique traqué par l'IA
+            known_ai = [(w, s) for w, (s, p, *_) in ai_player.guesses.items() if w in store]
+            if len(known_ai) >= 2:
+                G_ai = np.vstack([store.vec(w) for w, s in known_ai])
+                s_ai = np.array([s for w, s in known_ai], dtype=np.float32)
+                q_ai = estimate_secret(G_ai, s_ai)
+            else:
+                q_ai = store.vec(max(known_ai, key=lambda x: x[1])[0])
+
+            disc_scores = []
+            for d in DISCIPLINES:
+                d_norm = store.normalize(d)
+                if d_norm in store:
+                    disc_scores.append((d, float(store.vec(d_norm) @ q_ai)))
+            disc_scores.sort(key=lambda x: x[1], reverse=True)
+            top_disc = f"{disc_scores[0][0]} / {disc_scores[1][0]}"
+
+            # 2. Meilleur essai adverse
+            best_ai = max(ai_player.guesses.items(), key=lambda x: x[1][0])
+            w_b, (s_b, p_b, num_b, icon_b, lbl_b) = best_ai
+            sc_b = f"{p_b}‰" if p_b else f"{s_b*100:.1f}°C"
+
+            # 3. Alerte proximité
+            if p_b and p_b >= 900:
+                alert = f"🚨 DANGER BRÛLANT : L'IA est dans le Top 100 ({p_b}‰) !"
+            elif p_b:
+                alert = f"⚠️   ALERTE : L'IA est entrée dans le Top 1000 ({p_b}‰) !"
+            elif s_b >= 0.15:
+                alert = f"👀 PISTE TIÈDE : L'IA approche votre zone ({s_b*100:.1f}°C)."
+            else:
+                alert = f"🧊 CALME : L'IA cherche encore dans le froid ({s_b*100:.1f}°C)."
+
+            # 4. Le tour est consommé : l'IA joue son coup !
+            turn_no += 1
+            w_ai, s_ai, p_ai, icon_ai, lbl_ai = ai_player.play_turn(turn_no)
+            last_ai = (w_ai, s_ai, p_ai, turn_no, icon_ai, lbl_ai)
+            ai_won = (p_ai == 1000 or w_ai == ai_target)
+
+            notice = (
+                f"🕵️   [ESPIONNAGE SÉMANTIQUE — 1/1 UTILISÉ]\n"
+                f"    ├── Quartier traqué par l'IA : « {top_disc} »\n"
+                f"    ├── Meilleur essai adverse   : [{num_b}] {w_b} ({sc_b} — {icon_b} {lbl_b})\n"
+                f"    └── {alert}\n"
+                f"    (⚠️   Votre tour a été consommé : l'IA a joué « {w_ai} »)"
+            )
+
+            if ai_won:
+                render_duel_board(game_human, guesses_human, last_human,
+                                  game_ai, ai_player.guesses, last_ai,
+                                  turn_no, notice=None, stats=stats)
+                render_duel_debrief(game_human, guesses_human, game_ai, ai_player.guesses,
+                                    winner="ai", turn_no=turn_no, stats=stats)
+                try:
+                    ans = input("🎮  Rejouer une manche ? ([O]ui / [S]olo / [Q]uitter) [O] > ").strip().lower()
+                except (KeyboardInterrupt, EOFError):
+                    return None
+                if ans in ("s", "solo", "/solo"):
+                    return "solo"
+                if ans in ("n", "non", "q", "quit", "quitter"):
+                    return None
+                return "duel"
+
+            continue
         elif cmd in ("/abandon", "/giveup"):
             stats["ai"] += 1
             render_duel_debrief(game_human, guesses_human, game_ai, ai_player.guesses,
@@ -1696,7 +1769,7 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
                 return None
             return "duel"
         elif cmd in ("/aide", "/help"):
-            notice = "Commandes : /solo, /diff, /facile, /moyen, /expert, /indice, /rejouer, /abandon, /quitter"
+            notice = "Commandes : /espion (rapport tactique sur l'IA), /solo, /diff, /facile, /moyen, /expert, /indice, /rejouer, /abandon, /quitter"
             continue
         elif cmd in ("/indice", "/hint"):
             if len(guesses_human) < 3:
