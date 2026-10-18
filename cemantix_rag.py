@@ -49,6 +49,9 @@ RESET = "\033[0m"
 LM_API = os.getenv("LM_API", "http://host.docker.internal:1234/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2")
 
+# Nombre de meilleurs mots affichés par colonne en mode duel
+DUEL_TOP_WORDS = int(os.getenv("DUEL_TOP_WORDS", "10"))
+
 SITE = "https://cemantix.certitudes.org"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) cemantix-rag-tp",
@@ -1067,6 +1070,49 @@ def make_gauge(s: float, p: int | None, threshold: float, width: int = 20) -> st
     return f"[{bar}] {pct_lbl}"
 
 
+ANSI_RE = re.compile(r'\033\[[0-9;]*m')
+
+
+def strip_ansi(s: str) -> str:
+    return ANSI_RE.sub('', s)
+
+
+def visible_width(s: str) -> int:
+    clean = strip_ansi(s)
+    w = 0
+    for ch in clean:
+        if ch in "🥶🧊😎🥵🔥😱🥳⭐🎯🤖🧑⚔️":
+            w += 2
+        else:
+            w += 1
+    return w
+
+
+def pad_visible(s: str, target_width: int) -> str:
+    vw = visible_width(s)
+    pad = max(0, target_width - vw)
+    return s + " " * pad
+
+
+def weather_for_score(s: float, p: int | None) -> tuple[str, str]:
+    if p == 1000:
+        return "🥳", "GAGNÉ"
+    elif p and p >= 999:
+        return "😱", "BRÛL."
+    elif p and p >= 990:
+        return "🔥", "CHAUD"
+    elif p and p >= 900:
+        return "🥵", "CHAUD"
+    elif p and p >= 1:
+        return "😎", "TIÈDE"
+    elif s >= 0.15:
+        return "🥶", "FRAIS"
+    elif s >= 0:
+        return "🥶", "FROID"
+    else:
+        return "🧊", "GLAC."
+
+
 def render_game_board(game, guesses, last_played=None, notice=None, view_mode="top"):
     clear_screen()
     tries_count = len(guesses)
@@ -1114,172 +1160,489 @@ def render_game_board(game, guesses, last_played=None, notice=None, view_mode="t
     log("-" * 70)
 
 
+def format_duel_cell(num: int, w: str, s: float, p: int | None, icon: str, lbl: str, is_last: bool = False) -> str:
+    num_str = f" [{num:>2}] "
+    raw_w = f"{w[:12]:<12}"
+    w_str = f"{BOLD}{raw_w}{RESET} " if is_last else f"{raw_w} "
+    score_val = f"{p}‰" if p else f"{s*100:5.2f}°C"
+    score_str = f"{score_val:>8}  "
+    meteo_str = f"{icon}  {lbl:<5}"
+    cell = num_str + w_str + score_str + meteo_str
+    return pad_visible(cell, 38)
+
+
+def render_duel_board(game_human, guesses_human, last_human,
+                      game_ai, guesses_ai, last_ai,
+                      turn_no: int, notice=None):
+    clear_screen()
+    log("=" * 79)
+    log(f"⚔️   CÉMANTIX DUEL CROISÉ — 🧑   VOUS vs 🤖   IA RAG (Tour #{turn_no})")
+    log("=" * 79)
+
+    sec = game_ai.secret.upper()
+    if len(sec) <= 14:
+        r_title = f"  🤖  IA RAG (Cible : {sec})"
+    elif len(sec) <= 18:
+        r_title = f"  🤖  IA (Cible : {sec})"
+    else:
+        r_title = f"  🤖  IA : {sec[:16]}…"
+    col_l_title = pad_visible("  🧑  VOS ESSAIS (Cible : ???)", 38)
+    col_r_title = pad_visible(r_title, 38)
+    log(f"{col_l_title} │ {col_r_title}")
+
+    col_head = pad_visible(" #   Mot            Score   Météo", 38)
+    log(f"{col_head} │ {col_head}")
+    log("─" * 38 + "─┼─" + "─" * 38)
+
+    items_h = sorted(guesses_human.items(), key=lambda x: x[1][0], reverse=True)[:DUEL_TOP_WORDS]
+    items_a = sorted(guesses_ai.items(), key=lambda x: x[1][0], reverse=True)[:DUEL_TOP_WORDS]
+    max_rows = max(len(items_h), len(items_a), 1)
+
+    for i in range(max_rows):
+        if i < len(items_h):
+            w, (s, p, num, icon, lbl) = items_h[i]
+            is_last = (last_human and w == last_human[0])
+            c_left = format_duel_cell(num, w, s, p, icon, lbl, is_last=is_last)
+        else:
+            c_left = pad_visible("  -", 38) if (i == 0 and not guesses_human) else " " * 38
+
+        if i < len(items_a):
+            w, (s, p, num, icon, lbl) = items_a[i]
+            is_last = (last_ai and w == last_ai[0])
+            c_right = format_duel_cell(num, w, s, p, icon, lbl, is_last=is_last)
+        else:
+            c_right = pad_visible("  -", 38) if (i == 0 and not guesses_ai) else " " * 38
+
+        log(f"{c_left} │ {c_right}")
+
+    log("─" * 38 + "─┼─" + "─" * 38)
+
+    lh_score = f"{last_human[2]}‰" if (last_human and last_human[2]) else (f"{last_human[1]*100:.1f}°C" if last_human else "")
+    la_score = f"{last_ai[2]}‰" if (last_ai and last_ai[2]) else (f"{last_ai[1]*100:.1f}°C" if last_ai else "")
+
+    lh_str = f"  Dernier : [{last_human[3]:>2}] {last_human[0]} ({lh_score})" if last_human else "  Dernier : -"
+    la_str = f"  Dernier : [{last_ai[3]:>2}] {last_ai[0]} ({la_score})" if last_ai else "  Dernier : -"
+    log(f"{pad_visible(lh_str, 38)} │ {pad_visible(la_str, 38)}")
+
+    gh_str = f"  Jauge   : {make_gauge(last_human[1], last_human[2], game_human.p1000_threshold, width=10)}" if last_human else "  Jauge   : -"
+    ga_str = f"  Jauge   : {make_gauge(last_ai[1], last_ai[2], game_ai.p1000_threshold, width=10)}" if last_ai else "  Jauge   : -"
+    log(f"{pad_visible(gh_str, 38)} │ {pad_visible(ga_str, 38)}")
+    log("=" * 79)
+
+    if notice:
+        log(f"\n{notice}")
+
+
+class RagDuelPlayer:
+    """Agent RAG mathématique jouant un coup par tour pour le mode Duel."""
+    def __init__(self, store: VocabStore, game: MockClient):
+        self.store = store
+        self.game = game
+        self.tried = set()
+        self.guesses = {}   # norm -> (s, p, num, w_icon, w_lbl)
+        self.seeds = ["animal", "temps", "science", "musique", "justice", "corps", "voyage", "nourriture", "nature", "travail"]
+        self.seed_idx = 0
+
+    def play_turn(self, turn_no: int) -> tuple[str, float, int | None, str, str]:
+        word_to_play = None
+        known = [(w, s) for w, (s, p, *_) in self.guesses.items() if w in self.store]
+        best_score = max([s for w, s in known], default=-1.0)
+
+        # 1. Amorçage initial si moins de 4 mots ou aucun mot tiède
+        if (len(known) < 4 or best_score < 0.15) and self.seed_idx < len(self.seeds):
+            while self.seed_idx < len(self.seeds):
+                candidate_seed = self.store.normalize(self.seeds[self.seed_idx])
+                self.seed_idx += 1
+                if candidate_seed not in self.tried and candidate_seed in self.store:
+                    word_to_play = candidate_seed
+                    break
+
+        # 2. Régression Ridge + k-NN + Rerank
+        if not word_to_play and len(known) >= 2:
+            G = np.vstack([self.store.vec(w) for w, s in known])
+            s = np.array([s for w, s in known], dtype=np.float32)
+            q_est = estimate_secret(G, s)
+            raw_pool = self.store.knn(q_est, 100)
+
+            # Ajoute les voisins des meilleurs coups
+            sorted_known = sorted(known, key=lambda x: x[1], reverse=True)
+            for w, _ in sorted_known[:2]:
+                raw_pool += self.store.knn(self.store.vec(w), 50)
+
+            cands = []
+            for raw_w in raw_pool:
+                w = self.store.normalize(raw_w)
+                if (w not in self.tried
+                        and w not in cands
+                        and len(w) >= 4
+                        and w not in STOPWORDS
+                        and self.store.is_valid_french(w)):
+                    cands.append(w)
+                    if len(cands) >= 60:
+                        break
+
+            if cands:
+                reranked = rerank(self.store, cands, G, s, q_est)
+                if reranked:
+                    word_to_play = reranked[0][0]
+
+        # 3. Fallback sécurité
+        if not word_to_play:
+            for seed in SEED_WORDS:
+                s_norm = self.store.normalize(seed)
+                if s_norm not in self.tried and s_norm in self.store:
+                    word_to_play = s_norm
+                    break
+
+        if not word_to_play:
+            word_to_play = "science"
+
+        self.tried.add(word_to_play)
+        res = self.game.score(word_to_play)
+        s, p = res if res else (0.0, None)
+        w_icon, w_lbl = weather_for_score(s, p)
+
+        self.guesses[word_to_play] = (s, p, turn_no, w_icon, w_lbl)
+        return word_to_play, s, p, w_icon, w_lbl
+
+
+def run_solo_loop(store: VocabStore, secret_arg=None):
+    game = MockClient(store, secret=secret_arg)
+    guesses = {}   # norm -> (s, p, num, w_icon, w_lbl)
+    t0 = time.time()
+    tries_count = 0
+    last_played = None
+    notice = None
+    view_mode = "top"
+
+    while True:
+        render_game_board(game, guesses, last_played=last_played, notice=notice, view_mode=view_mode)
+        notice = None
+
+        try:
+            raw = input(f"Essai #{tries_count + 1} (ou /duel, /aide, /indice, /rejouer, /abandon) > ").strip().strip('\ufeff')
+        except (KeyboardInterrupt, EOFError):
+            log(f"\n👋  Partie interrompue. Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} ».")
+            return None, None
+
+        if not raw:
+            continue
+
+        cmd = raw.lower()
+        if cmd in ("/duel", "duel"):
+            return "duel", None
+        elif cmd in ("/quitter", "/quit", "/exit", "exit", "quit"):
+            log(f"\n👋  Au revoir ! Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} ».")
+            return None, None
+        elif cmd in ("/abandon", "/giveup", "/solution"):
+            elapsed = time.time() - t0
+            log("\n" + "=" * 70)
+            log(f"🏳️  Abandon après {tries_count} essai(s) ({elapsed:.1f}s).")
+            log(f"💡  Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} »")
+            log("=" * 70 + "\n")
+            try:
+                ans = input("🎮  Que souhaitez-vous faire ? ([O]ui pour rejouer / [D]uel / [Q]uitter) [O] > ").strip().lower()
+            except (KeyboardInterrupt, EOFError):
+                return None, None
+            if ans in ("d", "duel", "/duel"):
+                return "duel", None
+            if ans in ("n", "non", "q", "quit", "quitter"):
+                return None, None
+            return "solo", None
+        elif cmd in ("/rejouer", "/nouveau", "/new", "/restart"):
+            return "solo", None
+        elif cmd in ("/aide", "/help"):
+            notice = "Commandes : /duel (mode versus IA), /top, /historique, /indice, /rejouer, /abandon, /quitter"
+            continue
+        elif cmd in ("/top", "/best"):
+            view_mode = "top"
+            notice = "Affichage basculé sur le Top des meilleurs essais."
+            continue
+        elif cmd in ("/historique", "/history"):
+            view_mode = "history"
+            notice = "Affichage basculé sur l'historique chronologique."
+            continue
+        elif cmd in ("/indice", "/hint"):
+            if len(guesses) < 3:
+                notice = "💡  Jouez au moins 3 mots pour que le RAG puisse calculer un indice pertinent."
+                continue
+
+            ranked_words = sorted(guesses.items(), key=lambda x: x[1][0], reverse=True)
+            top_word, (best_s, best_p, *_) = ranked_words[0]
+
+            if best_s > 0.10:
+                v_best = store.vec(top_word)
+                v_target = 0.35 * v_best + 0.65 * game.v_secret
+                v_target = v_target / np.linalg.norm(v_target)
+                cands_knn = store.knn(v_target, k=60)
+            else:
+                cands_knn = store.knn(game.v_secret, k=150)[40:]
+
+            secret_stem = game.secret[:min(5, len(game.secret))]
+            valid_hints = []
+            for w in cands_knn:
+                w_norm = store.normalize(w)
+                if (w_norm not in guesses
+                        and w_norm != game.secret
+                        and len(w_norm) >= 4
+                        and w_norm not in STOPWORDS
+                        and not w_norm.startswith(secret_stem)
+                        and not game.secret.startswith(w_norm[:min(5, len(w_norm))])
+                        and store.is_valid_french(w_norm)):
+                    res_hint = game.score(w_norm)
+                    if res_hint:
+                        s_w, p_w = res_hint
+                        if s_w > best_s or (p_w and p_w >= 500):
+                            valid_hints.append((w_norm, s_w, p_w))
+
+            if valid_hints:
+                valid_hints.sort(key=lambda x: x[1])
+                chosen_hint = valid_hints[len(valid_hints) // 2][0]
+                notice = f"💡  [INDICE RAG] Piste sémantique vers le secret : explorez le champ de « {chosen_hint} »"
+            else:
+                notice = "💡  Pas d'indice supplémentaire disponible pour le moment."
+            continue
+
+        norm = store.normalize(cmd)
+        if norm in guesses:
+            s, p, num, w_icon, w_lbl = guesses[norm]
+            rk_str = f"{p}‰" if p else ""
+            notice = f"⚠️  Déjà essayé (#{num}) : « {norm} » ({s*100:.2f}°C  {w_icon}  {w_lbl} {rk_str})"
+            continue
+
+        if not store.is_valid_french(norm) or norm not in store:
+            notice = f"❌  Mot « {raw} » non reconnu (lemmes français au singulier uniquement)."
+            continue
+
+        res = game.score(norm)
+        if res is None:
+            notice = f"❌  Mot « {raw} » rejeté par le jeu."
+            continue
+
+        s, p = res
+        tries_count += 1
+        w_icon, w_lbl = weather_for_score(s, p)
+
+        best_score = max([v[0] for v in guesses.values()], default=-1.0)
+        is_new_best = (s > best_score) and (s > 0.15)
+        guesses[norm] = (s, p, tries_count, w_icon, w_lbl)
+        last_played = (norm, s, p, tries_count, w_icon, w_lbl, is_new_best)
+
+        if p == 1000 or norm == game.secret:
+            render_game_board(game, guesses, last_played=last_played, view_mode="top")
+            elapsed = time.time() - t0
+            log("\n" + "🎉" * 25)
+            log("🥳  VICTOIRE ! FÉLICITATIONS !")
+            log(f"    Vous avez trouvé le mot secret « {BOLD}{game.secret.upper()}{RESET} » !")
+            log(f"    Nombre total d'essais : {tries_count}")
+            log(f"    Temps de réflexion     : {elapsed:.1f} secondes")
+            log("🎉" * 25 + "\n")
+            try:
+                ans = input("🎮  Que souhaitez-vous faire ? ([O]ui pour rejouer / [D]uel / [Q]uitter) [O] > ").strip().lower()
+            except (KeyboardInterrupt, EOFError):
+                return None, None
+            if ans in ("d", "duel", "/duel"):
+                return "duel", None
+            if ans in ("n", "non", "q", "quit", "quitter"):
+                return None, None
+            return "solo", None
+
+
+def run_duel_loop(store: VocabStore):
+    clear_screen()
+    log("=" * 79)
+    log("⚔️   CÉMANTIX DUEL CROISÉ — NOUVEAU MATCH")
+    log("=" * 79)
+    log("L'IA a tiré son mot secret. Choisissez la cible que l'IA doit trouver :\n")
+
+    ai_target = None
+    while not ai_target:
+        try:
+            raw = input("🎯  Mot secret pour l'IA (votre mot, ou Entrée / '/random' pour tirage aléatoire) > ").strip().strip('\ufeff')
+        except (KeyboardInterrupt, EOFError):
+            log("\n👋  Au revoir !")
+            return None
+
+        if not raw or raw.lower() in ("/random", "random"):
+            valid_cands = [w for w in store.words if store.is_valid_french(w) and len(w) >= 4 and w not in STOPWORDS]
+            ai_target = str(np.random.choice(valid_cands))
+            log(f"🎲  Mot secret tiré au sort pour l'IA : « {BOLD}{ai_target.upper()}{RESET} »")
+            time.sleep(1.0)
+            break
+
+        cmd = raw.lower()
+        if cmd in ("/solo", "solo"):
+            return "solo"
+        if cmd in ("/quitter", "/quit", "quit", "exit"):
+            return None
+
+        norm = store.normalize(cmd)
+        if store.is_valid_french(norm) and norm in store:
+            ai_target = norm
+            log(f"✓   Mot secret de l'IA validé : « {BOLD}{ai_target.upper()}{RESET} »")
+            time.sleep(1.0)
+            break
+        else:
+            log(f"❌  Mot « {raw} » non reconnu ou non recevable (lemmes français au singulier uniquement).")
+
+    game_ai = MockClient(store, secret=ai_target)
+    ai_player = RagDuelPlayer(store, game_ai)
+    game_human = MockClient(store)
+
+    guesses_human = {}
+    last_human = None
+    last_ai = None
+    turn_no = 0
+    notice = None
+
+    while True:
+        render_duel_board(game_human, guesses_human, last_human,
+                          game_ai, ai_player.guesses, last_ai,
+                          turn_no + 1, notice=notice)
+        notice = None
+
+        try:
+            raw = input(f"Tour #{turn_no + 1} > Votre coup (ou /solo, /indice, /rejouer, /abandon) > ").strip().strip('\ufeff')
+        except (KeyboardInterrupt, EOFError):
+            log(f"\n👋  Duel interrompu. Votre mot secret était : « {BOLD}{game_human.secret.upper()}{RESET} ».")
+            return None
+
+        if not raw:
+            continue
+
+        cmd = raw.lower()
+        if cmd in ("/solo", "solo"):
+            return "solo"
+        elif cmd in ("/rejouer", "/nouveau", "/restart"):
+            return "duel"
+        elif cmd in ("/quitter", "/quit", "/exit", "exit", "quit"):
+            log(f"\n👋  Au revoir ! Votre mot secret était : « {BOLD}{game_human.secret.upper()}{RESET} ».")
+            return None
+        elif cmd in ("/abandon", "/giveup"):
+            log("\n" + "=" * 79)
+            log(f"🏳️   Abandon du duel au tour #{turn_no + 1}.")
+            log(f"💡   Votre mot secret à trouver était : « {BOLD}{game_human.secret.upper()}{RESET} »")
+            log(f"🤖   L'IA cherchait votre mot « {BOLD}{ai_target.upper()}{RESET} »")
+            log("=" * 79 + "\n")
+            try:
+                ans = input("🎮  Rejouer une manche ? ([O]ui / [S]olo / [Q]uitter) [O] > ").strip().lower()
+            except (KeyboardInterrupt, EOFError):
+                return None
+            if ans in ("s", "solo", "/solo"):
+                return "solo"
+            if ans in ("n", "non", "q", "quit", "quitter"):
+                return None
+            return "duel"
+        elif cmd in ("/aide", "/help"):
+            notice = "Commandes : /solo (mode solo), /indice, /rejouer, /abandon, /quitter"
+            continue
+        elif cmd in ("/indice", "/hint"):
+            if len(guesses_human) < 3:
+                notice = "💡  Jouez au moins 3 mots pour calculer un indice pertinent."
+                continue
+            ranked_words = sorted(guesses_human.items(), key=lambda x: x[1][0], reverse=True)
+            top_word, (best_s, best_p, *_) = ranked_words[0]
+            if best_s > 0.10:
+                v_best = store.vec(top_word)
+                v_target = 0.35 * v_best + 0.65 * game_human.v_secret
+                v_target = v_target / np.linalg.norm(v_target)
+                cands_knn = store.knn(v_target, k=60)
+            else:
+                cands_knn = store.knn(game_human.v_secret, k=150)[40:]
+
+            secret_stem = game_human.secret[:min(5, len(game_human.secret))]
+            valid_hints = []
+            for w in cands_knn:
+                w_norm = store.normalize(w)
+                if (w_norm not in guesses_human
+                        and w_norm != game_human.secret
+                        and len(w_norm) >= 4
+                        and w_norm not in STOPWORDS
+                        and not w_norm.startswith(secret_stem)
+                        and not game_human.secret.startswith(w_norm[:min(5, len(w_norm))])
+                        and store.is_valid_french(w_norm)):
+                    res_hint = game_human.score(w_norm)
+                    if res_hint:
+                        s_w, p_w = res_hint
+                        if s_w > best_s or (p_w and p_w >= 500):
+                            valid_hints.append((w_norm, s_w, p_w))
+            if valid_hints:
+                valid_hints.sort(key=lambda x: x[1])
+                chosen_hint = valid_hints[len(valid_hints) // 2][0]
+                notice = f"💡  [INDICE RAG] Piste sémantique vers votre cible : « {chosen_hint} »"
+            else:
+                notice = "💡  Pas d'indice supplémentaire disponible."
+            continue
+
+        norm_h = store.normalize(cmd)
+        if norm_h in guesses_human:
+            notice = f"⚠️   Déjà essayé : « {norm_h} »"
+            continue
+
+        if not store.is_valid_french(norm_h) or norm_h not in store:
+            notice = f"❌   Mot « {raw} » non reconnu (lemmes français au singulier uniquement)."
+            continue
+
+        res_h = game_human.score(norm_h)
+        if res_h is None:
+            notice = f"❌   Mot « {raw} » rejeté par le jeu."
+            continue
+
+        s_h, p_h = res_h
+        turn_no += 1
+        icon_h, lbl_h = weather_for_score(s_h, p_h)
+
+        guesses_human[norm_h] = (s_h, p_h, turn_no, icon_h, lbl_h)
+        last_human = (norm_h, s_h, p_h, turn_no, icon_h, lbl_h)
+        human_won = (p_h == 1000 or norm_h == game_human.secret)
+
+        # Coup de l'IA RAG
+        w_ai, s_ai, p_ai, icon_ai, lbl_ai = ai_player.play_turn(turn_no)
+        last_ai = (w_ai, s_ai, p_ai, turn_no, icon_ai, lbl_ai)
+        ai_won = (p_ai == 1000 or w_ai == ai_target)
+
+        if human_won or ai_won:
+            render_duel_board(game_human, guesses_human, last_human,
+                              game_ai, ai_player.guesses, last_ai,
+                              turn_no, notice=None)
+            log("\n" + "🎉" * 25)
+            if human_won and ai_won:
+                log("🤝   ÉGALITÉ PARFAITE ! Vous et l'IA avez trouvé vos cibles au même tour !")
+            elif human_won:
+                log(f"🥳   VICTOIRE DE L'HUMAIN EN {turn_no} COUPS !")
+                log(f"     Vous avez trouvé votre cible « {BOLD}{game_human.secret.upper()}{RESET} » avant l'IA !")
+                log(f"     L'IA traquait votre mot « {BOLD}{ai_target.upper()}{RESET} » ({last_ai[0]} : {last_ai[1]*100:.1f}°C).")
+            else:
+                log(f"🤖   VICTOIRE DE L'IA RAG EN {turn_no} COUPS !")
+                log(f"     L'IA a démasqué votre mot secret « {BOLD}{ai_target.upper()}{RESET} » !")
+                log(f"     Votre cible dissimulée était « {BOLD}{game_human.secret.upper()}{RESET} ».")
+            log("🎉" * 25 + "\n")
+
+            try:
+                ans = input("🎮  Rejouer une manche ? ([O]ui / [S]olo / [Q]uitter) [O] > ").strip().lower()
+            except (KeyboardInterrupt, EOFError):
+                return None
+            if ans in ("s", "solo", "/solo"):
+                return "solo"
+            if ans in ("n", "non", "q", "quit", "quitter"):
+                return None
+            return "duel"
+
+
 def run_game(args):
     store = VocabStore()
     secret_arg = getattr(args, "secret", None)
+    mode = "duel" if getattr(args, "duel", False) else "solo"
 
     while True:
-        game = MockClient(store, secret=secret_arg)
-        guesses = {}   # norm -> (s, p, num, w_icon, w_lbl)
-        history = []   # list of (norm, s, p, num, w_icon, w_lbl)
-        t0 = time.time()
-        tries_count = 0
-        last_played = None
-        notice = None
-        view_mode = "top"
-        game_over = False
-        last_cmd = None
-
-        while not game_over:
-            render_game_board(game, guesses, last_played=last_played, notice=notice, view_mode=view_mode)
-            notice = None
-
-            try:
-                raw = input(f"Essai #{tries_count + 1} (ou /aide, /indice, /rejouer, /abandon) > ").strip().strip('\ufeff')
-            except (KeyboardInterrupt, EOFError):
-                log(f"\n👋  Partie interrompue. Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} ».")
-                return
-
-            if not raw:
-                continue
-
-            cmd = raw.lower()
-            last_cmd = cmd
-            if cmd in ("/quitter", "/quit", "/exit", "exit", "quit"):
-                log(f"\n👋  Au revoir ! Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} ».")
-                return
-            elif cmd in ("/abandon", "/giveup", "/solution"):
-                elapsed = time.time() - t0
-                log("\n" + "=" * 70)
-                log(f"🏳️  Abandon après {tries_count} essai(s) ({elapsed:.1f}s).")
-                log(f"💡  Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} »")
-                log("=" * 70 + "\n")
-                game_over = True
+        if mode == "solo":
+            mode, secret_arg = run_solo_loop(store, secret_arg)
+            if mode is None:
                 break
-            elif cmd in ("/rejouer", "/nouveau", "/new", "/restart"):
-                log(f"\n🔄  Nouvelle partie lancée ! Le mot secret précédent était : « {BOLD}{game.secret.upper()}{RESET} ».\n")
-                time.sleep(1.2)
-                game_over = True
+        elif mode == "duel":
+            mode = run_duel_loop(store)
+            if mode is None:
                 break
-            elif cmd in ("/aide", "/help"):
-                notice = "Commandes disponibles : /top, /historique, /indice, /rejouer, /abandon, /quitter"
-                continue
-            elif cmd in ("/top", "/best"):
-                view_mode = "top"
-                notice = "Affichage basculé sur le Top des meilleurs essais."
-                continue
-            elif cmd in ("/historique", "/history"):
-                view_mode = "history"
-                notice = "Affichage basculé sur l'historique chronologique."
-                continue
-            elif cmd in ("/indice", "/hint"):
-                if len(guesses) < 3:
-                    notice = "💡  Jouez au moins 3 mots pour que le RAG puisse calculer un indice pertinent."
-                    continue
-
-                ranked_words = sorted(guesses.items(), key=lambda x: x[1][0], reverse=True)
-                top_word, (best_s, best_p, *_) = ranked_words[0]
-
-                # Si le joueur a déjà une piste (> 0.10 de cosinus), on calcule un vecteur pont vers le secret
-                if best_s > 0.10:
-                    v_best = store.vec(top_word)
-                    v_target = 0.35 * v_best + 0.65 * game.v_secret
-                    v_target = v_target / np.linalg.norm(v_target)
-                    cands_knn = store.knn(v_target, k=60)
-                else:
-                    # Sinon, on offre une tête de pont modérée dans la galaxie du mot secret
-                    cands_knn = store.knn(game.v_secret, k=150)[40:]
-
-                # Filtrage des candidats pour ne pas trahir le mot directement
-                secret_stem = game.secret[:min(5, len(game.secret))]
-                valid_hints = []
-                for w in cands_knn:
-                    w_norm = store.normalize(w)
-                    if (w_norm not in guesses
-                            and w_norm != game.secret
-                            and len(w_norm) >= 4
-                            and w_norm not in STOPWORDS
-                            and not w_norm.startswith(secret_stem)
-                            and not game.secret.startswith(w_norm[:min(5, len(w_norm))])
-                            and store.is_valid_french(w_norm)):
-                        res_hint = game.score(w_norm)
-                        if res_hint:
-                            s_w, p_w = res_hint
-                            if s_w > best_s or (p_w and p_w >= 500):
-                                valid_hints.append((w_norm, s_w, p_w))
-
-                if valid_hints:
-                    valid_hints.sort(key=lambda x: x[1])
-                    chosen_hint = valid_hints[len(valid_hints) // 2][0]
-                    notice = f"💡  [INDICE RAG] Piste sémantique vers le secret : explorez le champ de « {chosen_hint} »"
-                else:
-                    notice = "💡  Pas d'indice supplémentaire disponible pour le moment."
-                continue
-
-            norm = store.normalize(cmd)
-            if norm in guesses:
-                s, p, num, w_icon, w_lbl = guesses[norm]
-                rk_str = f"{p}‰" if p else ""
-                notice = f"⚠️  Déjà essayé (#{num}) : « {norm} » ({s*100:.2f}°C  {w_icon}  {w_lbl} {rk_str})"
-                continue
-
-            if not store.is_valid_french(norm) or norm not in store:
-                notice = f"❌  Mot « {raw} » non reconnu ou non recevable (lemmes français au singulier uniquement)."
-                continue
-
-            res = game.score(norm)
-            if res is None:
-                notice = f"❌  Mot « {raw} » rejeté par le jeu."
-                continue
-
-            s, p = res
-            tries_count += 1
-
-            # Échelle officielle Cémantix avec séparation stricte icône + libellé
-            if p == 1000 or norm == game.secret:
-                w_icon, w_lbl = "🥳", "GAGNÉ !"
-            elif p and p >= 999:
-                w_icon, w_lbl = "😱", "BRÛLANT"
-            elif p and p >= 990:
-                w_icon, w_lbl = "🔥", "TRÈS CHAUD"
-            elif p and p >= 900:
-                w_icon, w_lbl = "🥵", "CHAUD"
-            elif p and p >= 1:
-                w_icon, w_lbl = "😎", "TIÈDE"
-            elif s >= 0.15:
-                w_icon, w_lbl = "🥶", "FRAIS"
-            elif s >= 0:
-                w_icon, w_lbl = "🥶", "FROID"
-            else:
-                w_icon, w_lbl = "🧊", "GLACIAL"
-
-            best_score = max([v[0] for v in guesses.values()], default=-1.0)
-            is_new_best = (s > best_score) and (s > 0.15)
-            guesses[norm] = (s, p, tries_count, w_icon, w_lbl)
-            last_played = (norm, s, p, tries_count, w_icon, w_lbl, is_new_best)
-
-            if p == 1000 or norm == game.secret:
-                render_game_board(game, guesses, last_played=last_played, view_mode="top")
-                elapsed = time.time() - t0
-                log("\n" + "🎉" * 25)
-                log("🥳  VICTOIRE ! FÉLICITATIONS !")
-                log(f"    Vous avez trouvé le mot secret « {BOLD}{game.secret.upper()}{RESET} » !")
-                log(f"    Nombre total d'essais : {tries_count}")
-                log(f"    Temps de réflexion     : {elapsed:.1f} secondes")
-                log("🎉" * 25 + "\n")
-                game_over = True
-                break
-
-        secret_arg = None  # Après la première partie, tirage aléatoire systématique
-        if last_cmd not in ("/rejouer", "/nouveau", "/new", "/restart"):
-            try:
-                ans = input("🎮  Voulez-vous lancer une nouvelle partie ? [O/n] > ").strip().lower()
-            except (KeyboardInterrupt, EOFError):
-                log("\n👋  Au revoir !")
-                return
-            if ans in ("n", "non", "no", "q", "quit", "quitter"):
-                log("\n👋  Merci d'avoir joué ! À bientôt.\n")
-                return
 
 
 def main():
@@ -1320,7 +1683,12 @@ def main():
                     help="mode battle comparatif (N manches sur le MÊME mot) : 100%% RAG Pur vs Hybride RAG+LLM. Par défaut en direct sur le mot du jour Cémantix, ou en local avec --mock")
     ap.add_argument("--play", "--game", action="store_true", dest="play_mode",
                     help="mode jeu interactif : tire un mot au sort en local et vous laisse deviner avec le calcul vectoriel")
+    ap.add_argument("--duel", action="store_true",
+                    help="lance directement le mode duel croisé humain vs IA RAG")
     args = ap.parse_args()
+
+    if args.duel:
+        args.play_mode = True
 
     is_rag_only = getattr(args, "rag_only", False)
     mode_str = "100% RAG Pur Mathématique (Zéro LLM)" if is_rag_only else f"Hybride RAG + Local LLM ({LLM_MODEL})"

@@ -220,6 +220,7 @@ python cemantix_rag.py --play --secret "volcan"
 
 | Option | Type | Défaut | Description |
 | :--- | :---: | :---: | :--- |
+| `--duel` | Flag | `False` | Lance le mode duel croisé interactif (Humain vs IA RAG). |
 | `--play`, `--game` | Flag | `False` | Active le mode jeu interactif solo dans le terminal. |
 | `--rag-only`, `--no-llm` | Flag | `False` | Active le mode 100% RAG mathématique pur (zéro appel LLM). |
 | `--battle [R]` | Entier | `0` | Lance un tournoi comparatif de $R$ round(s) par mot (défaut : 1). |
