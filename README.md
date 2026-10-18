@@ -273,14 +273,23 @@ Ces variables peuvent être définies dans votre shell ou dans un fichier `.env`
 
 ```
 cemantix-rag-solver/
-├── cemantix_rag.py          # Coeur du solveur (RAG, Ridge, Sniper, LLM, Battle)
-├── requirements.txt         # Dépendances Python minimales (NumPy, ChromaDB, Requests)
+├── cemantix_rag.py          # Point d'entrée CLI et orchestration générale
+├── requirements.txt         # Dépendances Python (NumPy, ChromaDB, Requests)
 ├── Dockerfile               # Image conteneurisée prête à l'emploi
 ├── docker-compose.yml       # Configuration Docker avec persistance du volume de données
 ├── .gitignore               # Exclut les fichiers binaires volumineux et caches
 ├── README.md                # Documentation complète du projet
-└── cemantix_data/
-    └── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes français officiels)
+├── CHANGELOG.md             # Historique des versions et refactorings
+├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)
+│   └── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
+└── src/                     # Architecture modulaire
+    ├── __init__.py          # Expose les classes et fonctions du package
+    ├── config.py            # Constantes, styles ANSI, chemins et configuration LLM
+    ├── vocab.py             # VocabStore (lexique, word2vec, embeddings ChromaDB)
+    ├── clients.py           # Clients API officiel (CemantixClient) & simulation locale (MockClient)
+    ├── ui.py                # Rendu console, jauges ASCII, dashboard duel & débriefing
+    ├── solvers.py           # Régression Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
+    └── modes.py             # Boucles de jeu (benchmark, battle, solo, duel)
 ```
 
 ---
