@@ -1,0 +1,13 @@
+services:
+  cemantix:
+    build: .
+    container_name: cemantix_solver
+    volumes:
+      # Montage du cache local pour conserver les vecteurs et index ChromaDB (téléchargés 1 seule fois)
+      - ./cemantix_data:/app/cemantix_data
+    environment:
+      - LM_API=http://host.docker.internal:1234/v1
+      - LLM_MODEL=qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2
+    extra_hosts:
+      # Permet au conteneur de communiquer avec LM Studio tournant sur l'hôte
+      - "host.docker.internal:host-gateway"

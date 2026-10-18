@@ -1,0 +1,59 @@
+# ==============================================================================
+# .gitignore — Cémantix RAG Solver
+# ==============================================================================
+
+# 1. Modèles d'embeddings volumineux, matrices NumPy & bases vectorielles
+# Ces fichiers (~2.5 Go) sont téléchargés et indexés automatiquement au premier run.
+cemantix_data/*.bin
+cemantix_data/*.bin.part
+cemantix_data/*.npy
+cemantix_data/*.npz
+cemantix_data/chroma/
+cemantix_data/chroma_w2v/
+cemantix_data/fr_vocab.txt
+cemantix_data/words.txt
+cemantix_data/vecs.npy
+
+# Conserver le dictionnaire officiel de lemmes français (~500 Ko)
+!cemantix_data/lexique_fr.txt
+
+# 2. Environnements virtuels Python
+.venv/
+venv/
+ENV/
+env/
+*.venv/
+
+# 3. Caches Python et bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 4. Fichiers d'environnement et secrets locaux
+.env
+.env.local
+.env.*.local
+
+# 5. Configurations IDE et éditeurs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# 6. Fichiers système
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 7. Logs et traces
+*.log
+scratch/
+runs/
