@@ -12,6 +12,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Deux mots cibles distincts : l'Humain cherche le mot de l'IA ; l'IA cherche le mot de l'Humain (choisi manuellement ou tiré au sort via `/random`).
   - Dashboard console en deux colonnes synchronisées (80 colonnes), thermomètres ASCII et météos Cémantix en miroir.
   - Affichage paramétrable des meilleurs coups via `DUEL_TOP_WORDS` (par défaut Top 10).
+  - Compteur de manches et score cumulé de session persistant (`🧑   X — Y  🤖`) dans le bandeau supérieur.
   - Bascule instantanée en mémoire entre mode solo et duel via `/solo` et `/duel`.
 - **Mode jeu interactif solo (`--play` / `--game`)** :
   - Dashboard dynamique dans la console avec tableau récapitulatif Top 15 des meilleurs coups, météo et rang en pourmille (‰).

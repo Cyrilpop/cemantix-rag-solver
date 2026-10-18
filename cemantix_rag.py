@@ -1173,10 +1173,13 @@ def format_duel_cell(num: int, w: str, s: float, p: int | None, icon: str, lbl: 
 
 def render_duel_board(game_human, guesses_human, last_human,
                       game_ai, guesses_ai, last_ai,
-                      turn_no: int, notice=None):
+                      turn_no: int, notice=None, stats: dict | None = None):
     clear_screen()
     log("=" * 79)
-    log(f"⚔️   CÉMANTIX DUEL CROISÉ — 🧑   VOUS vs 🤖   IA RAG (Tour #{turn_no})")
+    if stats and stats.get("match"):
+        log(f"⚔️   DUEL CROISÉ — Manche #{stats['match']} (🧑   {stats['human']} — {stats['ai']}  🤖) — Tour #{turn_no}")
+    else:
+        log(f"⚔️   CÉMANTIX DUEL CROISÉ — 🧑   VOUS vs 🤖   IA RAG (Tour #{turn_no})")
     log("=" * 79)
 
     sec = game_ai.secret.upper()
@@ -1448,10 +1451,17 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
             return "solo", None
 
 
-def run_duel_loop(store: VocabStore):
+def run_duel_loop(store: VocabStore, stats: dict | None = None):
+    if stats is None:
+        stats = {"human": 0, "ai": 0, "draws": 0, "match": 0}
+    stats["match"] += 1
+
     clear_screen()
     log("=" * 79)
-    log("⚔️   CÉMANTIX DUEL CROISÉ — NOUVEAU MATCH")
+    if stats["match"] > 1:
+        log(f"⚔️   CÉMANTIX DUEL CROISÉ — MANCHE #{stats['match']} (Score : 🧑   {stats['human']} — {stats['ai']}  🤖)")
+    else:
+        log("⚔️   CÉMANTIX DUEL CROISÉ — NOUVEAU MATCH")
     log("=" * 79)
     log("L'IA a tiré son mot secret. Choisissez la cible que l'IA doit trouver :\n")
 
@@ -1498,7 +1508,7 @@ def run_duel_loop(store: VocabStore):
     while True:
         render_duel_board(game_human, guesses_human, last_human,
                           game_ai, ai_player.guesses, last_ai,
-                          turn_no + 1, notice=notice)
+                          turn_no + 1, notice=notice, stats=stats)
         notice = None
 
         try:
@@ -1519,10 +1529,12 @@ def run_duel_loop(store: VocabStore):
             log(f"\n👋  Au revoir ! Votre mot secret était : « {BOLD}{game_human.secret.upper()}{RESET} ».")
             return None
         elif cmd in ("/abandon", "/giveup"):
+            stats["ai"] += 1
             log("\n" + "=" * 79)
             log(f"🏳️   Abandon du duel au tour #{turn_no + 1}.")
             log(f"💡   Votre mot secret à trouver était : « {BOLD}{game_human.secret.upper()}{RESET} »")
             log(f"🤖   L'IA cherchait votre mot « {BOLD}{ai_target.upper()}{RESET} »")
+            log(f"📊   Score cumulé de session : 🧑   {stats['human']} — {stats['ai']}  🤖 (Manche #{stats['match']})")
             log("=" * 79 + "\n")
             try:
                 ans = input("🎮  Rejouer une manche ? ([O]ui / [S]olo / [Q]uitter) [O] > ").strip().lower()
@@ -1602,9 +1614,16 @@ def run_duel_loop(store: VocabStore):
         ai_won = (p_ai == 1000 or w_ai == ai_target)
 
         if human_won or ai_won:
+            if human_won and ai_won:
+                stats["draws"] += 1
+            elif human_won:
+                stats["human"] += 1
+            else:
+                stats["ai"] += 1
+
             render_duel_board(game_human, guesses_human, last_human,
                               game_ai, ai_player.guesses, last_ai,
-                              turn_no, notice=None)
+                              turn_no, notice=None, stats=stats)
             log("\n" + "🎉" * 25)
             if human_won and ai_won:
                 log("🤝   ÉGALITÉ PARFAITE ! Vous et l'IA avez trouvé vos cibles au même tour !")
@@ -1616,6 +1635,7 @@ def run_duel_loop(store: VocabStore):
                 log(f"🤖   VICTOIRE DE L'IA RAG EN {turn_no} COUPS !")
                 log(f"     L'IA a démasqué votre mot secret « {BOLD}{ai_target.upper()}{RESET} » !")
                 log(f"     Votre cible dissimulée était « {BOLD}{game_human.secret.upper()}{RESET} ».")
+            log(f"📊   Score cumulé de session : 🧑   {stats['human']} — {stats['ai']}  🤖 (Manches jouées : {stats['match']})")
             log("🎉" * 25 + "\n")
 
             try:
@@ -1633,6 +1653,7 @@ def run_game(args):
     store = VocabStore()
     secret_arg = getattr(args, "secret", None)
     mode = "duel" if getattr(args, "duel", False) else "solo"
+    duel_stats = {"human": 0, "ai": 0, "draws": 0, "match": 0}
 
     while True:
         if mode == "solo":
@@ -1640,7 +1661,7 @@ def run_game(args):
             if mode is None:
                 break
         elif mode == "duel":
-            mode = run_duel_loop(store)
+            mode = run_duel_loop(store, stats=duel_stats)
             if mode is None:
                 break
 
