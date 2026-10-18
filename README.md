@@ -216,10 +216,31 @@ python cemantix_rag.py --play --secret "volcan"
 
 ---
 
+### 5. Mode Duel Croisé Humain vs IA (`--duel`)
+
+Face-à-face en simultané type « Bataille Navale sémantique » opposant un joueur humain et l'IA RAG :
+- **Mots secrets croisés :** L'Humain cherche le mot de l'IA ; l'IA cherche le mot choisi par l'Humain (ou tiré au sort avec `/random`).
+- **Dashboard miroir synchronisé :** Affichage côte à côte des deux progressions (thermomètres ASCII, météo, Top coups).
+- **Niveaux de difficulté :** 3 profils d'IA (`facile`, `moyen`, `expert`) sélectionnables au départ ou via `/diff`, `/facile`, `/moyen`, `/expert`.
+- **Coup spécial d'espionnage (`/espion`) :** 1 crédit par match pour intercepter les projections Ridge de l'IA (disciplines surveillées, niveau de danger).
+- **Débriefing comparatif d'après-match :** Bilan exhaustif côte à côte (vainqueur, première étincelle, répartition météo).
+
+```bash
+# Lancer le mode duel croisé :
+python cemantix_rag.py --duel
+
+# Régler la difficulté initiale de l'IA :
+python cemantix_rag.py --duel -d expert
+```
+
+---
+
 ## ⚙️ Options en Ligne de Commande
 
 | Option | Type | Défaut | Description |
 | :--- | :---: | :---: | :--- |
+| `--duel` | Flag | `False` | Lance le mode duel croisé interactif (Humain vs IA RAG). |
+| `--difficulty`, `-d` | Choix (`facile`, `moyen`, `expert`) | `moyen` | Règle le niveau d'agressivité de l'IA en mode duel. |
 | `--play`, `--game` | Flag | `False` | Active le mode jeu interactif solo dans le terminal. |
 | `--rag-only`, `--no-llm` | Flag | `False` | Active le mode 100% RAG mathématique pur (zéro appel LLM). |
 | `--battle [R]` | Entier | `0` | Lance un tournoi comparatif de $R$ round(s) par mot (défaut : 1). |
