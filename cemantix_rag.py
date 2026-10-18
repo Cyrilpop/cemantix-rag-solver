@@ -1237,6 +1237,84 @@ def render_duel_board(game_human, guesses_human, last_human,
         log(f"\n{notice}")
 
 
+def render_duel_debrief(game_human, guesses_human, game_ai, guesses_ai,
+                        winner: str, turn_no: int, stats: dict):
+    """Affiche le tableau comparatif d'après-match côte à côte sur 79 colonnes."""
+    log("\n" + "=" * 79)
+    log(f"📊   DÉBRIEFING DU MATCH — MANCHE #{stats.get('match', 1)}")
+    log("=" * 79)
+
+    if winner == "human":
+        win_str = f"  Vainqueur : 🥳  HUMAIN (en {turn_no} tours)"
+    elif winner == "ai":
+        win_str = f"  Vainqueur : 🤖  IA RAG (en {turn_no} tours)"
+    elif winner == "draw":
+        win_str = f"  Résultat  : 🤝  ÉGALITÉ ({turn_no} tours)"
+    else:
+        win_str = f"  Résultat  : 🏳️  ABANDON (au tour #{turn_no})"
+
+    score_str = f"  Score session : 🧑  {stats.get('human', 0)} — {stats.get('ai', 0)}  🤖"
+    log(f"{pad_visible(win_str, 38)} │ {pad_visible(score_str, 38)}")
+    log("─" * 38 + "─┼─" + "─" * 38)
+
+    diff_tag = stats.get("difficulty", "moyen").upper()
+    title_l = "  🧑  PARCOURS HUMAIN"
+    title_r = f"  🤖  PARCOURS IA RAG [{diff_tag}]"
+    log(f"{pad_visible(title_l, 38)} │ {pad_visible(title_r, 38)}")
+
+    target_l = f"  • Cible        : {game_human.secret.upper()[:16]}"
+    target_r = f"  • Cible        : {game_ai.secret.upper()[:16]}"
+    log(f"{pad_visible(target_l, 38)} │ {pad_visible(target_r, 38)}")
+
+    h_won = (winner == "human" or game_human.secret in guesses_human)
+    a_won = (winner == "ai" or game_ai.secret in guesses_ai)
+    t_h = guesses_human.get(game_human.secret, (0, 0, turn_no))[2] if h_won else None
+    t_a = guesses_ai.get(game_ai.secret, (0, 0, turn_no))[2] if a_won else None
+
+    stat_l = f"  • Statut       : TROUVÉ (Tour #{t_h})" if h_won else "  • Statut       : Non trouvé"
+    stat_r = f"  • Statut       : TROUVÉ (Tour #{t_a})" if a_won else "  • Statut       : Non trouvé"
+    log(f"{pad_visible(stat_l, 38)} │ {pad_visible(stat_r, 38)}")
+
+    def fmt_best(guesses):
+        if not guesses:
+            return "-"
+        b = max(guesses.items(), key=lambda x: x[1][0], default=None)
+        if not b:
+            return "-"
+        w, (s, p, num, *_) = b
+        sc = f"{p}‰" if p else f"{s*100:.1f}°C"
+        return f"[{num:>2}] {w[:10]} ({sc})"
+
+    bm_l = f"  • Meilleur mot : {fmt_best(guesses_human)}"
+    bm_r = f"  • Meilleur mot : {fmt_best(guesses_ai)}"
+    log(f"{pad_visible(bm_l, 38)} │ {pad_visible(bm_r, 38)}")
+
+    def fmt_spark(guesses):
+        sparks = [(w, v[0], v[1], v[2]) for w, v in guesses.items() if (v[0] >= 0.15 or v[1] is not None)]
+        if not sparks:
+            return "-"
+        first = min(sparks, key=lambda x: x[3])
+        return f"Tour #{first[3]} ({first[0][:10]})"
+
+    spk_l = f"  • 1ère étincelle: {fmt_spark(guesses_human)}"
+    spk_r = f"  • 1ère étincelle: {fmt_spark(guesses_ai)}"
+    log(f"{pad_visible(spk_l, 38)} │ {pad_visible(spk_r, 38)}")
+
+    def count_weather(guesses):
+        hot = sum(1 for v in guesses.values() if v[1] and v[1] >= 900)
+        warm = sum(1 for v in guesses.values() if v[1] and v[1] < 900)
+        cold = sum(1 for v in guesses.values() if not v[1])
+        return hot, warm, cold
+
+    hot_h, warm_h, cold_h = count_weather(guesses_human)
+    hot_a, warm_a, cold_a = count_weather(guesses_ai)
+
+    met_l = f"  • Météo        : 🔥 {hot_h:<2} 😎 {warm_h:<2} 🥶 {cold_h:<2}"
+    met_r = f"  • Météo        : 🔥 {hot_a:<2} 😎 {warm_a:<2} 🥶 {cold_a:<2}"
+    log(f"{pad_visible(met_l, 38)} │ {pad_visible(met_r, 38)}")
+    log("─" * 38 + "─┼─" + "─" * 38 + "\n")
+
+
 class RagDuelPlayer:
     """Agent RAG mathématique jouant un coup par tour pour le mode Duel."""
     def __init__(self, store: VocabStore, game: MockClient, difficulty: str = "moyen"):
@@ -1606,12 +1684,8 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
             continue
         elif cmd in ("/abandon", "/giveup"):
             stats["ai"] += 1
-            log("\n" + "=" * 79)
-            log(f"🏳️   Abandon du duel au tour #{turn_no + 1}.")
-            log(f"💡   Votre mot secret à trouver était : « {BOLD}{game_human.secret.upper()}{RESET} »")
-            log(f"🤖   L'IA cherchait votre mot « {BOLD}{ai_target.upper()}{RESET} »")
-            log(f"📊   Score cumulé de session : 🧑   {stats['human']} — {stats['ai']}  🤖 (Manche #{stats['match']})")
-            log("=" * 79 + "\n")
+            render_duel_debrief(game_human, guesses_human, game_ai, ai_player.guesses,
+                                winner="abandon", turn_no=turn_no + 1, stats=stats)
             try:
                 ans = input("🎮  Rejouer une manche ? ([O]ui / [S]olo / [Q]uitter) [O] > ").strip().lower()
             except (KeyboardInterrupt, EOFError):
@@ -1692,27 +1766,19 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
         if human_won or ai_won:
             if human_won and ai_won:
                 stats["draws"] += 1
+                winner = "draw"
             elif human_won:
                 stats["human"] += 1
+                winner = "human"
             else:
                 stats["ai"] += 1
+                winner = "ai"
 
             render_duel_board(game_human, guesses_human, last_human,
                               game_ai, ai_player.guesses, last_ai,
                               turn_no, notice=None, stats=stats)
-            log("\n" + "🎉" * 25)
-            if human_won and ai_won:
-                log("🤝   ÉGALITÉ PARFAITE ! Vous et l'IA avez trouvé vos cibles au même tour !")
-            elif human_won:
-                log(f"🥳   VICTOIRE DE L'HUMAIN EN {turn_no} COUPS !")
-                log(f"     Vous avez trouvé votre cible « {BOLD}{game_human.secret.upper()}{RESET} » avant l'IA !")
-                log(f"     L'IA traquait votre mot « {BOLD}{ai_target.upper()}{RESET} » ({last_ai[0]} : {last_ai[1]*100:.1f}°C).")
-            else:
-                log(f"🤖   VICTOIRE DE L'IA RAG EN {turn_no} COUPS !")
-                log(f"     L'IA a démasqué votre mot secret « {BOLD}{ai_target.upper()}{RESET} » !")
-                log(f"     Votre cible dissimulée était « {BOLD}{game_human.secret.upper()}{RESET} ».")
-            log(f"📊   Score cumulé de session : 🧑   {stats['human']} — {stats['ai']}  🤖 (Manches jouées : {stats['match']})")
-            log("🎉" * 25 + "\n")
+            render_duel_debrief(game_human, guesses_human, game_ai, ai_player.guesses,
+                                winner=winner, turn_no=turn_no, stats=stats)
 
             try:
                 ans = input("🎮  Rejouer une manche ? ([O]ui / [S]olo / [Q]uitter) [O] > ").strip().lower()

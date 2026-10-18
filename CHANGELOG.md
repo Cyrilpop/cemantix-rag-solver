@@ -16,6 +16,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - 3 niveaux de difficulté pour l'IA (`Facile`, `Moyen`, `Expert`) ajustant le nombre de graines, le seuil de chauffe et le choix des candidats rerankés.
   - Configuration d'avant-match guidée en deux étapes (niveau puis cible de l'IA).
   - Bascule dynamique du niveau en jeu via `/diff`, `/facile`, `/moyen`, `/expert` et option CLI `--difficulty` (`-d`).
+  - Tableau de débriefing comparatif d'après-match (`render_duel_debrief`) : confrontation côte à côte des cibles, statut, meilleur mot atteint, première étincelle et répartition météo.
   - Bascule instantanée en mémoire entre mode solo et duel via `/solo` et `/duel`.
 - **Mode jeu interactif solo (`--play` / `--game`)** :
   - Dashboard dynamique dans la console avec tableau récapitulatif Top 15 des meilleurs coups, météo et rang en pourmille (‰).
