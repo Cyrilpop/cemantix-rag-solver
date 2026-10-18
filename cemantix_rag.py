@@ -1177,7 +1177,8 @@ def render_duel_board(game_human, guesses_human, last_human,
     clear_screen()
     log("=" * 79)
     if stats and stats.get("match"):
-        log(f"⚔️   DUEL CROISÉ — Manche #{stats['match']} (🧑   {stats['human']} — {stats['ai']}  🤖) — Tour #{turn_no}")
+        diff_tag = f" [{stats.get('difficulty', 'moyen').upper()}]" if stats.get("difficulty") else ""
+        log(f"⚔️   DUEL CROISÉ — Manche #{stats['match']} (🧑   {stats['human']} — {stats['ai']}  🤖){diff_tag} — Tour #{turn_no}")
     else:
         log(f"⚔️   CÉMANTIX DUEL CROISÉ — 🧑   VOUS vs 🤖   IA RAG (Tour #{turn_no})")
     log("=" * 79)
@@ -1238,12 +1239,24 @@ def render_duel_board(game_human, guesses_human, last_human,
 
 class RagDuelPlayer:
     """Agent RAG mathématique jouant un coup par tour pour le mode Duel."""
-    def __init__(self, store: VocabStore, game: MockClient):
+    def __init__(self, store: VocabStore, game: MockClient, difficulty: str = "moyen"):
         self.store = store
         self.game = game
+        self.difficulty = difficulty.lower() if difficulty else "moyen"
+        if self.difficulty not in ("facile", "moyen", "expert"):
+            self.difficulty = "moyen"
         self.tried = set()
         self.guesses = {}   # norm -> (s, p, num, w_icon, w_lbl)
-        self.seeds = ["animal", "temps", "science", "musique", "justice", "corps", "voyage", "nourriture", "nature", "travail"]
+
+        if self.difficulty == "facile":
+            self.seeds = ["animal", "temps", "science", "musique", "justice", "corps", "voyage", "nourriture", "nature", "travail", "couleur", "argent"]
+            self.min_seeds = 6
+        elif self.difficulty == "expert":
+            self.seeds = ["animal", "science", "musique", "justice"]
+            self.min_seeds = 2
+        else:  # moyen
+            self.seeds = ["animal", "temps", "science", "musique", "justice", "corps", "voyage", "nourriture", "nature", "travail"]
+            self.min_seeds = 4
         self.seed_idx = 0
 
     def play_turn(self, turn_no: int) -> tuple[str, float, int | None, str, str]:
@@ -1251,8 +1264,9 @@ class RagDuelPlayer:
         known = [(w, s) for w, (s, p, *_) in self.guesses.items() if w in self.store]
         best_score = max([s for w, s in known], default=-1.0)
 
-        # 1. Amorçage initial si moins de 4 mots ou aucun mot tiède
-        if (len(known) < 4 or best_score < 0.15) and self.seed_idx < len(self.seeds):
+        # 1. Amorçage initial selon niveau
+        warm_threshold = 0.22 if self.difficulty == "facile" else (0.12 if self.difficulty == "expert" else 0.15)
+        if (len(known) < self.min_seeds or best_score < warm_threshold) and self.seed_idx < len(self.seeds):
             while self.seed_idx < len(self.seeds):
                 candidate_seed = self.store.normalize(self.seeds[self.seed_idx])
                 self.seed_idx += 1
@@ -1265,11 +1279,13 @@ class RagDuelPlayer:
             G = np.vstack([self.store.vec(w) for w, s in known])
             s = np.array([s for w, s in known], dtype=np.float32)
             q_est = estimate_secret(G, s)
-            raw_pool = self.store.knn(q_est, 100)
+            k_knn = 150 if self.difficulty == "expert" else (100 if self.difficulty == "moyen" else 60)
+            raw_pool = self.store.knn(q_est, k_knn)
 
             # Ajoute les voisins des meilleurs coups
             sorted_known = sorted(known, key=lambda x: x[1], reverse=True)
-            for w, _ in sorted_known[:2]:
+            k_best = 3 if self.difficulty == "expert" else 2
+            for w, _ in sorted_known[:k_best]:
                 raw_pool += self.store.knn(self.store.vec(w), 50)
 
             cands = []
@@ -1287,7 +1303,17 @@ class RagDuelPlayer:
             if cands:
                 reranked = rerank(self.store, cands, G, s, q_est)
                 if reranked:
-                    word_to_play = reranked[0][0]
+                    if self.difficulty == "expert":
+                        # Expert : joue toujours le top 1 absolu
+                        word_to_play = reranked[0][0]
+                    elif self.difficulty == "facile":
+                        # Facile : sélectionne parmi le pool (rangs 3 à 8) pour ne pas converger trop vite
+                        cand_pool = [c[0] for c in reranked[min(2, len(reranked)-1):min(8, len(reranked))]]
+                        word_to_play = str(np.random.choice(cand_pool)) if cand_pool else reranked[0][0]
+                    else:
+                        # Moyen : équilibré, choisit dans le top 2
+                        cand_pool = [c[0] for c in reranked[:min(2, len(reranked))]]
+                        word_to_play = str(np.random.choice(cand_pool))
 
         # 3. Fallback sécurité
         if not word_to_play:
@@ -1451,9 +1477,11 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
             return "solo", None
 
 
-def run_duel_loop(store: VocabStore, stats: dict | None = None):
+def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficulty: str = "moyen"):
     if stats is None:
-        stats = {"human": 0, "ai": 0, "draws": 0, "match": 0}
+        stats = {"human": 0, "ai": 0, "draws": 0, "match": 0, "difficulty": initial_difficulty}
+    if "difficulty" not in stats:
+        stats["difficulty"] = initial_difficulty
     stats["match"] += 1
 
     clear_screen()
@@ -1463,24 +1491,54 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None):
     else:
         log("⚔️   CÉMANTIX DUEL CROISÉ — NOUVEAU MATCH")
     log("=" * 79)
-    log("L'IA a tiré son mot secret. Choisissez la cible que l'IA doit trouver :\n")
+    log("L'IA a tiré son mot secret. Paramétrez la manche :\n")
 
-    ai_target = None
-    while not ai_target:
+    # Étape 1/2 : Niveau de difficulté de l'IA
+    diff_default = stats["difficulty"].capitalize()
+    while True:
         try:
-            raw = input("🎯  Mot secret pour l'IA (votre mot, ou Entrée / '/random' pour tirage aléatoire) > ").strip().strip('\ufeff')
+            raw_diff = input(f"Étape 1/2 🎚️   Niveau de l'IA ([F]acile, [M]oyen, [E]xpert) [{diff_default}] > ").strip().lower()
         except (KeyboardInterrupt, EOFError):
             log("\n👋  Au revoir !")
             return None
 
-        if not raw or raw.lower() in ("/random", "random"):
+        if not raw_diff:
+            break
+        elif raw_diff in ("/solo", "solo"):
+            return "solo"
+        elif raw_diff in ("/quitter", "/quit", "quit", "exit"):
+            return None
+        elif raw_diff.startswith("f"):
+            stats["difficulty"] = "facile"
+            break
+        elif raw_diff.startswith("e"):
+            stats["difficulty"] = "expert"
+            break
+        elif raw_diff.startswith("m"):
+            stats["difficulty"] = "moyen"
+            break
+        else:
+            log("❌  Option invalide. Choisissez [F]acile, [M]oyen ou [E]xpert.")
+
+    log(f"✓   Niveau sélectionné : {BOLD}{stats['difficulty'].upper()}{RESET}\n")
+
+    # Étape 2/2 : Mot secret pour l'IA
+    ai_target = None
+    while not ai_target:
+        try:
+            raw = input("Étape 2/2 🎯   Mot secret pour l'IA (Entrée = tirage aléatoire) > ").strip().strip('\ufeff')
+        except (KeyboardInterrupt, EOFError):
+            log("\n👋  Au revoir !")
+            return None
+
+        cmd = raw.lower()
+        if not raw or cmd in ("/random", "random"):
             valid_cands = [w for w in store.words if store.is_valid_french(w) and len(w) >= 4 and w not in STOPWORDS]
             ai_target = str(np.random.choice(valid_cands))
             log(f"🎲  Mot secret tiré au sort pour l'IA : « {BOLD}{ai_target.upper()}{RESET} »")
-            time.sleep(1.0)
+            time.sleep(0.8)
             break
 
-        cmd = raw.lower()
         if cmd in ("/solo", "solo"):
             return "solo"
         if cmd in ("/quitter", "/quit", "quit", "exit"):
@@ -1490,13 +1548,13 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None):
         if store.is_valid_french(norm) and norm in store:
             ai_target = norm
             log(f"✓   Mot secret de l'IA validé : « {BOLD}{ai_target.upper()}{RESET} »")
-            time.sleep(1.0)
+            time.sleep(0.8)
             break
         else:
             log(f"❌  Mot « {raw} » non reconnu ou non recevable (lemmes français au singulier uniquement).")
 
     game_ai = MockClient(store, secret=ai_target)
-    ai_player = RagDuelPlayer(store, game_ai)
+    ai_player = RagDuelPlayer(store, game_ai, difficulty=stats["difficulty"])
     game_human = MockClient(store)
 
     guesses_human = {}
@@ -1528,6 +1586,24 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None):
         elif cmd in ("/quitter", "/quit", "/exit", "exit", "quit"):
             log(f"\n👋  Au revoir ! Votre mot secret était : « {BOLD}{game_human.secret.upper()}{RESET} ».")
             return None
+        elif cmd in ("/diff", "/difficulte", "/difficulty", "/niveau"):
+            notice = f"🎚️   Niveau actuel de l'IA : {stats['difficulty'].upper()} (changez avec /facile, /moyen, /expert)"
+            continue
+        elif cmd in ("/facile", "facile"):
+            stats["difficulty"] = "facile"
+            ai_player.difficulty = "facile"
+            notice = "✓   Niveau de l'IA basculé sur : FACILE"
+            continue
+        elif cmd in ("/moyen", "moyen"):
+            stats["difficulty"] = "moyen"
+            ai_player.difficulty = "moyen"
+            notice = "✓   Niveau de l'IA basculé sur : MOYEN"
+            continue
+        elif cmd in ("/expert", "expert"):
+            stats["difficulty"] = "expert"
+            ai_player.difficulty = "expert"
+            notice = "✓   Niveau de l'IA basculé sur : EXPERT"
+            continue
         elif cmd in ("/abandon", "/giveup"):
             stats["ai"] += 1
             log("\n" + "=" * 79)
@@ -1546,7 +1622,7 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None):
                 return None
             return "duel"
         elif cmd in ("/aide", "/help"):
-            notice = "Commandes : /solo (mode solo), /indice, /rejouer, /abandon, /quitter"
+            notice = "Commandes : /solo, /diff, /facile, /moyen, /expert, /indice, /rejouer, /abandon, /quitter"
             continue
         elif cmd in ("/indice", "/hint"):
             if len(guesses_human) < 3:
@@ -1653,7 +1729,8 @@ def run_game(args):
     store = VocabStore()
     secret_arg = getattr(args, "secret", None)
     mode = "duel" if getattr(args, "duel", False) else "solo"
-    duel_stats = {"human": 0, "ai": 0, "draws": 0, "match": 0}
+    init_diff = getattr(args, "difficulty", "moyen")
+    duel_stats = {"human": 0, "ai": 0, "draws": 0, "match": 0, "difficulty": init_diff}
 
     while True:
         if mode == "solo":
@@ -1661,7 +1738,7 @@ def run_game(args):
             if mode is None:
                 break
         elif mode == "duel":
-            mode = run_duel_loop(store, stats=duel_stats)
+            mode = run_duel_loop(store, stats=duel_stats, initial_difficulty=init_diff)
             if mode is None:
                 break
 
@@ -1706,6 +1783,8 @@ def main():
                     help="mode jeu interactif : tire un mot au sort en local et vous laisse deviner avec le calcul vectoriel")
     ap.add_argument("--duel", action="store_true",
                     help="lance directement le mode duel croisé humain vs IA RAG")
+    ap.add_argument("--difficulty", "-d", choices=["facile", "moyen", "expert"], default="moyen",
+                    help="niveau de difficulté de l'IA en mode duel (facile, moyen, expert; défaut: moyen)")
     args = ap.parse_args()
 
     if args.duel:
