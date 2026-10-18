@@ -41,8 +41,11 @@ import numpy as np
 import requests
 
 # --------------------------------------------------------------------------- #
-# Configuration
+# Configuration & Styles
 # --------------------------------------------------------------------------- #
+BOLD = "\033[34m"
+RESET = "\033[0m"
+
 LM_API = os.getenv("LM_API", "http://host.docker.internal:1234/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2")
 
@@ -1026,24 +1029,261 @@ def run_battle(args, n_rounds: int):
     time_b_all = [r["res_b"]["time"] for r in all_battle_results]
 
     log("\n📊  STATISTIQUES GLOBALES SUR TOUS LES DUELS :")
-    log(f"  Victoires ⚡ 100% RAG Pur : {wins_a} / {total_duels} ({wins_a/total_duels*100:.1f}%)")
-    log(f"  Victoires 🤖 Hybride LLM  : {wins_b} / {total_duels} ({wins_b/total_duels*100:.1f}%)")
-    log(f"  Duels nuls 🤝             : {draws} / {total_duels} ({draws/total_duels*100:.1f}%)")
+    log(f"  Victoires ⚡  100% RAG Pur : {wins_a} / {total_duels} ({wins_a/total_duels*100:.1f}%)")
+    log(f"  Victoires 🤖  Hybride LLM  : {wins_b} / {total_duels} ({wins_b/total_duels*100:.1f}%)")
+    log(f"  Duels nuls 🤝  : {draws} / {total_duels} ({draws/total_duels*100:.1f}%)")
 
     if tries_a_all and tries_b_all:
         log("\n🎯  EFFICACITÉ GLOBALE (Nombre d'essais moyen) :")
-        log(f"  ⚡ 100% RAG Pur  : {np.mean(tries_a_all):.1f} essais (médiane: {np.median(tries_a_all):.0f}, min: {np.min(tries_a_all)}, max: {np.max(tries_a_all)})")
-        log(f"  🤖 Hybride LLM   : {np.mean(tries_b_all):.1f} essais (médiane: {np.median(tries_b_all):.0f}, min: {np.min(tries_b_all)}, max: {np.max(tries_b_all)})")
+        log(f"  ⚡  100% RAG Pur  : {np.mean(tries_a_all):.1f} essais (médiane: {np.median(tries_a_all):.0f}, min: {np.min(tries_a_all)}, max: {np.max(tries_a_all)})")
+        log(f"  🤖  Hybride LLM   : {np.mean(tries_b_all):.1f} essais (médiane: {np.median(tries_b_all):.0f}, min: {np.min(tries_b_all)}, max: {np.max(tries_b_all)})")
 
-    log("\n⏱️   TEMPS D'EXÉCUTION CUMULÉ :")
-    log(f"  ⚡ 100% RAG Pur  : {sum(time_a_all):.2f}s au total (moyenne {np.mean(time_a_all):.2f}s/duel)")
-    log(f"  🤖 Hybride LLM   : {sum(time_b_all):.2f}s au total (moyenne {np.mean(time_b_all):.2f}s/duel)")
+    log("\n⏱️  TEMPS D'EXÉCUTION CUMULÉ :")
+    log(f"  ⚡  100% RAG Pur  : {sum(time_a_all):.2f}s au total (moyenne {np.mean(time_a_all):.2f}s/duel)")
+    log(f"  🤖  Hybride LLM   : {sum(time_b_all):.2f}s au total (moyenne {np.mean(time_b_all):.2f}s/duel)")
     if sum(time_a_all) > 0:
         log(f"  🚀  Facteur d'accélération RAG : {sum(time_b_all)/max(sum(time_a_all), 0.001):.1f}x plus rapide !")
     log("=" * 88 + "\n" if total_words > 1 else "=" * 70 + "\n")
 
 
+def clear_screen():
+    """Efface l'écran du terminal proprement pour tous les OS et environnements."""
+    if sys.stdout.isatty():
+        os.system("cls" if os.name == "nt" else "clear")
+
+
+def make_gauge(s: float, p: int | None, threshold: float, width: int = 20) -> str:
+    """Génère un thermomètre visuel ASCII adapté à la proximité sémantique."""
+    if p is not None:
+        ratio = 0.35 + (min(1000, max(1, p)) / 1000.0) * 0.65
+        pct_lbl = f"{p:>4}‰"
+    else:
+        norm_s = max(0.0, s) / max(threshold, 0.01)
+        ratio = min(0.35, norm_s * 0.35)
+        pct_lbl = f"{s*100:5.1f}°C"
+    filled = int(round(ratio * width))
+    filled = max(0, min(width, filled))
+    bar = "█" * filled + "░" * (width - filled)
+    return f"[{bar}] {pct_lbl}"
+
+
+def render_game_board(game, guesses, last_played=None, notice=None, view_mode="top"):
+    clear_screen()
+    tries_count = len(guesses)
+    best_tuple = max(guesses.values(), key=lambda v: v[0], default=None)
+    best_score_str = f"{best_tuple[0]*100:6.2f}°C" if best_tuple else "Aucun"
+    best_word = [w for w, v in guesses.items() if v == best_tuple][0] if best_tuple else "-"
+
+    log("=" * 70)
+    log("🎮  CÉMANTIX INTERACTIF — À VOUS DE JOUER !")
+    log("=" * 70)
+    log(f"Essais joués : {tries_count:>3}  |  Meilleur : {best_word:<15} ({best_score_str})")
+    log(f"Seuil Top 1000 : {game.p1000_threshold * 100:.2f}°C")
+    log("-" * 70)
+
+    if not guesses:
+        log("\n  💡  Proposez un premier mot pour démarrer la recherche sémantique !\n")
+    else:
+        if view_mode == "history":
+            log("📜  HISTORIQUE DES ESSAIS (Ordre chronologique) :")
+            items = sorted(guesses.items(), key=lambda x: x[1][2])[-15:]
+        else:
+            log("🏆  TABLEAU RÉCAPITULATIF DES MEILLEURS ESSAIS :")
+            items = sorted(guesses.items(), key=lambda x: x[1][0], reverse=True)[:15]
+
+        log(f"  {'#':<5}  {'Mot':<20} {'Température':<12}  {'Météo':<14}  {'Rang'}")
+        log("  " + "─" * 60)
+        for w, (s, p, num, w_icon, w_lbl) in items:
+            rk_str = f"{p:>4}‰" if p else "     "
+            is_last = (last_played and w == last_played[0])
+            w_disp = f"{BOLD}{w:<20}{RESET}" if is_last else f"{w:<20}"
+            log(f"  [{num:>3}]  {w_disp} {s*100:6.2f}°C     {w_icon}  {w_lbl:<10}  {rk_str}")
+        log("  " + "─" * 60)
+
+    if last_played:
+        w, s, p, num, w_icon, w_lbl, is_best = last_played
+        rk_str = f"({p}‰)" if p else ""
+        rec_str = "  ⭐  (Nouveau record !)" if is_best else ""
+        gauge = make_gauge(s, p, game.p1000_threshold, width=20)
+        log(f"Dernier coup : [{num:>3}] {BOLD}{w}{RESET} ({s*100:.2f}°C  {w_icon}  {w_lbl} {rk_str}){rec_str}")
+        log(f"Thermomètre  : {gauge}  {w_icon}  {w_lbl}")
+
+    if notice:
+        log(f"\n{notice}")
+
+    log("-" * 70)
+
+
+def run_game(args):
+    store = VocabStore()
+    secret_arg = getattr(args, "secret", None)
+
+    while True:
+        game = MockClient(store, secret=secret_arg)
+        guesses = {}   # norm -> (s, p, num, w_icon, w_lbl)
+        history = []   # list of (norm, s, p, num, w_icon, w_lbl)
+        t0 = time.time()
+        tries_count = 0
+        last_played = None
+        notice = None
+        view_mode = "top"
+        game_over = False
+        last_cmd = None
+
+        while not game_over:
+            render_game_board(game, guesses, last_played=last_played, notice=notice, view_mode=view_mode)
+            notice = None
+
+            try:
+                raw = input(f"Essai #{tries_count + 1} (ou /aide, /indice, /rejouer, /abandon) > ").strip().strip('\ufeff')
+            except (KeyboardInterrupt, EOFError):
+                log(f"\n👋  Partie interrompue. Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} ».")
+                return
+
+            if not raw:
+                continue
+
+            cmd = raw.lower()
+            last_cmd = cmd
+            if cmd in ("/quitter", "/quit", "/exit", "exit", "quit"):
+                log(f"\n👋  Au revoir ! Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} ».")
+                return
+            elif cmd in ("/abandon", "/giveup", "/solution"):
+                elapsed = time.time() - t0
+                log("\n" + "=" * 70)
+                log(f"🏳️  Abandon après {tries_count} essai(s) ({elapsed:.1f}s).")
+                log(f"💡  Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} »")
+                log("=" * 70 + "\n")
+                game_over = True
+                break
+            elif cmd in ("/rejouer", "/nouveau", "/new", "/restart"):
+                log(f"\n🔄  Nouvelle partie lancée ! Le mot secret précédent était : « {BOLD}{game.secret.upper()}{RESET} ».\n")
+                time.sleep(1.2)
+                game_over = True
+                break
+            elif cmd in ("/aide", "/help"):
+                notice = "Commandes disponibles : /top, /historique, /indice, /rejouer, /abandon, /quitter"
+                continue
+            elif cmd in ("/top", "/best"):
+                view_mode = "top"
+                notice = "Affichage basculé sur le Top des meilleurs essais."
+                continue
+            elif cmd in ("/historique", "/history"):
+                view_mode = "history"
+                notice = "Affichage basculé sur l'historique chronologique."
+                continue
+            elif cmd in ("/indice", "/hint"):
+                if len(guesses) < 3:
+                    notice = "💡  Jouez au moins 3 mots pour que le RAG puisse calculer un indice pertinent."
+                    continue
+
+                ranked_words = sorted(guesses.items(), key=lambda x: x[1][0], reverse=True)
+                top_word, (best_s, best_p, *_) = ranked_words[0]
+
+                # Si le joueur a déjà une piste (> 0.10 de cosinus), on calcule un vecteur pont vers le secret
+                if best_s > 0.10:
+                    v_best = store.vec(top_word)
+                    v_target = 0.35 * v_best + 0.65 * game.v_secret
+                    v_target = v_target / np.linalg.norm(v_target)
+                    cands_knn = store.knn(v_target, k=60)
+                else:
+                    # Sinon, on offre une tête de pont modérée dans la galaxie du mot secret
+                    cands_knn = store.knn(game.v_secret, k=150)[40:]
+
+                # Filtrage des candidats pour ne pas trahir le mot directement
+                secret_stem = game.secret[:min(5, len(game.secret))]
+                valid_hints = []
+                for w in cands_knn:
+                    w_norm = store.normalize(w)
+                    if (w_norm not in guesses
+                            and w_norm != game.secret
+                            and len(w_norm) >= 4
+                            and w_norm not in STOPWORDS
+                            and not w_norm.startswith(secret_stem)
+                            and not game.secret.startswith(w_norm[:min(5, len(w_norm))])
+                            and store.is_valid_french(w_norm)):
+                        res_hint = game.score(w_norm)
+                        if res_hint:
+                            s_w, p_w = res_hint
+                            if s_w > best_s or (p_w and p_w >= 500):
+                                valid_hints.append((w_norm, s_w, p_w))
+
+                if valid_hints:
+                    valid_hints.sort(key=lambda x: x[1])
+                    chosen_hint = valid_hints[len(valid_hints) // 2][0]
+                    notice = f"💡  [INDICE RAG] Piste sémantique vers le secret : explorez le champ de « {chosen_hint} »"
+                else:
+                    notice = "💡  Pas d'indice supplémentaire disponible pour le moment."
+                continue
+
+            norm = store.normalize(cmd)
+            if norm in guesses:
+                s, p, num, w_icon, w_lbl = guesses[norm]
+                rk_str = f"{p}‰" if p else ""
+                notice = f"⚠️  Déjà essayé (#{num}) : « {norm} » ({s*100:.2f}°C  {w_icon}  {w_lbl} {rk_str})"
+                continue
+
+            if not store.is_valid_french(norm) or norm not in store:
+                notice = f"❌  Mot « {raw} » non reconnu ou non recevable (lemmes français au singulier uniquement)."
+                continue
+
+            res = game.score(norm)
+            if res is None:
+                notice = f"❌  Mot « {raw} » rejeté par le jeu."
+                continue
+
+            s, p = res
+            tries_count += 1
+
+            # Échelle officielle Cémantix avec séparation stricte icône + libellé
+            if p == 1000 or norm == game.secret:
+                w_icon, w_lbl = "🥳", "GAGNÉ !"
+            elif p and p >= 999:
+                w_icon, w_lbl = "😱", "BRÛLANT"
+            elif p and p >= 990:
+                w_icon, w_lbl = "🔥", "TRÈS CHAUD"
+            elif p and p >= 900:
+                w_icon, w_lbl = "🥵", "CHAUD"
+            elif p and p >= 1:
+                w_icon, w_lbl = "😎", "TIÈDE"
+            elif s >= 0.15:
+                w_icon, w_lbl = "🥶", "FRAIS"
+            elif s >= 0:
+                w_icon, w_lbl = "🥶", "FROID"
+            else:
+                w_icon, w_lbl = "🧊", "GLACIAL"
+
+            best_score = max([v[0] for v in guesses.values()], default=-1.0)
+            is_new_best = (s > best_score) and (s > 0.15)
+            guesses[norm] = (s, p, tries_count, w_icon, w_lbl)
+            last_played = (norm, s, p, tries_count, w_icon, w_lbl, is_new_best)
+
+            if p == 1000 or norm == game.secret:
+                render_game_board(game, guesses, last_played=last_played, view_mode="top")
+                elapsed = time.time() - t0
+                log("\n" + "🎉" * 25)
+                log("🥳  VICTOIRE ! FÉLICITATIONS !")
+                log(f"    Vous avez trouvé le mot secret « {BOLD}{game.secret.upper()}{RESET} » !")
+                log(f"    Nombre total d'essais : {tries_count}")
+                log(f"    Temps de réflexion     : {elapsed:.1f} secondes")
+                log("🎉" * 25 + "\n")
+                game_over = True
+                break
+
+        secret_arg = None  # Après la première partie, tirage aléatoire systématique
+        if last_cmd not in ("/rejouer", "/nouveau", "/new", "/restart"):
+            try:
+                ans = input("🎮  Voulez-vous lancer une nouvelle partie ? [O/n] > ").strip().lower()
+            except (KeyboardInterrupt, EOFError):
+                log("\n👋  Au revoir !")
+                return
+            if ans in ("n", "non", "no", "q", "quit", "quitter"):
+                log("\n👋  Merci d'avoir joué ! À bientôt.\n")
+                return
+
+
 def main():
+    clear_screen()
     ap = argparse.ArgumentParser(description="Solveur Cémantix par RAG local (frWac)")
     ap.add_argument("--max-tries", type=int, default=300)
     ap.add_argument("--retrieve", type=int, default=60,
@@ -1078,12 +1318,16 @@ def main():
                     help="exécute N parties simulées à la suite et affiche les statistiques globales")
     ap.add_argument("--battle", type=int, nargs="?", const=1, default=0,
                     help="mode battle comparatif (N manches sur le MÊME mot) : 100%% RAG Pur vs Hybride RAG+LLM. Par défaut en direct sur le mot du jour Cémantix, ou en local avec --mock")
+    ap.add_argument("--play", "--game", action="store_true", dest="play_mode",
+                    help="mode jeu interactif : tire un mot au sort en local et vous laisse deviner avec le calcul vectoriel")
     args = ap.parse_args()
 
     is_rag_only = getattr(args, "rag_only", False)
     mode_str = "100% RAG Pur Mathématique (Zéro LLM)" if is_rag_only else f"Hybride RAG + Local LLM ({LLM_MODEL})"
 
-    if args.battle > 0 or args.words > 1 or bool(args.secrets):
+    if args.play_mode:
+        run_game(args)
+    elif args.battle > 0 or args.words > 1 or bool(args.secrets):
         battle_rounds = args.battle if args.battle > 0 else 1
         run_battle(args, battle_rounds)
     elif args.benchmark > 0:
