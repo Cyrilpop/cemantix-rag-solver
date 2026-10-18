@@ -22,7 +22,7 @@ DUEL_TOP_WORDS = int(os.getenv("DUEL_TOP_WORDS", "10"))
 # --------------------------------------------------------------------------- #
 # Chemins & Modèles vectoriels
 # --------------------------------------------------------------------------- #
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "cemantix_data"
 
 LEXIQUE_FILE = DATA_DIR / "lexique_fr.txt"

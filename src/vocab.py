@@ -17,7 +17,7 @@ import chromadb
 import numpy as np
 import requests
 
-from config import (
+from .config import (
     DATA_DIR, LEXIQUE_FILE, LEXIQUE_URL, W2V_FILE, W2V_URL,
     MAX_VOCAB, CHROMA_DIR, COLLECTION, WORD_RE, STOPWORDS,
     HEADERS, log

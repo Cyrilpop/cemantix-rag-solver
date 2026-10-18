@@ -11,7 +11,7 @@ Composants d'affichage dans le terminal :
 import os
 import sys
 
-from config import (
+from .config import (
     BOLD, RESET, ANSI_RE, BOARD_WIDTH, COL_WIDTH, DUEL_TOP_WORDS, log
 )
 

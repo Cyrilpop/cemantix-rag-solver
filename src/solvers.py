@@ -16,13 +16,13 @@ from pathlib import Path
 import numpy as np
 import requests
 
-from config import (
+from .config import (
     LM_API, LLM_MODEL, PROMPT, DISCIPLINES, STOPWORDS,
     SEED_WORDS, SEEDS_FACILE, SEEDS_MOYEN, SEEDS_EXPERT, log
 )
-from vocab import VocabStore
-from clients import CemantixClient, MockClient
-from ui import weather_for_score
+from .vocab import VocabStore
+from .clients import CemantixClient, MockClient
+from .ui import weather_for_score
 
 
 # --------------------------------------------------------------------------- #

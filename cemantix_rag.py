@@ -10,21 +10,21 @@ Modes disponibles :
   - Tournoi Battle (--battle N ou --secrets ...)
   - Jeu interactif Solo / Duel croisé (--play ou --duel)
 
-Architecture modulaire :
-  - config.py   : Constantes, styles ANSI, chemins et configuration LLM
-  - vocab.py    : VocabStore (lexique, word2vec, embeddings ChromaDB)
-  - clients.py  : Client API officiel (CemantixClient) & simulation locale (MockClient)
-  - ui.py       : Rendu console, jauges ASCII, dashboard duel & débriefing
-  - solvers.py  : Algorithmes Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
-  - modes.py    : Boucles d'orchestration (benchmark, battle, solo, duel)
+Architecture modulaire (package src/) :
+  - src/config.py   : Constantes, styles ANSI, chemins et configuration LLM
+  - src/vocab.py    : VocabStore (lexique, word2vec, embeddings ChromaDB)
+  - src/clients.py  : Client API officiel (CemantixClient) & simulation locale (MockClient)
+  - src/ui.py       : Rendu console, jauges ASCII, dashboard duel & débriefing
+  - src/solvers.py  : Algorithmes Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
+  - src/modes.py    : Boucles d'orchestration (benchmark, battle, solo, duel)
 """
 import argparse
 import sys
 
-from config import LLM_MODEL, log
-from ui import clear_screen
-from solvers import Solver
-from modes import run_benchmark, run_battle, run_game
+from src.config import LLM_MODEL, log
+from src.ui import clear_screen
+from src.solvers import Solver
+from src.modes import run_benchmark, run_battle, run_game
 
 
 def main():

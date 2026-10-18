@@ -11,7 +11,7 @@ import re
 import requests
 import numpy as np
 
-from config import SITE, HEADERS, STOPWORDS, log
+from .config import SITE, HEADERS, STOPWORDS, log
 
 
 class CemantixClient:

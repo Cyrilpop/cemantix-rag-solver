@@ -6,6 +6,18 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié] - 2026-10-18
 
+### Modifié
+- **Refactoring architectural modulaire (`src/`)** :
+  - Découpage du script monolithique `cemantix_rag.py` (~2 000 lignes) en package modulaire `src/`.
+  - `src/config.py` : centralisation des constantes, styles ANSI et configuration d'environnement.
+  - `src/vocab.py` : gestion du dictionnaire Lexique 3.83, normalisation des accents et `VocabStore` (ChromaDB).
+  - `src/clients.py` : client officiel `CemantixClient` et simulateur local `MockClient`.
+  - `src/ui.py` : composants de rendu console, thermomètres ASCII, dashboards solo/duel et débriefing.
+  - `src/solvers.py` : régression Ridge, algorithme de reranking, interface LLM local, `Solver` et `RagDuelPlayer`.
+  - `src/modes.py` : boucles d'orchestration pour benchmark, battle, solo et duel.
+  - `cemantix_rag.py` : point d'entrée CLI épuré (~80 lignes) orchestrant les modules.
+  - Mise à jour du `Dockerfile` et de la documentation (`README.md`).
+
 ### Ajouté
 - **Mode duel croisé interactif (`--duel`)** :
   - Duel en face-à-face « Bataille Navale sémantique » opposant Joueur Humain vs IA RAG.
