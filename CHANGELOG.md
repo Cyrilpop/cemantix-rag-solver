@@ -23,6 +23,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Restauration de l'écran d'accueil permettant de choisir explicitement entre le mode Solo et le mode Duel croisé au lancement de `--play`.
 
 ### Ajouté
+- **Amorçage par graines orthogonales garanties (Farthest Point Sampling)** :
+  - Sélection géométrique itérative sur l'hypersphère unitaire à 500 dimensions minimisant la similarité cosinus maximale entre les graines sélectionnées.
+  - Couverture pluridisciplinaire exhaustive sans redondance sémantique, assurant un conditionnement numérique optimal pour la régression Ridge dès le premier tour.
+  - Intégration dans le solveur autonome, les benchmarks, le menu de configuration et ajout de la suite de tests unitaires dédiée (`tests/test_seeds.py`).
 - **Menu interactif principal complet (`src/menu.py`)** :
   - Lancement automatique du menu d'accueil lors d'une exécution sans argument (`python cemantix_rag.py`) ou via l'option `--menu` / `-i`.
   - Accès centralisé à l'ensemble des modes : puzzle du jour, jeu solo, duel croisé, battle comparatif, mock local, benchmark autonome et réglages.

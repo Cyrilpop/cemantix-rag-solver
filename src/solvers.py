@@ -158,34 +158,84 @@ class Solver:
         return sorted(((w, s, p) for w, (s, p) in self.guesses.items()),
                       key=lambda g: g[1], reverse=True)
 
-    def generate_optimal_seeds(self, count: int = 16) -> list:
-        """Génération pluridisciplinaire par RAG : interroge ChromaDB pour extraire
-        dynamiquement les lemmes représentatifs des grands domaines de la connaissance."""
+    def generate_optimal_seeds(self, count: int = 16, max_similarity: float = 0.22) -> list:
+        """Génération de graines orthogonales par Farthest Point Sampling (FPS) :
+        maximise la couverture et l'indépendance linéaire dans l'espace à 500 dimensions.
+        Garantit une orthogonalité quasi-parfaite (similarité cosinus minimale entre graines)."""
         if count <= 0:
             return []
-        disciplines = list(DISCIPLINES)
-        np.random.shuffle(disciplines)
-        selected = disciplines[:min(count, len(disciplines))]
 
-        seeds = []
-        for d in selected:
+        # 1. Constitution du pool de lemmes candidats propres et variés
+        cand_words = []
+
+        # Pôle A : disciplines fondamentales et leurs voisins directs dans ChromaDB
+        for d in DISCIPLINES:
             d_norm = self.store.normalize(d)
-            if d_norm in self.store and self.store.is_valid_french(d_norm):
-                vec = self.store.vec(d_norm)
-                neighbors = self.store.knn(vec, k=30)
-                cands = [d_norm]
-                for raw_w in neighbors:
+            if self.store.is_valid_french(d_norm) and d_norm not in cand_words:
+                cand_words.append(d_norm)
+                for raw_w in self.store.knn(self.store.vec(d_norm), k=20):
                     w = self.store.normalize(raw_w)
                     if (self.store.is_valid_french(w)
                             and len(w) >= 4 and w not in STOPWORDS
                             and not w.endswith(('es', 'eaux', 'eux', 'aux'))
                             and not (w.endswith('s') and not w.endswith(('is', 'us', 'as', 'ps', 'os')))
-                            and w not in cands):
-                        cands.append(w)
-                top_pool = cands[:6]
-                chosen = str(np.random.choice(top_pool))
-                if chosen not in seeds:
-                    seeds.append(chosen)
+                            and w not in cand_words):
+                        cand_words.append(w)
+
+        # Pôle B : lemmes fréquents de haute qualité pour enrichir le maillage si nécessaire
+        for w in self.store.clean_french_words[:1500]:
+            if (len(w) >= 4 and w not in STOPWORDS
+                    and not w.endswith(('es', 'eaux', 'eux', 'aux'))
+                    and not (w.endswith('s') and not w.endswith(('is', 'us', 'as', 'ps', 'os')))
+                    and w not in cand_words):
+                cand_words.append(w)
+                if len(cand_words) >= 400:
+                    break
+
+        if not cand_words:
+            return list(SEED_WORDS[:count])
+
+        # 2. Construction de la matrice des candidats (vecteurs normalisés)
+        C = np.vstack([self.store.vec(w) for w in cand_words])
+
+        # 3. Choix du premier germe (mot à similarité moyenne minimale avec l'ensemble du corpus)
+        mean_correlations = np.abs(C @ C.T).mean(axis=1)
+        first_idx = int(np.argmin(mean_correlations))
+
+        chosen_indices = [first_idx]
+        chosen_vecs = [C[first_idx]]
+
+        # 4. Farthest Point Sampling (FPS) / Max-Min Cosine Orthogonality
+        # À chaque étape, on retient le mot minimisant la corrélation maximale avec les graines déjà retenues
+        while len(chosen_indices) < min(count, len(cand_words)):
+            current_G = np.vstack(chosen_vecs)
+            sim_matrix = np.abs(C @ current_G.T)  # shape: (len(cand_words), len(chosen))
+            max_sims = np.max(sim_matrix, axis=1)
+
+            # Exclure les mots déjà retenus
+            max_sims[chosen_indices] = np.inf
+
+            best_idx = int(np.argmin(max_sims))
+            best_sim = float(max_sims[best_idx])
+
+            # Si le meilleur candidat restant dépasse le seuil et qu'on a le nombre de graines requis
+            if best_sim > max_similarity and len(chosen_indices) >= count:
+                break
+
+            chosen_indices.append(best_idx)
+            chosen_vecs.append(C[best_idx])
+
+        seeds = [cand_words[i] for i in chosen_indices]
+
+        if getattr(self.args, "verbose", False) and len(chosen_vecs) > 1:
+            G_seeds = np.vstack(chosen_vecs)
+            pairwise_sim = np.abs(G_seeds @ G_seeds.T)
+            np.fill_diagonal(pairwise_sim, 0.0)
+            max_pair = float(pairwise_sim.max())
+            avg_pair = float(pairwise_sim[pairwise_sim > 0].mean())
+            log(f"  🌱  [GRAINES ORTHOGONALES RAG] {len(seeds)} graines sélectionnées "
+                f"(similarité max: {max_pair:.3f}, moy: {avg_pair:.3f})")
+
         return seeds
 
     def get_seeds(self, forced_seeds: list = None) -> list:

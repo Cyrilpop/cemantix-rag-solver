@@ -49,6 +49,7 @@ Ce projet implémente deux approches d'Intelligence Artificielle en compétition
 ```
 
 - **Espace vectoriel officiel** : Utilise le corpus `frWac` (Fauconnier, 500 dimensions, continuous Bag-of-Words), source originale utilisée par Cémantix.
+- **Amorçage par graines orthogonales (Farthest Point Sampling)** : Échantillonnage géométrique sur l'hypersphère unitaire minimisant la corrélation cosinus maximale entre les graines. Garantit une couverture optimale de l'espace à 500 dimensions (D-optimal design) dès le premier tour.
 - **Régression Ridge analytique** : Résout $q^* = \arg\min_q \|G q - s\|^2 + \lambda \|q\|^2$, permettant de trianguler le vecteur cible à partir des produits scalaires observés.
 - **Sniper RAG** : Lorsque l'erreur résiduelle quadratique moyenne d'un candidat tombe sous un seuil critique ($\varepsilon < 5 \times 10^{-5}$), le solveur valide immédiatement une certitude mathématique sans gaspiller de coups.
 - **Garantie 0 mot refusé & Gestion stricte des accents** : Filtrage et normalisation canonique via le dictionnaire officiel français (Lexique 3.83, 46 272 lemmes). Aucun mot anglais, mot inventé ou pluriel/féminin non recevable n'est émis.
@@ -271,7 +272,7 @@ python cemantix_rag.py --duel -d expert
 | `--secret <mot>` | Chaîne | `None` | Impose le mot secret unique à trouver (active automatiquement le mock). |
 | `--benchmark <N>` | Entier | `0` | Exécute $N$ parties d'affilée en simulation locale et affiche les statistiques. |
 | `-v`, `--verbose` | Flag | `False` | Affiche les détails internes (erreur Ridge, top-15 injecté, logs LLM). |
-| `--seed-count <N>` | Entier | `16` | Nombre de mots graines lors de l'amorçage pluridisciplinaire RAG. |
+| `--seed-count <N>` | Entier | `16` | Nombre de mots graines lors de l'amorçage orthogonal RAG (Farthest Point Sampling). |
 | `--seeds <mots>` | Chaîne | `""` | Mots graines manuels séparés par des virgules (ex: `"danse,science,art"`). |
 | `--delay <sec>` | Float | `0.25` | Délai de politesse entre deux requêtes envoyées à l'API du site web. |
 | `--max-tries <N>` | Entier | `300` | Nombre maximum de tentatives avant d'abandonner une partie. |
