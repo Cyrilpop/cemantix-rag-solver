@@ -23,6 +23,13 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Restauration de l'écran d'accueil permettant de choisir explicitement entre le mode Solo et le mode Duel croisé au lancement de `--play`.
 
 ### Ajouté
+- **Menu interactif principal complet (`src/menu.py`)** :
+  - Lancement automatique du menu d'accueil lors d'une exécution sans argument (`python cemantix_rag.py`) ou via l'option `--menu` / `-i`.
+  - Accès centralisé à l'ensemble des modes : puzzle du jour, jeu solo, duel croisé, battle comparatif, mock local, benchmark autonome et réglages.
+  - Résolution du puzzle du jour avec choix dynamique du moteur (Hybride ou 100% RAG pur), réglage du nombre de graines d'amorçage et répétition de la résolution sur le même puzzle avec bilan statistique (taux de victoire, moyenne, médiane, min/max, répartition des sources et temps).
+  - Navigation universelle `/menu` (ou `menu`) opérationnelle depuis n'importe quel écran, sous-menu ou prompt de saisie pour revenir instantanément au menu principal sans surcharger visuellement les invites.
+  - Nettoyage d'écran automatique (`clear_screen`) avec fallback ANSI (`\033[H\033[2J`) garantissant un rendu propre et isolé sous tous les terminaux et conteneurs Docker.
+  - Panneau de réglages interactif pour basculer le mode verbeux, ajuster les délais réseau, la limite d'essais, les graines et les paramètres LLM en cours de session.
 - **Mode duel croisé interactif (`--duel`)** :
   - Duel en face-à-face « Bataille Navale sémantique » opposant Joueur Humain vs IA RAG.
   - Deux mots cibles distincts : l'Humain cherche le mot de l'IA ; l'IA cherche le mot de l'Humain (choisi manuellement ou tiré au sort via `/random`).

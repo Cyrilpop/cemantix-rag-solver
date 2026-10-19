@@ -130,17 +130,38 @@ docker compose run --rm cemantix --battle 3
 
 ## 🎮 Guide d'Utilisation
 
-### 1. Affronter le mot du jour officiel Cémantix (Live)
+### 0. Menu Interactif Principal (Par défaut)
 
-Le script se connecte directement à l'API du jeu officiel [cemantix.certitudes.org](https://cemantix.certitudes.org).
+Si vous lancez le solveur **sans option** (ou avec `--menu` / `-i`), un menu d'accueil interactif s'affiche :
+
+```bash
+python cemantix_rag.py
+# ou avec l'option explicite :
+python cemantix_rag.py --menu
+```
+
+Ce menu centralise et permet de piloter toutes les fonctionnalités du projet :
+- `[1] 🎯 Résoudre le puzzle du jour` : choix du moteur (Hybride ou 100% RAG pur), réglage des graines et répétition consécutive.
+- `[2] 🧑 Mode Jeu Solo` : recherche sémantique libre avec jauges ASCII, météos et indices vectoriels.
+- `[3] ⚔️ Mode Duel Croisé` : vous affrontez l'IA RAG avec 3 niveaux et espionnage sémantique (`/espion`).
+- `[4] 🥊 Mode Battle comparatif` : RAG Pur vs Hybride LLM sur le même mot secret.
+- `[5] 🧪 Simulation locale Mock` : résolution automatique locale par l'IA sur mot aléatoire ou imposé.
+- `[6] 📊 Benchmark autonome` : évaluation statistique de précision sur $N$ parties simulées.
+- `[7] ⚙️ Paramètres & Configuration` : ajustement en direct du mode verbeux, des délais, des graines et du LLM.
+- `[Q] 🚪 Quitter` : quitter proprement l'application.
+
+> [!TIP]
+> Sur **absolument tous les écrans, sous-menus et invites de saisie**, tapez `/menu` (ou `menu`) pour revenir instantanément au menu principal !
+
+---
+
+### 1. Affronter le mot du jour officiel Cémantix en CLI direct
+
+Vous pouvez également lancer directement le solveur en ligne de commande avec des options :
 
 - **Mode 100% RAG Pur (Ultra-rapide, 0 LLM requis)** :
   ```bash
   python cemantix_rag.py --rag-only
-  ```
-- **Mode Hybride RAG + LLM Local** :
-  ```bash
-  python cemantix_rag.py
   ```
 - **Mode Verbose (affiche la descente Ridge, les candidats rerankés et le raisonnement du LLM)** :
   ```bash
