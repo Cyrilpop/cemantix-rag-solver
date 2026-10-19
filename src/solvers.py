@@ -158,10 +158,11 @@ class Solver:
         return sorted(((w, s, p) for w, (s, p) in self.guesses.items()),
                       key=lambda g: g[1], reverse=True)
 
-    def generate_optimal_seeds(self, count: int = 16, max_similarity: float = 0.22) -> list:
+    def generate_optimal_seeds(self, count: int = 16, max_similarity: float = 0.22, randomize_anchor: bool = True) -> list:
         """Génération de graines orthogonales par Farthest Point Sampling (FPS) :
         maximise la couverture et l'indépendance linéaire dans l'espace à 500 dimensions.
-        Garantit une orthogonalité quasi-parfaite (similarité cosinus minimale entre graines)."""
+        Garantit une orthogonalité quasi-parfaite (similarité cosinus minimale entre graines).
+        Si randomize_anchor=True, diversifie le point de départ pour renouveler les graines à chaque partie."""
         if count <= 0:
             return []
 
@@ -198,9 +199,15 @@ class Solver:
         # 2. Construction de la matrice des candidats (vecteurs normalisés)
         C = np.vstack([self.store.vec(w) for w in cand_words])
 
-        # 3. Choix du premier germe (mot à similarité moyenne minimale avec l'ensemble du corpus)
-        mean_correlations = np.abs(C @ C.T).mean(axis=1)
-        first_idx = int(np.argmin(mean_correlations))
+        # 3. Choix du premier germe (ancre initiale)
+        if randomize_anchor:
+            # Tire un premier germe diversifié parmi les pôles de la connaissance
+            discipline_norms = [self.store.normalize(d) for d in DISCIPLINES if self.store.is_valid_french(self.store.normalize(d))]
+            disc_indices = [i for i, w in enumerate(cand_words) if w in discipline_norms]
+            first_idx = int(np.random.choice(disc_indices)) if disc_indices else int(np.random.randint(len(cand_words)))
+        else:
+            mean_correlations = np.abs(C @ C.T).mean(axis=1)
+            first_idx = int(np.argmin(mean_correlations))
 
         chosen_indices = [first_idx]
         chosen_vecs = [C[first_idx]]
@@ -215,7 +222,13 @@ class Solver:
             # Exclure les mots déjà retenus
             max_sims[chosen_indices] = np.inf
 
-            best_idx = int(np.argmin(max_sims))
+            if randomize_anchor:
+                # Tirage stochastique parmi le top-3 des mots les plus orthogonaux pour renouveler la combinaison
+                top_candidates = np.argsort(max_sims)[:min(3, len(cand_words) - len(chosen_indices))]
+                best_idx = int(np.random.choice(top_candidates))
+            else:
+                best_idx = int(np.argmin(max_sims))
+
             best_sim = float(max_sims[best_idx])
 
             # Si le meilleur candidat restant dépasse le seuil et qu'on a le nombre de graines requis
@@ -307,8 +320,19 @@ class Solver:
             if self.play_word(w, "seed"):
                 return self.win(w, time.time() - t0)
 
-            # Détection anticipée (Sniper) : dès 4 graines valides enregistrées
             valid_seeds = len(self.guesses)
+            last_score, last_permille = self.guesses.get(w, (0.0, None))
+
+            # 1. Amorçage adaptatif : interruption précoce dès qu'un mot est chaud (>= 18°C ou Top 1000)
+            if valid_seeds >= 3 and i < len(seeds):
+                is_warm = (last_score >= 0.18) or (last_permille is not None and last_permille >= 1)
+                if is_warm:
+                    p_info = f", {last_permille}‰" if last_permille else ""
+                    log(f"\n🔥  [AMORÇAGE ADAPTATIF] Signal chaud détecté sur « {w} » ({last_score * 100:.2f}°C{p_info}) dès la graine {i}/{len(seeds)} !")
+                    log(f"    ➔ Interruption immédiate de l'amorçage pour exploiter la zone chaude en convergence RAG.\n")
+                    break
+
+            # 2. Détection anticipée (Sniper) : dès 4 graines valides enregistrées
             if valid_seeds >= 4 and i < len(seeds):
                 cands_quick = self.retrieve(self.ranked(), verbose=False)
                 if cands_quick:

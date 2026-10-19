@@ -49,7 +49,7 @@ Ce projet implémente deux approches d'Intelligence Artificielle en compétition
 ```
 
 - **Espace vectoriel officiel** : Utilise le corpus `frWac` (Fauconnier, 500 dimensions, continuous Bag-of-Words), source originale utilisée par Cémantix.
-- **Amorçage par graines orthogonales (Farthest Point Sampling)** : Échantillonnage géométrique sur l'hypersphère unitaire minimisant la corrélation cosinus maximale entre les graines. Garantit une couverture optimale de l'espace à 500 dimensions (D-optimal design) dès le premier tour.
+- **Amorçage par graines orthogonales & Détection adaptative** : Échantillonnage par *Farthest Point Sampling* (FPS) sur l'hypersphère unitaire minimisant la corrélation cosinus entre les graines (D-optimal design), avec diversification dynamique du point d'ancrage à chaque partie et interruption précoce dès qu'une zone chaude est touchée ($\ge 18^\circ\text{C}$ ou Top 1000).
 - **Régression Ridge analytique** : Résout $q^* = \arg\min_q \|G q - s\|^2 + \lambda \|q\|^2$, permettant de trianguler le vecteur cible à partir des produits scalaires observés.
 - **Sniper RAG** : Lorsque l'erreur résiduelle quadratique moyenne d'un candidat tombe sous un seuil critique ($\varepsilon < 5 \times 10^{-5}$), le solveur valide immédiatement une certitude mathématique sans gaspiller de coups.
 - **Garantie 0 mot refusé & Gestion stricte des accents** : Filtrage et normalisation canonique via le dictionnaire officiel français (Lexique 3.83, 46 272 lemmes). Aucun mot anglais, mot inventé ou pluriel/féminin non recevable n'est émis.
