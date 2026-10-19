@@ -21,6 +21,8 @@ def clear_screen() -> None:
     """Efface l'écran du terminal proprement pour tous les OS et environnements."""
     if sys.stdout.isatty():
         os.system("cls" if os.name == "nt" else "clear")
+    else:
+        print("\033[H\033[2J", end="", flush=True)
 
 
 def make_gauge(s: float, p: int | None, threshold: float, width: int = 20) -> str:

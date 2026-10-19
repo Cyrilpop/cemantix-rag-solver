@@ -290,7 +290,7 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
         notice = None
 
         try:
-            raw = input(f"Essai #{tries_count + 1} (ou /duel, /aide, /indice, /rejouer, /abandon, /menu) > ").strip().strip('\ufeff')
+            raw = input(f"Essai #{tries_count + 1} (ou /duel, /aide, /indice, /rejouer, /abandon) > ").strip().strip('\ufeff')
         except (KeyboardInterrupt, EOFError):
             log(f"\n👋  Partie interrompue. Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} ».")
             return None, None
@@ -313,12 +313,12 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
             log(f"💡  Le mot secret était : « {BOLD}{game.secret.upper()}{RESET} »")
             log("=" * 70 + "\n")
             try:
-                ans = input("🎮  Que souhaitez-vous faire ? ([O]ui pour rejouer / [D]uel / [M]enu / [Q]uitter) [O] > ").strip().lower()
+                ans = input("🎮  Que souhaitez-vous faire ? ([O]ui pour rejouer / [D]uel / [Q]uitter) [O] > ").strip().lower()
             except (KeyboardInterrupt, EOFError):
                 return None, None
             if ans in ("d", "duel", "/duel"):
                 return "duel", None
-            if ans in ("m", "menu", "/menu"):
+            if ans in ("m", "menu", "/menu", "/accueil"):
                 return None, None
             if ans in ("n", "non", "q", "quit", "quitter"):
                 return None, None
@@ -414,12 +414,12 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
             log(f"    Temps de réflexion     : {elapsed:.1f} secondes")
             log("🎉" * 25 + "\n")
             try:
-                ans = input("🎮  Que souhaitez-vous faire ? ([O]ui pour rejouer / [D]uel / [M]enu / [Q]uitter) [O] > ").strip().lower()
+                ans = input("🎮  Que souhaitez-vous faire ? ([O]ui pour rejouer / [D]uel / [Q]uitter) [O] > ").strip().lower()
             except (KeyboardInterrupt, EOFError):
                 return None, None
             if ans in ("d", "duel", "/duel"):
                 return "duel", None
-            if ans in ("m", "menu", "/menu"):
+            if ans in ("m", "menu", "/menu", "/accueil"):
                 return None, None
             if ans in ("n", "non", "q", "quit", "quitter"):
                 return None, None
@@ -458,6 +458,8 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
             break
         elif raw_diff in ("/solo", "solo"):
             return "solo"
+        elif raw_diff in ("/menu", "menu", "/accueil"):
+            return None
         elif raw_diff in ("/quitter", "/quit", "quit", "exit"):
             return None
         elif raw_diff.startswith("f"):
@@ -493,6 +495,8 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
 
         if cmd in ("/solo", "solo"):
             return "solo"
+        if cmd in ("/menu", "menu", "/accueil"):
+            return None
         if cmd in ("/quitter", "/quit", "quit", "exit"):
             return None
 
@@ -524,7 +528,7 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
         notice = None
 
         try:
-            raw = input(f"Tour #{turn_no + 1} > Votre coup (ou /solo, /espion, /indice, /rejouer, /abandon, /menu) > ").strip().strip('\ufeff')
+            raw = input(f"Tour #{turn_no + 1} > Votre coup (ou /solo, /espion, /indice, /rejouer, /abandon) > ").strip().strip('\ufeff')
         except (KeyboardInterrupt, EOFError):
             log(f"\n👋  Duel interrompu. Votre mot secret était : « {BOLD}{game_human.secret.upper()}{RESET} ».")
             return None
@@ -627,6 +631,8 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
                     return None
                 if ans in ("s", "solo", "/solo"):
                     return "solo"
+                if ans in ("m", "menu", "/menu", "/accueil"):
+                    return None
                 if ans in ("n", "non", "q", "quit", "quitter"):
                     return None
                 return "duel"
@@ -642,6 +648,8 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
                 return None
             if ans in ("s", "solo", "/solo"):
                 return "solo"
+            if ans in ("m", "menu", "/menu", "/accueil"):
+                return None
             if ans in ("n", "non", "q", "quit", "quitter"):
                 return None
             return "duel"
@@ -733,12 +741,12 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
                                 winner=winner, turn_no=turn_no, stats=stats)
 
             try:
-                ans = input("🎮  Rejouer une manche ? ([O]ui / [S]olo / [M]enu / [Q]uitter) [O] > ").strip().lower()
+                ans = input("🎮  Rejouer une manche ? ([O]ui / [S]olo / [Q]uitter) [O] > ").strip().lower()
             except (KeyboardInterrupt, EOFError):
                 return None
             if ans in ("s", "solo", "/solo"):
                 return "solo"
-            if ans in ("m", "menu", "/menu"):
+            if ans in ("m", "menu", "/menu", "/accueil"):
                 return None
             if ans in ("n", "non", "q", "quit", "quitter"):
                 return None
@@ -773,6 +781,8 @@ def run_game(args, store: VocabStore = None):
 
         if choice in ("2", "d", "duel", "/duel"):
             mode = "duel"
+        elif choice in ("m", "menu", "/menu", "/accueil"):
+            return
         elif choice in ("q", "quit", "quitter", "/quit", "/quitter", "exit", "/exit"):
             log("\n👋  Au revoir !")
             return
