@@ -343,7 +343,7 @@ def render_settings_menu(args, notice: str = None) -> None:
     elif seeds_val:
         seed_state = f"Personnalisées ({seeds_val[:30]}...)" if len(seeds_val) > 30 else f"Personnalisées ({seeds_val})"
     else:
-        seed_state = f"Dynamique RAG ({getattr(args, 'seed_count', 16)} graines pluridisciplinaires)"
+        seed_state = f"Orthogonales RAG ({getattr(args, 'seed_count', 16)} graines FPS)"
 
     log(f"  {BOLD}[1]{RESET} Mode verbeux (Verbose)      : {verbose_state}")
     log(f"  {BOLD}[2]{RESET} Limite d'essais max         : {getattr(args, 'max_tries', 300)} essais")
