@@ -22,6 +22,6 @@ ENV PYTHONUNBUFFERED=1
 ENV LM_API="http://host.docker.internal:1234/v1"
 ENV LLM_MODEL="qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2"
 
-# Point d'entrée
+# Point d'entrée (par défaut : menu interactif complet)
 ENTRYPOINT ["python", "cemantix_rag.py"]
-CMD ["--help"]
+CMD []

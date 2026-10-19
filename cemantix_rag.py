@@ -25,11 +25,16 @@ from src.config import LLM_MODEL, log
 from src.ui import clear_screen
 from src.solvers import Solver
 from src.modes import run_benchmark, run_battle, run_game
+from src.menu import run_main_menu
 
 
 def main():
     clear_screen()
+    has_cli_options = len(sys.argv) > 1
+
     ap = argparse.ArgumentParser(description="Solveur Cémantix par RAG local (frWac)")
+    ap.add_argument("--menu", "-i", "--interactive", action="store_true",
+                    help="ouvre le menu interactif principal")
     ap.add_argument("--max-tries", type=int, default=300)
     ap.add_argument("--retrieve", type=int, default=60,
                     help="nb de voisins récupérés par requête ChromaDB")
@@ -70,6 +75,11 @@ def main():
     ap.add_argument("--difficulty", "-d", choices=["facile", "moyen", "expert"], default="moyen",
                     help="niveau de difficulté de l'IA en mode duel (facile, moyen, expert; défaut: moyen)")
     args = ap.parse_args()
+
+    # Lancement automatique du menu interactif si aucun argument CLI n'est passé ou si --menu est spécifié
+    if not has_cli_options or args.menu:
+        run_main_menu(args)
+        return
 
     if args.duel:
         args.play_mode = True
