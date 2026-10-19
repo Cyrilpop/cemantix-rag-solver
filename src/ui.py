@@ -12,7 +12,8 @@ import os
 import sys
 
 from .config import (
-    BOLD, RESET, ANSI_RE, BOARD_WIDTH, COL_WIDTH, DUEL_TOP_WORDS, log
+    BOLD, CYAN, GREEN, YELLOW, DIM, RESET, ANSI_RE,
+    BOARD_WIDTH, COL_WIDTH, DUEL_TOP_WORDS, LLM_MODEL, LM_API, log
 )
 
 
@@ -47,7 +48,7 @@ def visible_width(s: str) -> int:
     clean = strip_ansi(s)
     w = 0
     for ch in clean:
-        if ch in "🥶🧊😎🥵🔥😱🥳⭐🎯🤖🧑⚔️":
+        if ch in "🥶🧊😎🥵🔥😱🥳⭐🎯🤖🧑⚔️🥊🧪📊⚙️🚪↩️💡":
             w += 2
         else:
             w += 1
@@ -298,3 +299,62 @@ def render_duel_debrief(game_human, guesses_human, game_ai, guesses_ai,
     met_r = f"  • Météo        : 🔥 {hot_a:<2} 😎 {warm_a:<2} 🥶 {cold_a:<2}"
     log(f"{pad_visible(met_l, COL_WIDTH)} │ {pad_visible(met_r, COL_WIDTH)}")
     log("─" * COL_WIDTH + "─┼─" + "─" * COL_WIDTH + "\n")
+
+
+def render_main_menu(args=None, notice: str = None) -> None:
+    """Affiche le menu d'accueil principal du Cémantix RAG Solver."""
+    clear_screen()
+    log("=" * 76)
+    log(f"🎯  {BOLD}CÉMANTIX RAG SOLVER — MENU PRINCIPAL{RESET}")
+    log("=" * 76)
+    log(f"  🤖 Modèle LLM : {CYAN}{LLM_MODEL}{RESET}")
+    log(f"  📚 Espace RAG : word2vec frWac (150 000 lemmes) + ChromaDB")
+    log("-" * 76)
+    log("")
+    log(f"  {BOLD}[1]{RESET} 🎯  Résoudre le puzzle du jour  (En ligne sur le site officiel Cémantix)")
+    log(f"  {BOLD}[2]{RESET} 🧑  Mode Jeu Solo               (Devinez le mot secret avec jauges & indices)")
+    log(f"  {BOLD}[3]{RESET} ⚔️   Mode Duel Croisé            (Vous vs IA RAG, 3 niveaux & espionnage)")
+    log(f"  {BOLD}[4]{RESET} 🥊  Mode Battle comparatif      (100% RAG Pur vs Hybride LLM sur le même mot)")
+    log(f"  {BOLD}[5]{RESET} 🧪  Partie simulée en local     (IA seule sur mot secret local Mock)")
+    log(f"  {BOLD}[6]{RESET} 📊  Benchmark autonome          (Évaluation statistique sur N parties simulées)")
+    log(f"  {BOLD}[7]{RESET} ⚙️   Paramètres & Configuration  (Mode verbeux, max essais, délais, graines...)")
+    log("")
+    log(f"  {BOLD}[Q]{RESET} 🚪  Quitter")
+    log("")
+    log("=" * 76)
+    if notice:
+        log(f"\n{notice}\n")
+
+
+def render_settings_menu(args, notice: str = None) -> None:
+    """Affiche l'écran des paramètres et options avancées."""
+    clear_screen()
+    log("=" * 76)
+    log(f"⚙️   {BOLD}PARAMÈTRES & CONFIGURATION DU SOLVEUR{RESET}")
+    log("=" * 76)
+    verbose_state = f"{GREEN}[Activé]{RESET}" if getattr(args, "verbose", False) else f"{DIM}[Désactivé]{RESET}"
+    rag_only_state = f"{GREEN}[100% RAG Pur]{RESET}" if getattr(args, "rag_only", False) else f"{CYAN}[Hybride LLM]{RESET}"
+
+    seeds_val = getattr(args, "seeds", "")
+    if getattr(args, "static_seeds", False):
+        seed_state = "Statique (liste fixe de 20 mots)"
+    elif seeds_val:
+        seed_state = f"Personnalisées ({seeds_val[:30]}...)" if len(seeds_val) > 30 else f"Personnalisées ({seeds_val})"
+    else:
+        seed_state = f"Dynamique RAG ({getattr(args, 'seed_count', 16)} graines pluridisciplinaires)"
+
+    log(f"  {BOLD}[1]{RESET} Mode verbeux (Verbose)      : {verbose_state}")
+    log(f"  {BOLD}[2]{RESET} Limite d'essais max         : {getattr(args, 'max_tries', 300)} essais")
+    log(f"  {BOLD}[3]{RESET} Pause réseau entre requêtes : {getattr(args, 'delay', 0.25):.2f}s")
+    log(f"  {BOLD}[4]{RESET} Candidats Rerankés par tour : {getattr(args, 'rag_words', 3)}")
+    log(f"  {BOLD}[5]{RESET} Mots demandés au LLM / tour : {getattr(args, 'llm_words', 6)}")
+    log(f"  {BOLD}[6]{RESET} Amorçage des graines        : {seed_state}")
+    log(f"  {BOLD}[7]{RESET} Difficulté Duel par défaut  : {getattr(args, 'difficulty', 'moyen').upper()}")
+    log(f"  {BOLD}[8]{RESET} Moteur par défaut résolution: {rag_only_state}")
+    log(f"  {BOLD}[9]{RESET} Modèle & Endpoint LLM       : {LLM_MODEL} ({LM_API})")
+    log("")
+    log(f"  {BOLD}[R]{RESET} ↩️   Retour au menu principal")
+    log("=" * 76)
+    if notice:
+        log(f"\n{notice}\n")
+

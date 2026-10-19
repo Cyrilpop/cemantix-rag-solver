@@ -12,6 +12,10 @@ from pathlib import Path
 # Styles ANSI & Dimensions console
 # --------------------------------------------------------------------------- #
 BOLD = "\033[34m"
+CYAN = "\033[36m"
+GREEN = "\033[32m"
+YELLOW = "\033[33m"
+DIM = "\033[2m"
 RESET = "\033[0m"
 ANSI_RE = re.compile(r'\033\[[0-9;]*m')
 
