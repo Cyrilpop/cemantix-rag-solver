@@ -52,8 +52,8 @@ def main():
                     help="mots graines séparés par des virgules (ex: --seeds 'micro,questionner,revue,publier')")
     ap.add_argument("--seeds-file", type=str, default="",
                     help="chemin vers un fichier de mots graines (un par ligne)")
-    ap.add_argument("--seed-count", type=int, default=16,
-                    help="nombre de mots graines à tester lors de l'amorçage pluridisciplinaire (défaut : 16)")
+    ap.add_argument("--seed-count", type=int, default=12,
+                    help="nombre de mots graines à tester lors de l'amorçage pluridisciplinaire (défaut : 12)")
     ap.add_argument("--static-seeds", action="store_true",
                     help="utiliser l'ancienne liste fixe de 20 graines au lieu de l'extraction RAG")
     ap.add_argument("--mock", action="store_true",

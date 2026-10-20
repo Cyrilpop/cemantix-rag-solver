@@ -35,15 +35,17 @@ def estimate_secret(G: np.ndarray, s: np.ndarray, lam: float = 0.1) -> np.ndarra
 
 
 def rerank(store: VocabStore, cands: list, G: np.ndarray, s: np.ndarray, q_est: np.ndarray) -> list:
-    """Erreur quadratique entre cos(candidat, essai_i) et le score observé s_i,
-    pondérée vers les essais chauds (là où l'information est la plus fiable)."""
+    """Reranking multicritère : combine la température estimée et la cohérence
+    quadratique pondérée vers les essais chauds."""
     if not cands:
         return []
     C = np.vstack([store.vec(w) for w in cands])
     weights = np.exp((s - s.max()) / 0.1)
     err = (((C @ G.T) - s) ** 2 * weights).sum(axis=1) / weights.sum()
     pred_temp = (C @ q_est) * 100.0
-    order = np.argsort(err)
+    # Score d'excellence : favorise les candidats chauds tout en pénalisant l'incohérence
+    rank_score = pred_temp - 120.0 * np.sqrt(err)
+    order = np.argsort(rank_score)[::-1]
     return [(cands[i], float(pred_temp[i]), float(err[i])) for i in order]
 
 
@@ -158,40 +160,20 @@ class Solver:
         return sorted(((w, s, p) for w, (s, p) in self.guesses.items()),
                       key=lambda g: g[1], reverse=True)
 
-    def generate_optimal_seeds(self, count: int = 16, max_similarity: float = 0.22, randomize_anchor: bool = True) -> list:
+    def generate_optimal_seeds(self, count: int = 12, max_similarity: float = 0.22, randomize_anchor: bool = True) -> list:
         """Génération de graines orthogonales par Farthest Point Sampling (FPS) :
         maximise la couverture et l'indépendance linéaire dans l'espace à 500 dimensions.
-        Garantit une orthogonalité quasi-parfaite (similarité cosinus minimale entre graines).
-        Si randomize_anchor=True, diversifie le point de départ pour renouveler les graines à chaque partie."""
+        Restreint strictement le vivier aux disciplines fondamentales et grands concepts
+        cardinaux pour garantir pertinence sémantique et indépendance géométrique."""
         if count <= 0:
             return []
 
-        # 1. Constitution du pool de lemmes candidats propres et variés
+        # 1. Constitution du pool des lemmes cardinaux fondamentaux
         cand_words = []
-
-        # Pôle A : disciplines fondamentales et leurs voisins directs dans ChromaDB
-        for d in DISCIPLINES:
+        for d in list(DISCIPLINES) + list(SEED_WORDS):
             d_norm = self.store.normalize(d)
-            if self.store.is_valid_french(d_norm) and d_norm not in cand_words:
+            if self.store.is_valid_french(d_norm) and d_norm in self.store and d_norm not in cand_words:
                 cand_words.append(d_norm)
-                for raw_w in self.store.knn(self.store.vec(d_norm), k=20):
-                    w = self.store.normalize(raw_w)
-                    if (self.store.is_valid_french(w)
-                            and len(w) >= 4 and w not in STOPWORDS
-                            and not w.endswith(('es', 'eaux', 'eux', 'aux'))
-                            and not (w.endswith('s') and not w.endswith(('is', 'us', 'as', 'ps', 'os')))
-                            and w not in cand_words):
-                        cand_words.append(w)
-
-        # Pôle B : lemmes fréquents de haute qualité pour enrichir le maillage si nécessaire
-        for w in self.store.clean_french_words[:1500]:
-            if (len(w) >= 4 and w not in STOPWORDS
-                    and not w.endswith(('es', 'eaux', 'eux', 'aux'))
-                    and not (w.endswith('s') and not w.endswith(('is', 'us', 'as', 'ps', 'os')))
-                    and w not in cand_words):
-                cand_words.append(w)
-                if len(cand_words) >= 400:
-                    break
 
         if not cand_words:
             return list(SEED_WORDS[:count])
@@ -201,10 +183,7 @@ class Solver:
 
         # 3. Choix du premier germe (ancre initiale)
         if randomize_anchor:
-            # Tire un premier germe diversifié parmi les pôles de la connaissance
-            discipline_norms = [self.store.normalize(d) for d in DISCIPLINES if self.store.is_valid_french(self.store.normalize(d))]
-            disc_indices = [i for i, w in enumerate(cand_words) if w in discipline_norms]
-            first_idx = int(np.random.choice(disc_indices)) if disc_indices else int(np.random.randint(len(cand_words)))
+            first_idx = int(np.random.randint(len(cand_words)))
         else:
             mean_correlations = np.abs(C @ C.T).mean(axis=1)
             first_idx = int(np.argmin(mean_correlations))
@@ -213,7 +192,6 @@ class Solver:
         chosen_vecs = [C[first_idx]]
 
         # 4. Farthest Point Sampling (FPS) / Max-Min Cosine Orthogonality
-        # À chaque étape, on retient le mot minimisant la corrélation maximale avec les graines déjà retenues
         while len(chosen_indices) < min(count, len(cand_words)):
             current_G = np.vstack(chosen_vecs)
             sim_matrix = np.abs(C @ current_G.T)  # shape: (len(cand_words), len(chosen))
@@ -223,15 +201,14 @@ class Solver:
             max_sims[chosen_indices] = np.inf
 
             if randomize_anchor:
-                # Tirage stochastique parmi le top-3 des mots les plus orthogonaux pour renouveler la combinaison
-                top_candidates = np.argsort(max_sims)[:min(3, len(cand_words) - len(chosen_indices))]
+                # Tirage stochastique parmi le top-2 des mots les plus orthogonaux
+                top_k = min(2, len(cand_words) - len(chosen_indices))
+                top_candidates = np.argsort(max_sims)[:top_k]
                 best_idx = int(np.random.choice(top_candidates))
             else:
                 best_idx = int(np.argmin(max_sims))
 
             best_sim = float(max_sims[best_idx])
-
-            # Si le meilleur candidat restant dépasse le seuil et qu'on a le nombre de graines requis
             if best_sim > max_similarity and len(chosen_indices) >= count:
                 break
 
@@ -262,12 +239,12 @@ class Solver:
                 seeds = [w.strip().lower() for w in path.read_text(encoding="utf-8").splitlines() if w.strip()]
             else:
                 log(f"   ⚠  Fichier graines {path} introuvable, génération pluridisciplinaire RAG.")
-                count = self.args.seed_count if self.args.seed_count is not None else 16
+                count = self.args.seed_count if self.args.seed_count is not None else 12
                 return self.generate_optimal_seeds(count)
         elif self.args.static_seeds:
             seeds = SEED_WORDS
         else:
-            count = self.args.seed_count if self.args.seed_count is not None else 16
+            count = self.args.seed_count if self.args.seed_count is not None else 12
             return self.generate_optimal_seeds(count)
 
         if self.args.seed_count is not None:
@@ -281,11 +258,12 @@ class Solver:
         G = np.vstack([self.store.vec(g[0]) for g in known])
         s = np.array([g[1] for g in known], dtype=np.float32)
         q_est = estimate_secret(G, s)
-        k = self.args.retrieve
-        fetch_k = max(k * 3, 100)
-        raw_pool = self.store.knn(q_est, fetch_k)
-        for w, _, _ in known[:3]:  # voisins des 3 meilleurs essais
-            raw_pool += self.store.knn(self.store.vec(w), fetch_k // 2)
+        k = max(self.args.retrieve, 60)
+        fetch_k = max(k * 2, 120)
+        raw_pool = list(self.store.knn(q_est, fetch_k))
+        for w, sc, _ in known[:3]:  # voisins des 3 meilleurs essais
+            if sc > 0.10:
+                raw_pool += self.store.knn(self.store.vec(w), 35)
         
         # Normalisation canonique stricte : élimine tout doublon sans accent ou token web parasite
         pool = []
@@ -322,25 +300,33 @@ class Solver:
 
             valid_seeds = len(self.guesses)
             last_score, last_permille = self.guesses.get(w, (0.0, None))
+            best_score = max(v[0] for v in self.guesses.values())
 
-            # 1. Amorçage adaptatif : interruption précoce dès qu'un mot est chaud (>= 18°C ou Top 1000)
+            # 1. Amorçage adaptatif : interruption précoce dès qu'un mot est chaud (Top 1000 confirmé)
             if valid_seeds >= 3 and i < len(seeds):
-                is_warm = (last_score >= 0.18) or (last_permille is not None and last_permille >= 1)
+                is_warm = (best_score >= 0.20) or (last_permille is not None and last_permille >= 1)
                 if is_warm:
-                    p_info = f", {last_permille}‰" if last_permille else ""
-                    log(f"\n🔥  [AMORÇAGE ADAPTATIF] Signal chaud détecté sur « {w} » ({last_score * 100:.2f}°C{p_info}) dès la graine {i}/{len(seeds)} !")
+                    best_word_entry = max(self.guesses.items(), key=lambda x: x[1][0])
+                    bw_name = best_word_entry[0]
+                    bw_score, bw_p = best_word_entry[1]
+                    p_info = f", {bw_p}‰" if bw_p else ""
+                    log(f"\n🔥  [AMORÇAGE ADAPTATIF] Signal chaud détecté sur « {bw_name} » ({bw_score * 100:.2f}°C{p_info}) dès la graine {i}/{len(seeds)} !")
                     log(f"    ➔ Interruption immédiate de l'amorçage pour exploiter la zone chaude en convergence RAG.\n")
                     break
 
-            # 2. Détection anticipée (Sniper) : dès 4 graines valides enregistrées
-            if valid_seeds >= 4 and i < len(seeds):
+            # 2. Détection anticipée (Sniper) : dès 3 graines si candidat brûlant ou certitude
+            if valid_seeds >= 3 and i < len(seeds):
                 cands_quick = self.retrieve(self.ranked(), verbose=False)
                 if cands_quick:
-                    top_cand, _, top_err = cands_quick[0]
-                    if top_err < 0.00005 and top_cand not in self.tried:
-                        log(f"\n⚡  [SNIPER RAG] Certitude mathématique après {valid_seeds} graines : « {top_cand} » (err = {top_err:.5f})")
-                        if self.play_word(top_cand, "rag"):
-                            return self.win(top_cand, time.time() - t0)
+                    top_cand, top_temp, top_err = cands_quick[0]
+                    if (top_temp >= 65.0 and top_err < 0.003) or (top_err < 0.0001):
+                        if top_cand not in self.tried:
+                            log(f"\n⚡  [SNIPER RAG] Tir d'anticipation après {valid_seeds} graines : « {top_cand} » (est: {top_temp:.1f}°C, err: {top_err:.5f})")
+                            if self.play_word(top_cand, "rag"):
+                                return self.win(top_cand, time.time() - t0)
+                            s_snip, p_snip = self.guesses.get(top_cand, (0.0, None))
+                            if s_snip >= 0.18 or (p_snip and p_snip >= 1):
+                                break
 
         round_no = 0
         rag_k = self.args.rag_words if (self.args.rag_words != 3 or not is_rag_only) else 5
@@ -355,10 +341,10 @@ class Solver:
             cand_words = [c[0] for c in candidates_info]
 
             # Fast-path : si le candidat RAG n°1 est mathématiquement certain, on le teste immédiatement sans appeler le LLM
-            if candidates_info and candidates_info[0][2] < 0.00005 and cand_words[0] not in self.tried:
-                top_cand, _, top_err = candidates_info[0]
+            if candidates_info and (candidates_info[0][1] >= 75.0 and candidates_info[0][2] < 0.002) and cand_words[0] not in self.tried:
+                top_cand, top_temp, top_err = candidates_info[0]
                 if self.args.verbose:
-                    log(f"⚡  [FAST-PATH RAG] Candidat certain « {top_cand} » (err={top_err:.5f}), tir direct sans attente LLM...")
+                    log(f"⚡  [FAST-PATH RAG] Candidat prometteur « {top_cand} » ({top_temp:.1f}°C, err={top_err:.5f}), tir direct sans attente LLM...")
                 if self.play_word(top_cand, "rag"):
                     return self.win(top_cand, time.time() - t0)
 
@@ -408,6 +394,10 @@ class Solver:
             for w, src in batch:
                 if self.play_word(w, src):
                     return self.win(w, time.time() - t0)
+                # Si le coup joué apporte un gain chaud majeur vers la cible, recalcul Ridge immédiat
+                s_cur, p_cur = self.guesses.get(w, (0.0, None))
+                if s_cur >= 0.28 or (p_cur and p_cur >= 600):
+                    break
 
         secret_name = getattr(self.game, "secret", "inconnu")
         elapsed = time.time() - t0

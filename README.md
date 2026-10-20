@@ -272,7 +272,7 @@ python cemantix_rag.py --duel -d expert
 | `--secret <mot>` | Chaîne | `None` | Impose le mot secret unique à trouver (active automatiquement le mock). |
 | `--benchmark <N>` | Entier | `0` | Exécute $N$ parties d'affilée en simulation locale et affiche les statistiques. |
 | `-v`, `--verbose` | Flag | `False` | Affiche les détails internes (erreur Ridge, top-15 injecté, logs LLM). |
-| `--seed-count <N>` | Entier | `16` | Nombre de mots graines lors de l'amorçage orthogonal RAG (Farthest Point Sampling). |
+| `--seed-count <N>` | Entier | `12` | Nombre de mots graines lors de l'amorçage orthogonal RAG (Farthest Point Sampling). |
 | `--seeds <mots>` | Chaîne | `""` | Mots graines manuels séparés par des virgules (ex: `"danse,science,art"`). |
 | `--delay <sec>` | Float | `0.25` | Délai de politesse entre deux requêtes envoyées à l'API du site web. |
 | `--max-tries <N>` | Entier | `300` | Nombre maximum de tentatives avant d'abandonner une partie. |

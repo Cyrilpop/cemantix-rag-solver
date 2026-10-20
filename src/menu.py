@@ -84,7 +84,7 @@ def handle_menu_action(choice: str, args, store: VocabStore, duel_stats: dict) -
     # ------------------------------------------------------------------- #
     if choice == "1":
         clear_screen()
-        curr_seeds = getattr(args, "seed_count", 16)
+        curr_seeds = getattr(args, "seed_count", 12)
         log("─" * 76)
         log(f"🎯  {BOLD}RÉSOLUTION DU PUZZLE DU JOUR (EN LIGNE SUR CERTITUDES.ORG){RESET}")
         log("─" * 76)
@@ -433,11 +433,11 @@ def handle_settings_menu(args, store: VocabStore = None):
             if sub_s == "1":
                 args.static_seeds = False
                 args.seeds = ""
-                raw_cnt = prompt_choice("Nombre de graines orthogonales [16] > ", default="16")
+                raw_cnt = prompt_choice("Nombre de graines orthogonales [12] > ", default="12")
                 try:
                     args.seed_count = max(1, int(raw_cnt))
                 except ValueError:
-                    args.seed_count = 16
+                    args.seed_count = 12
                 notice = f"✓ Graines RAG orthogonales activées ({args.seed_count} graines FPS)."
             elif sub_s == "2":
                 args.static_seeds = True
