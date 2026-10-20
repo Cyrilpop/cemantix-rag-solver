@@ -14,7 +14,7 @@ import time
 import numpy as np
 
 from .config import (
-    BOLD, RESET, LLM_MODEL, STOPWORDS, DISCIPLINES, log
+    BOLD, RESET, LLM_MODEL, STOPWORDS, ENGLISH_WORDS, DISCIPLINES, log
 )
 from .vocab import VocabStore
 from .clients import CemantixClient, MockClient
@@ -386,6 +386,10 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
             notice = f"⚠️  Déjà essayé (#{num}) : « {norm} » ({s*100:.2f}°C  {w_icon}  {w_lbl} {rk_str})"
             continue
 
+        if norm in ENGLISH_WORDS:
+            notice = f"❌  Mot « {raw} » rejeté (mot anglais non autorisé dans Cémantix)."
+            continue
+
         if not store.is_valid_french(norm) or norm not in store:
             notice = f"❌  Mot « {raw} » non reconnu (lemmes français au singulier uniquement)."
             continue
@@ -699,6 +703,10 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
         norm_h = store.normalize(cmd)
         if norm_h in guesses_human:
             notice = f"⚠️   Déjà essayé : « {norm_h} »"
+            continue
+
+        if norm_h in ENGLISH_WORDS:
+            notice = f"❌   Mot « {raw} » rejeté (mot anglais non autorisé dans Cémantix)."
             continue
 
         if not store.is_valid_french(norm_h) or norm_h not in store:

@@ -17,7 +17,7 @@ import numpy as np
 import requests
 
 from .config import (
-    LM_API, LLM_MODEL, PROMPT, DISCIPLINES, STOPWORDS,
+    LM_API, LLM_MODEL, PROMPT, DISCIPLINES, STOPWORDS, ENGLISH_WORDS,
     SEED_WORDS, SEEDS_FACILE, SEEDS_MOYEN, SEEDS_EXPERT, log
 )
 from .vocab import VocabStore
@@ -118,6 +118,10 @@ class Solver:
         if word in self.tried:
             return False
         self.tried.add(word)
+
+        if word in ENGLISH_WORDS:
+            log(f"        {source:<4} {word:<20} (mot anglais exclu)")
+            return False
 
         if not self.store.is_valid_french(word):
             log(f"        {source:<4} {word:<20} (inconnu du site)")
