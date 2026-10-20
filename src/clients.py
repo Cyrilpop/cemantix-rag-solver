@@ -8,20 +8,61 @@ Fournit les interfaces de jeu :
 """
 import time
 import re
+import socket
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
+import urllib3.util.connection as urllib3_conn
 import numpy as np
 
 from .config import SITE, HEADERS, STOPWORDS, log
 
+# Force la résolution IPv4 pour éviter l'erreur [Errno 101] Network is unreachable
+# fréquente sous Docker / WSL2 due à l'absence de routage IPv6 dans le bridge.
+urllib3_conn.allowed_gai_family = lambda: socket.AF_INET
+
 
 class CemantixClient:
     """Client HTTP pour le jeu officiel en direct sur https://cemantix.certitudes.org/."""
-    def __init__(self, delay: float = 0.25):
+    def __init__(self, delay: float = 0.25, max_retries: int = 3):
+        self.delay = delay
+        self.max_retries = max_retries
         self.s = requests.Session()
         self.s.headers.update({"User-Agent": HEADERS["User-Agent"]})
-        self.delay = delay
+
+        # Configuration de la résilience réseau (retries automatiques sur micro-coupures)
+        retry_strategy = Retry(
+            total=max_retries,
+            connect=max_retries,
+            read=max_retries,
+            backoff_factor=0.5,
+            status_forcelist=[500, 502, 503, 504],
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.s.mount("https://", adapter)
+        self.s.mount("http://", adapter)
+
         log(f"🌐  Connexion à {SITE}...")
-        html = self.s.get(SITE + "/", timeout=15).text
+        html = None
+        last_error = None
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                r = self.s.get(SITE + "/", timeout=15)
+                html = r.text
+                break
+            except requests.RequestException as e:
+                last_error = e
+                if attempt < max_retries:
+                    log(f"⚠️  Connexion temporairement indisponible (tentative {attempt}/{max_retries}) : {e}. Réessai...")
+                    time.sleep(attempt)
+                else:
+                    log(f"❌  Échec de connexion à {SITE} après {max_retries} tentatives : {e}")
+
+        if not html:
+            raise RuntimeError(f"Impossible de joindre {SITE} : {last_error}")
+
         m = re.search(r'data-puzzle-number="(\d+)"', html)
         if not m:
             raise RuntimeError("Numéro du puzzle introuvable dans la page.")
@@ -30,7 +71,7 @@ class CemantixClient:
 
     def score(self, word: str):
         """Retourne (cosinus, permille|None), ou None si le site ne connaît pas le mot."""
-        for attempt in range(3):
+        for attempt in range(self.max_retries):
             try:
                 r = self.s.post(f"{SITE}/score?n={self.puzzle}",
                                 data={"word": word}, headers=HEADERS, timeout=15)

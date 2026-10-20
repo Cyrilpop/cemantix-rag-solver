@@ -84,7 +84,7 @@ def handle_menu_action(choice: str, args, store: VocabStore, duel_stats: dict) -
     # ------------------------------------------------------------------- #
     if choice == "1":
         clear_screen()
-        curr_seeds = getattr(args, "seed_count", 16)
+        curr_seeds = getattr(args, "seed_count", 12)
         log("─" * 76)
         log(f"🎯  {BOLD}RÉSOLUTION DU PUZZLE DU JOUR (EN LIGNE SUR CERTITUDES.ORG){RESET}")
         log("─" * 76)
@@ -425,7 +425,7 @@ def handle_settings_menu(args, store: VocabStore = None):
             log("=" * 76)
             log(f"🌱  {BOLD}STRATÉGIE D'AMORÇAGE DES GRAINES{RESET}")
             log("=" * 76)
-            log("  [1] 🧠 Dynamique RAG (sélection pluridisciplinaire dans ChromaDB)")
+            log("  [1] 🧠 Orthogonales RAG (Farthest Point Sampling dans ChromaDB)")
             log("  [2] 📋 Statique (liste classique de 20 mots)")
             log("  [3] ✍️  Personnalisée (mots saisis à la main)")
             log("─" * 76)
@@ -433,12 +433,12 @@ def handle_settings_menu(args, store: VocabStore = None):
             if sub_s == "1":
                 args.static_seeds = False
                 args.seeds = ""
-                raw_cnt = prompt_choice("Nombre de graines pluridisciplinaires [16] > ", default="16")
+                raw_cnt = prompt_choice("Nombre de graines orthogonales [12] > ", default="12")
                 try:
                     args.seed_count = max(1, int(raw_cnt))
                 except ValueError:
-                    args.seed_count = 16
-                notice = f"✓ Graines RAG dynamiques activées ({args.seed_count} graines)."
+                    args.seed_count = 12
+                notice = f"✓ Graines RAG orthogonales activées ({args.seed_count} graines FPS)."
             elif sub_s == "2":
                 args.static_seeds = True
                 args.seeds = ""
