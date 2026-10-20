@@ -19,7 +19,7 @@ import requests
 
 from .config import (
     DATA_DIR, LEXIQUE_FILE, LEXIQUE_URL, W2V_FILE, W2V_URL,
-    MAX_VOCAB, CHROMA_DIR, COLLECTION, WORD_RE, STOPWORDS,
+    MAX_VOCAB, CHROMA_DIR, COLLECTION, WORD_RE, STOPWORDS, ENGLISH_WORDS,
     HEADERS, log
 )
 
@@ -32,7 +32,15 @@ def strip_accents(text: str) -> str:
 def ensure_lexique() -> Path:
     """Télécharge et extrait le dictionnaire Lexique 3.83 s'il n'existe pas localement."""
     if LEXIQUE_FILE.exists() and LEXIQUE_FILE.stat().st_size > 100000:
+        words = set(LEXIQUE_FILE.read_text(encoding="utf-8").splitlines())
+        polluted = [w for w in ("water", "people", "about", "shit", "fuck", "game", "play") if w in words]
+        if not polluted:
+            return LEXIQUE_FILE
+        log(f"🧹  Assainissement du dictionnaire {LEXIQUE_FILE.name} (suppression des résidus anglais)...")
+        clean_words = sorted(w for w in words if w not in ENGLISH_WORDS)
+        LEXIQUE_FILE.write_text("\n".join(clean_words), encoding="utf-8")
         return LEXIQUE_FILE
+
     log("⬇  Téléchargement et extraction du dictionnaire Lexique 3.83...")
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     try:
@@ -44,12 +52,16 @@ def ensure_lexique() -> Path:
             lemmes = set()
             for row in reader:
                 cg = row.get("cgram", "")
-                if cg in ("NOM", "ADJ", "VER", "ADV", "AUX") or cg.startswith("ADJ:") or cg.startswith("PRO:"):
+                if (cg in ("NOM", "ADJ", "VER", "ADV", "AUX", "CON", "PRE")
+                        or cg.startswith("ADJ:") or cg.startswith("PRO:")):
                     w = row.get("lemme", "").strip().lower()
-                    if len(w) >= 3 and re.fullmatch(r"[a-zàâäçéèêëîïôöùûüÿœæ\-]+", w):
+                    if (len(w) >= 3
+                            and re.fullmatch(r"[a-zàâäçéèêëîïôöùûüÿœæ\-]+", w)
+                            and w not in ENGLISH_WORDS):
                         lemmes.add(w)
-            LEXIQUE_FILE.write_text("\n".join(sorted(lemmes)), encoding="utf-8")
-            log(f"✓  {len(lemmes)} lemmes officiels enregistrés dans {LEXIQUE_FILE.name}")
+            clean_lemmes = sorted(w for w in lemmes if w not in ENGLISH_WORDS)
+            LEXIQUE_FILE.write_text("\n".join(clean_lemmes), encoding="utf-8")
+            log(f"✓  {len(clean_lemmes)} lemmes officiels enregistrés dans {LEXIQUE_FILE.name}")
     except Exception as e:
         log(f"⚠  Impossible de télécharger Lexique 3.83 : {e}")
     return LEXIQUE_FILE
@@ -95,7 +107,7 @@ def download_w2v(path: Path) -> None:
 
 def load_w2v():
     """Lit le binaire word2vec (trié par fréquence) et garde les MAX_VOCAB
-    premiers lemmes simples (pas d'expressions 'a_b', pas de mots-outils)."""
+    premiers lemmes simples (pas d'expressions 'a_b', mots français valides)."""
     path = DATA_DIR / W2V_FILE
     cache_npy = DATA_DIR / f"{path.stem}_{MAX_VOCAB}_vecs.npy"
     cache_words = DATA_DIR / f"{path.stem}_{MAX_VOCAB}_words.txt"
@@ -103,18 +115,27 @@ def load_w2v():
 
     # Format ultra-rapide (mmap mémoire : ~0.05 seconde)
     if cache_npy.exists() and cache_words.exists():
-        log(f"📦  Chargement rapide des {MAX_VOCAB} lemmes (mmap instantané)...")
         words = cache_words.read_text(encoding="utf-8").splitlines()
-        vecs = np.load(cache_npy, mmap_mode="r")
-        return words, vecs
+        # Si le cache contient le mot "car", il est sain et à jour
+        if "car" in words:
+            log(f"📦  Chargement rapide des {len(words)} lemmes (mmap instantané)...")
+            vecs = np.load(cache_npy, mmap_mode="r")
+            return words, vecs
+        log("🔄  Ancien cache incomplet détecté (sans 'car'). Régénération propre depuis frWac...")
+        cache_npy.unlink(missing_ok=True)
+        cache_words.unlink(missing_ok=True)
+        if cache_npz.exists():
+            cache_npz.unlink(missing_ok=True)
 
     if cache_npz.exists():
         log(f"📦  Décompression du cache vectoriel ({MAX_VOCAB} lemmes)...")
         z = np.load(cache_npz)
         words, vecs = list(z["words"]), z["vecs"]
-        np.save(cache_npy, vecs)
-        cache_words.write_text("\n".join(words), encoding="utf-8")
-        return words, vecs
+        if "car" in words:
+            np.save(cache_npy, vecs)
+            cache_words.write_text("\n".join(words), encoding="utf-8")
+            return words, vecs
+        cache_npz.unlink(missing_ok=True)
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     if not path.exists():
@@ -131,7 +152,8 @@ def load_w2v():
                     raw += c
             v = f.read(size)
             w = raw.decode("utf-8", "ignore")
-            if WORD_RE.fullmatch(w) and w not in STOPWORDS:
+            # Conserve tous les lemmes au format valide sans exclure les mots français usuels
+            if WORD_RE.fullmatch(w):
                 words.append(w)
                 vecs.append(np.frombuffer(v, dtype=np.float32))
                 if len(words) >= MAX_VOCAB:
@@ -160,6 +182,18 @@ class VocabStore:
             COLLECTION, metadata={"hnsw:space": "cosine"})
         if self.col.count() < len(words):
             self._ingest(words, vecs)
+        else:
+            # Synchronisation rapide des lemmes fondamentaux réintégrés
+            key_words = [w for w in ["car", "faire", "être", "avoir", "bien", "rien", "autre"] if w in self.index]
+            try:
+                existing = set(self.col.get(ids=key_words)["ids"])
+                missing = [w for w in key_words if w not in existing]
+                if missing:
+                    missing_vecs = [self.vec(w) for w in missing]
+                    self.col.upsert(ids=missing, embeddings=[v.tolist() for v in missing_vecs])
+                    log(f"✓  Synchronisation ChromaDB : {len(missing)} lemmes essentiels réintégrés ({', '.join(missing)})")
+            except Exception as e:
+                log(f"⚠️  Vérification ChromaDB : {e}")
         log(f"📚  Vector store prêt : {self.col.count()} lemmes ({W2V_FILE})")
 
     def normalize(self, word: str) -> str:
@@ -173,8 +207,12 @@ class VocabStore:
         return w
 
     def is_valid_french(self, word: str) -> bool:
-        """Vérifie qu'un mot est un lemme français officiel sous son orthographe exacte (avec accents) et présent dans l'espace vectoriel."""
-        return (word in self.valid_lemmas or not self.valid_lemmas) and (word in self.index)
+        """Vérifie qu'un mot est un lemme français valide (non anglais) et présent dans l'espace vectoriel."""
+        w = word.strip().lower()
+        if w in ENGLISH_WORDS:
+            return False
+        return (w in self.valid_lemmas or not self.valid_lemmas) and (w in self.index)
+
 
     def _ingest(self, words, vecs, batch: int = 5000) -> None:
         log(f"⏳  Indexation ChromaDB de {len(words)} lemmes (une seule fois)...")
