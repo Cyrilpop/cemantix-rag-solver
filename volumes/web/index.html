@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cémantix Solver — Mot du Jour</title>
+  <meta name="description" content="Dashboard du mot du jour Cémantix résolu par IA sémantique et RAG vectoriel">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <span class="brand-icon">🎯</span>
+        <div class="brand-text">
+          <h1>Cémantix Solver</h1>
+          <span class="brand-subtitle">Mot du Jour &amp; IA Sémantique</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div id="daemon-badge" class="status-badge status-sleeping" title="État du démon d'automatisation">
+          <span class="status-pulse"></span>
+          <span id="daemon-status-text">Veille active (00h00)</span>
+        </div>
+
+        <button id="theme-toggle" class="btn-icon" aria-label="Changer de thème" title="Basculer Mode Clair / Sombre">
+          <span class="theme-icon">☀️</span>
+        </button>
+
+        <button id="global-spoiler-toggle" class="btn-icon" aria-label="Mode anti-spoiler" title="Activer / Désactiver le flou anti-spoiler">
+          <span class="spoiler-icon">🛡️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Hero Card : Mot du Jour -->
+    <section class="hero-section">
+      <div class="hero-card card">
+        <div class="hero-header">
+          <div class="puzzle-meta">
+            <span id="puzzle-badge" class="badge badge-accent">Puzzle #----</span>
+            <span id="puzzle-date" class="meta-date">Chargement de la date...</span>
+          </div>
+          <span id="win-badge" class="badge badge-success">🏆 Résolu avec succès</span>
+        </div>
+
+        <!-- Zone du mot secret avec protection anti-spoiler -->
+        <div class="secret-container">
+          <div id="secret-word-card" class="secret-word-card is-spoiled">
+            <div class="spoiler-overlay">
+              <span class="spoiler-icon-large">🔒</span>
+              <p class="spoiler-prompt">Le mot secret est masqué pour éviter tout spoiler.</p>
+              <button id="reveal-word-btn" class="btn btn-primary">
+                <span class="btn-icon-text">👁️</span> Révéler le mot secret
+              </button>
+            </div>
+            <div class="secret-word-revealed">
+              <span class="secret-label">MOT SECRET DU JOUR</span>
+              <h2 id="secret-word" class="secret-word-text">--------</h2>
+              <div class="secret-actions">
+                <button id="copy-word-btn" class="btn btn-secondary btn-sm" title="Copier le mot dans le presse-papier">
+                  <span>📋</span> Copier
+                </button>
+                <button id="hide-word-btn" class="btn btn-ghost btn-sm" title="Masquer à nouveau">
+                  <span>🙈</span> Masquer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Badges métriques de la session du jour -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="metric-icon">🎯</span>
+            <div class="metric-info">
+              <span class="metric-label">Coups Joués</span>
+              <span id="metric-tries" class="metric-value">-- essais</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-icon">⚡</span>
+            <div class="metric-info">
+              <span class="metric-label">Temps Calcul</span>
+              <span id="metric-time" class="metric-value">-- s</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-icon">🧠</span>
+            <div class="metric-info">
+              <span class="metric-label">Moteur IA</span>
+              <span id="metric-source" class="metric-value">100% RAG Pur</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <span class="metric-icon">🌐</span>
+            <div class="metric-info">
+              <span class="metric-label">Site Officiel</span>
+              <span class="metric-value"><a href="https://cemantix.certitudes.org" target="_blank" rel="noopener">Cémantix ↗</a></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section Thermomètre Cémantix & Podium des Meilleurs Indices -->
+    <section class="section">
+      <div class="grid-2col">
+        <!-- Thermomètre & Climat Sémantique -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🌡️ Échelle Thermique Cémantix</h3>
+            <span class="card-subtitle">Barème officiel de proximité</span>
+          </div>
+
+          <div class="thermometer-visual">
+            <div class="temp-bar">
+              <div class="temp-tier tier-ice" title="Glacial (< 0°C)">🧊 &lt;0°C</div>
+              <div class="temp-tier tier-cold" title="Froid (0 - 10°C)">🥶 0-10°</div>
+              <div class="temp-tier tier-cool" title="Frais (10 - 20°C)">😎 10-20°</div>
+              <div class="temp-tier tier-warm" title="Chaud (20 - 30°C)">🥵 20-30°</div>
+              <div class="temp-tier tier-fire" title="Brûlant (> 30°C ou Top 1000)">🔥 &gt;30°C</div>
+            </div>
+          </div>
+
+          <!-- Compte à rebours minuit -->
+          <div class="countdown-box">
+            <div class="countdown-header">
+              <span class="countdown-icon">⏰</span>
+              <span class="countdown-title">Prochain mot secret dans :</span>
+            </div>
+            <div class="countdown-timer">
+              <div class="time-block"><span id="cd-hours" class="time-num">00</span><span class="time-unit">h</span></div>
+              <span class="time-sep">:</span>
+              <div class="time-block"><span id="cd-minutes" class="time-num">00</span><span class="time-unit">m</span></div>
+              <span class="time-sep">:</span>
+              <div class="time-block"><span id="cd-seconds" class="time-num">00</span><span class="time-unit">s</span></div>
+            </div>
+            <p class="countdown-note">Minuit (00h00 heure de Paris) — le démon autonome résoudra le mot dès sa parution.</p>
+          </div>
+        </div>
+
+        <!-- Podium des Indices & Meilleurs Essais -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h3>🔍 Indices &amp; Mots d'Approche</h3>
+              <span class="card-subtitle">Meilleurs candidats ayant conduit à la solution</span>
+            </div>
+            <button id="clues-toggle-btn" class="btn btn-sm btn-ghost" title="Afficher / Masquer les indices">
+              <span id="clues-btn-icon">👁️</span> <span id="clues-btn-text">Masquer</span>
+            </button>
+          </div>
+
+          <div id="clues-container" class="clues-list">
+            <div id="clues-placeholder" class="clues-empty">
+              <span>Aucun indice détaillé disponible pour ce puzzle.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Statistiques Globales (KPIs) -->
+    <section class="section">
+      <div class="section-title">
+        <h3>📊 Tableau de Bord des Performances</h3>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card card">
+          <span class="stat-icon">🏆</span>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Puzzles Résolus</div>
+        </div>
+        <div class="stat-card card">
+          <span class="stat-icon">🎯</span>
+          <div class="stat-value" id="stat-avg-tries">0</div>
+          <div class="stat-label">Moyenne de Coups</div>
+        </div>
+        <div class="stat-card card">
+          <span class="stat-icon">⚡</span>
+          <div class="stat-value" id="stat-avg-time">0.0s</div>
+          <div class="stat-label">Temps Moyen</div>
+        </div>
+        <div class="stat-card card">
+          <span class="stat-icon">💯</span>
+          <div class="stat-value" id="stat-win-rate">100%</div>
+          <div class="stat-label">Taux de Succès</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Historique des Mots Précédents -->
+    <section class="section">
+      <div class="card">
+        <div class="card-header history-header">
+          <div>
+            <h3>📜 Historique &amp; Archives des Puzzles</h3>
+            <span class="card-subtitle">Consultez les mots et performances des jours passés</span>
+          </div>
+          <div class="search-box">
+            <span class="search-icon">🔎</span>
+            <input type="text" id="history-search" placeholder="Filtrer par mot ou date..." aria-label="Recherche historique">
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Puzzle</th>
+                <th>Mot Secret</th>
+                <th>Essais</th>
+                <th>Durée</th>
+                <th>Moteur</th>
+                <th>Résultat</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr>
+                <td colspan="7" class="loading-cell">Chargement de l'historique...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-left">
+        <p><strong>Cémantix Solver</strong> — Propulsé par RAG vectoriel (frWac Word2Vec + ChromaDB) &amp; Démon autonome 24h/24.</p>
+        <span class="footer-sub">Conçu pour être servi ultra-rapidement via <strong>Caddy</strong> (volume <code>./volumes/web</code>).</span>
+      </div>
+      <div class="footer-right">
+        <span id="last-updated" class="footer-time">Dernière synchro : --</span>
+        <button id="manual-refresh-btn" class="btn btn-ghost btn-sm" title="Actualiser les données">
+          <span>🔄</span> Actualiser
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
