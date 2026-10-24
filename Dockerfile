@@ -1,9 +1,10 @@
 FROM python:3.12-slim
 
-# Dépendances système minimales
+# Dépendances système minimales et gestion du fuseau horaire
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -19,9 +20,11 @@ COPY cemantix_data/lexique_fr.txt ./cemantix_data/lexique_fr.txt
 
 # Variables d'environnement configurables
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV TZ="Europe/Paris"
 ENV LM_API="http://host.docker.internal:1234/v1"
 ENV LLM_MODEL="qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2"
 
-# Point d'entrée (par défaut : menu interactif complet)
+# Point d'entrée (par défaut : menu interactif ou commande injectée par compose)
 ENTRYPOINT ["python", "cemantix_rag.py"]
 CMD []
