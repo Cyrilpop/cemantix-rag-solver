@@ -517,6 +517,30 @@ class GameAPIHandler(BaseHTTPRequestHandler):
                 "puzzle_id": puzzle,
                 "available": bool(word),
             })
+        if path in ("/api/daily", "/api/dashboard"):
+            try:
+                from .web import build_web_data
+                data = build_web_data()
+            except Exception as e:
+                self._send_json({"error": f"Erreur chargement données dashboard: {e}"}, status=500)
+                return
+
+            query = self.path.split("?")[1] if "?" in self.path else ""
+            params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+            reveal = params.get("reveal", "").lower() in ("true", "1", "yes")
+
+            if not reveal and data.get("current"):
+                secret = data["current"].get("word")
+                data["current"]["word"] = None
+                data["current"]["is_revealed"] = False
+                if secret and "trajectory" in data["current"]:
+                    for step in data["current"]["trajectory"]:
+                        if str(step.get("word", "")).lower() == secret.lower():
+                            step["word"] = "••••••••"
+            elif data.get("current"):
+                data["current"]["is_revealed"] = True
+
+            self._send_json(data)
             return
 
         self._send_json({"error": "Route introuvable"}, status=404)
