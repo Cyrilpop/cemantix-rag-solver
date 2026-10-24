@@ -308,7 +308,8 @@
     DOM.historyTbody.innerHTML = html;
   }
 
-  // --- Compte à Rebours Minuit (Europe/Paris) ---\n  function updateCountdown() {
+  // --- Compte à Rebours Minuit (Europe/Paris) ---
+  function updateCountdown() {
     const now = new Date();
     const parisTimeStr = now.toLocaleString("en-US", { timeZone: "Europe/Paris" });
     const parisNow = new Date(parisTimeStr);
