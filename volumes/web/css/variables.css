@@ -1,0 +1,93 @@
+/* ==========================================================================
+   Cémantix Solver — Variables & Tokens de Style
+   ========================================================================== */
+
+:root {
+  --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Thème Sombre (Défaut) */
+  --bg-app: #0d1117;
+  --bg-card: rgba(22, 27, 34, 0.85);
+  --bg-card-hover: rgba(30, 37, 46, 0.95);
+  --bg-input: #161b22;
+  --border-color: #30363d;
+  --border-focus: #58a6ff;
+
+  --text-main: #f0f6fc;
+  --text-muted: #8b949e;
+  --text-dim: #6e7681;
+
+  --accent: #58a6ff;
+  --accent-glow: rgba(88, 166, 255, 0.25);
+  --success: #3fb950;
+  --success-glow: rgba(63, 185, 80, 0.25);
+  --warning: #d29922;
+  --danger: #f85149;
+
+  --tier-ice: #38bdf8;
+  --tier-cold: #60a5fa;
+  --tier-cool: #34d399;
+  --tier-warm: #fbbf24;
+  --tier-fire: #f87171;
+
+  /* Dégradés thermiques sémantiques */
+  --gradient-dashboard: linear-gradient(90deg,
+      #075985 0%,
+      #075985 16%,
+      #3b82f6 24%,
+      #3b82f6 36%,
+      #10b981 44%,
+      #10b981 56%,
+      #f59e0b 64%,
+      #f59e0b 76%,
+      #c20000 84%,
+      #c20000 100%);
+  --gradient-game: linear-gradient(90deg,
+      #fcf161 0%,
+      #f59e0b 25%,
+      #f97316 60%,
+      #c20000 100%);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 25px rgba(88, 166, 255, 0.15);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Scrollbar élégante (Sombre) */
+  --scrollbar-thumb: rgba(255, 255, 255, 0.22);
+  --scrollbar-thumb-hover: #58a6ff;
+  --scrollbar-track: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="light"] {
+  --bg-app: #f6f8fa;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-card-hover: #ffffff;
+  --bg-input: #f6f8fa;
+  --border-color: #d0d7de;
+  --border-focus: #0969da;
+
+  --text-main: #1f2328;
+  --text-muted: #656d76;
+  --text-dim: #8c959f;
+
+  --accent: #0969da;
+  --accent-glow: rgba(9, 105, 218, 0.15);
+  --success: #1a7f37;
+  --success-glow: rgba(26, 127, 55, 0.15);
+  --warning: #9a6700;
+  --danger: #cf222e;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 20px rgba(9, 105, 218, 0.1);
+
+  /* Scrollbar élégante (Clair) */
+  --scrollbar-thumb: rgba(0, 0, 0, 0.22);
+  --scrollbar-thumb-hover: #0969da;
+  --scrollbar-track: rgba(0, 0, 0, 0.03);
+}

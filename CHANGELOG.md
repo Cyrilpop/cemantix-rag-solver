@@ -55,6 +55,26 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - **Surveillance de santé Docker (HEALTHCHECK)** : intégration d'un heartbeat régulier et de la commande `python cemantix_rag.py --healthcheck` rapportant dynamiquement l'état `healthy` sous `docker ps` et `docker compose ps`.
 
 ### Modifié / Amélioré
+- **Refonte Modulaire & Architecture Atomique de l'Interface Web (`volumes/web/`)** :
+  - **Scission de la page monolithique `index.html`** : séparation en deux pages HTML atomiques et sémantiques avec URLs propres sans extension :
+    - `index.html` : Tableau de bord du mot du jour (URL `/`), métriques, thermomètre, podium des indices, KPIs, historique des puzzles archivés, modale de trajectoire IA et section SEO / FAQ.
+    - `play/index.html` : Interface dédiée au jeu interactif Cémantix en ligne servie sous l'URL propre `/play/` (mode Défi du jour, mode Illimité avec sélecteur de difficulté, saisie réactive, spotlight et listes d'essais).
+  - **Découpage modulaire des styles CSS (`volumes/web/css/`)** : décomposition du fichier monolithique `style.css` (~2 200 lignes) en 6 sous-modules atomiques indépendants :
+    - `variables.css` : tokens de design, thèmes sombre et clair, dégradés thermiques sémantiques.
+    - `base.css` : reset, typographie, boutons, badges, composants de base, boutons pill et notifications toast.
+    - `layout.css` : en-tête d'application, navigation par onglets réactive et pied de page fixe.
+    - `dashboard.css` : composants visuels du tableau de bord, thermomètre, compte à rebours minuit et guide SEO.
+    - `game.css` : commandes de jeu, saisie, spotlight du dernier mot et listes de propositions.
+    - `modal.css` : modale de visualisation de la trajectoire du bot et filtres de progression.
+  - **Modularisation JavaScript en modules ES natifs (`volumes/web/js/`)** : éclatement du fichier monolithique `app.js` (~1 400 lignes) en modules autonomes sans bundler lourd :
+    - `app.js` : point d'entrée unique et bootstrap de l'application selon les éléments du DOM.
+    - `utils.js` : helpers de formatage de dates, calcul des classes thermiques, gestionnaire de toasts et copie presse-papier.
+    - `theme.js` : commutation des thèmes clair/sombre et bascule globale du voile anti-spoiler.
+    - `countdown.js` : horloge décomptant en temps réel le temps jusqu'à minuit (Europe/Paris).
+    - `trajectory.js` : gestion et filtrage de la modale de trajectoire du solveur IA.
+    - `dashboard.js` : synchronisation continue de `data.json`, rendu du mot du jour et recherche dans l'historique.
+    - `game.js` : gestion des parties interactives, appels à la micro-API `/api/game/*`, persistance locale et spotlight.
+  - **Optimisation du chargement et élimination des fichiers obsolètes** : suppression des monolithes racine `app.js` et `style.css`, liaison directe des ressources spécifiques par page pour un rendu immédiat et zéro flash de style.
 - **Refonte Ergonomique & Architecture des Dégradés (`volumes/web/`)** :
   - **Mise en page 2 colonnes de la carte Hero (Mot du Jour)** : réorganisation du bloc Mot du Jour en grille à deux colonnes équilibrée sur grand écran (carte du mot secret à gauche, 3 cartes métriques empilées à droite) pour supprimer les espaces vides et offrir une lecture immédiate.
   - **Architecture à deux dégradés distincts (`--gradient-dashboard` et `--gradient-game`)** :
