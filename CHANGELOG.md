@@ -4,18 +4,28 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
-## [Non publié] - 2026-10-18
+## [Non publié] - 2026-10-24
+
+### Ajouté
+- **Mode Démon 24h/24 & Veille automatique (`src/daemon.py`, `--daemon`)** :
+  - **Exécution en arrière-plan permanente sous Docker** : le conteneur reste en sommeil léger et se réveille chaque nuit à **00h00 (heure de Paris / Europe/Paris)** pour résoudre le mot officiel Cémantix en mode 100% RAG pur.
+  - **Interception gracieuse des signaux POSIX** : écoute de `SIGTERM` et `SIGINT` avec boucle de sommeil par tranche de 1 seconde permettant un arrêt immédiat sans délai (`docker stop` / `docker compose down`).
+  - **Rattrapage au démarrage** : vérifie dès le lancement si le mot du jour est déjà consigné dans l'historique ; dans le cas contraire, il le résout immédiatement avant d'entamer son cycle de veille jusqu'à minuit.
+  - **Historisation automatique** : enregistrement des statistiques quotidiennes dans `cemantix_data/daily_history.json` (date, puzzle, mot trouvé, nombre de coups, durée).
+  - **Configuration Docker pour service autonome** : ajout de `restart: unless-stopped`, `command: ["--daemon", "--rag-only"]`, paquet Debian `tzdata` et variable `TZ=Europe/Paris`.
+
+## [0.2.0] - 2026-10-18
 
 ### Modifié
 - **Refactoring architectural modulaire (`src/`)** :
-  - Découpage du script monolithique `cemantix_rag.py` (~2 000 lignes) en package modulaire `src/`.
-  - `src/config.py` : centralisation des constantes, styles ANSI et configuration d'environnement.
-  - `src/vocab.py` : gestion du dictionnaire Lexique 3.83, normalisation des accents et `VocabStore` (ChromaDB).
-  - `src/clients.py` : client officiel `CemantixClient` et simulateur local `MockClient`.
-  - `src/ui.py` : composants de rendu console, thermomètres ASCII, dashboards solo/duel et débriefing.
-  - `src/solvers.py` : régression Ridge, algorithme de reranking, interface LLM local, `Solver` et `RagDuelPlayer`.
-  - `src/modes.py` : boucles d'orchestration pour benchmark, battle, solo et duel.
-  - `cemantix_rag.py` : point d'entrée CLI épuré (~80 lignes) orchestrant les modules.
+  - Découpage du script monolithique `cemantix_rag.py` (~2 000 lignes) en package modulaire `src/`.\
+  - `src/config.py` : centralisation des constantes, styles ANSI et configuration d'environnement.\
+  - `src/vocab.py` : gestion du dictionnaire Lexique 3.83, normalisation des accents et `VocabStore` (ChromaDB).\
+  - `src/clients.py` : client officiel `CemantixClient` et simulateur local `MockClient`.\
+  - `src/ui.py` : composants de rendu console, thermomètres ASCII, dashboards solo/duel et débriefing.\
+  - `src/solvers.py` : régression Ridge, algorithme de reranking, interface LLM local, `Solver` et `RagDuelPlayer`.\
+  - `src/modes.py` : boucles d'orchestration pour benchmark, battle, solo et duel.\
+  - `cemantix_rag.py` : point d'entrée CLI épuré (~80 lignes) orchestrant les modules.\
   - Mise à jour du `Dockerfile` et de la documentation (`README.md`).
 
 ### Corrigé
@@ -58,21 +68,3 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Compteur de manches et score cumulé de session persistant (`🧑   X — Y  🤖`) dans le bandeau supérieur.
   - 3 niveaux de difficulté pour l'IA (`Facile`, `Moyen`, `Expert`) ajustant le nombre de graines, le seuil de chauffe et le choix des candidats rerankés.
   - Configuration d'avant-match guidée en deux étapes (niveau puis cible de l'IA).
-  - Bascule dynamique du niveau en jeu via `/diff`, `/facile`, `/moyen`, `/expert` et option CLI `--difficulty` (`-d`).
-  - Tableau de débriefing comparatif d'après-match (`render_duel_debrief`) : confrontation côte à côte des cibles, statut, meilleur mot atteint, première étincelle et répartition météo.
-   - Coup spécial d'espionnage sémantique (`/espion`) : 1 crédit par match permettant au joueur d'intercepter la projection Ridge de l'IA (disciplines surveillées, meilleure piste et alerte de proximité sémantique en temps réel), en consommant son tour de jeu.
-  - Bascule instantanée en mémoire entre mode solo et duel via `/solo` et `/duel`.
-- **Mode jeu interactif solo (`--play` / `--game`)** :
-  - Dashboard dynamique dans la console avec tableau récapitulatif Top 15 des meilleurs coups, météo et rang en pourmille (‰).
-  - Thermomètre ASCII dynamique (`make_gauge`) pour visualiser en temps réel la proximité sémantique de chaque coup.
-  - Système d'indice vectoriel RAG (`/indice`) par interpolation vers le vecteur secret avec affichage persistant des indices débloqués à l'écran.
-  - Boucle de jeu continue en mémoire : enchaînement instantané des parties sans recharger VocabStore ni ChromaDB.
-  - Commandes en cours de partie : `/aide`, `/top`, `/historique`, `/indice`, `/rejouer`, `/abandon`, `/quitter`.
-
-## [1.0.0] - 2026-10-18
-
-### Ajouté
-- Solveur 100% RAG mathématique par régression Ridge et reranking géométrique.
-- Mode hybride RAG + LLM local (compatible LM Studio).
-- Mode Battle comparatif direct sur le même mot secret.
-- Intégration de l'espace vectoriel frWac (150 000 lemmes) et du dictionnaire officiel Lexique 3.83.
