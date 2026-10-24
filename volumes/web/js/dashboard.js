@@ -8,6 +8,7 @@ import { initTrajectoryModal, openTrajectoryModal } from "./trajectory.js";
 
 export const dashboardState = {
   data: null,
+  secretWord: null,
   searchQuery: "",
   cluesVisible: true,
 };
@@ -25,8 +26,7 @@ export function initDashboard() {
 
   if (revealWordBtn) {
     revealWordBtn.addEventListener("click", () => {
-      themeState.isSpoiled = false;
-      secretWordCard?.classList.remove("is-spoiled");
+      revealSecretWord();
     });
   }
 
@@ -39,14 +39,30 @@ export function initDashboard() {
 
   if (copyWordBtn) {
     copyWordBtn.addEventListener("click", () => {
-      const secretWord = document.getElementById("secret-word");
-      const word = secretWord?.textContent?.trim();
-      if (word && word !== "--------") {
+      if (dashboardState.secretWord) {
+        const word = dashboardState.secretWord.toUpperCase();
         navigator.clipboard.writeText(word).then(() => {
           showToast(`📋 Mot secret « ${word} » copié !`);
         }).catch(() => {
           showToast("Erreur lors de la copie.");
         });
+      } else {
+        fetch(`/api/daily?reveal=true&t=${Date.now()}`)
+          .then((res) => res.json())
+          .then((json) => {
+            if (json.current && json.current.word) {
+              dashboardState.secretWord = json.current.word;
+              dashboardState.data = json;
+              const secretWord = document.getElementById("secret-word");
+              if (secretWord) secretWord.textContent = json.current.word.toUpperCase();
+              secretWordCard?.classList.remove("is-spoiled");
+              themeState.isSpoiled = false;
+              navigator.clipboard.writeText(json.current.word.toUpperCase()).then(() => {
+                showToast(`📋 Mot secret « ${json.current.word.toUpperCase()} » copié !`);
+              });
+            }
+          })
+          .catch(() => showToast("Erreur lors de la copie."));
       }
     });
   }
@@ -100,24 +116,60 @@ export function initDashboard() {
   }, 30000);
 }
 
+export function revealSecretWord() {
+  const secretWord = document.getElementById("secret-word");
+  const secretWordCard = document.getElementById("secret-word-card");
+  themeState.isSpoiled = false;
+  secretWordCard?.classList.remove("is-spoiled");
+
+  if (dashboardState.secretWord) {
+    if (secretWord) secretWord.textContent = dashboardState.secretWord.toUpperCase();
+    return;
+  }
+
+  if (secretWord) secretWord.textContent = "RÉVÉLATION...";
+  fetch(`/api/daily?reveal=true&t=${Date.now()}`)
+    .then((res) => {
+      if (!res.ok) throw new Error("API indisponible");
+      return res.json();
+    })
+    .then((json) => {
+      if (json.current && json.current.word) {
+        dashboardState.secretWord = json.current.word;
+        dashboardState.data = json;
+        if (secretWord) secretWord.textContent = json.current.word.toUpperCase();
+        renderClues(json.current.top_guesses);
+      }
+    })
+    .catch((err) => {
+      console.warn("Échec révélation mot secret :", err);
+      if (secretWord) secretWord.textContent = "--------";
+      showToast("Impossible de révéler le mot secret");
+    });
+}
+
 export function fetchDashboardData(isManual = false) {
   const lastUpdated = document.getElementById("last-updated");
   if (isManual && lastUpdated) {
     lastUpdated.textContent = "Actualisation...";
   }
 
-  fetch(`data.json?t=${Date.now()}`)
+  const revealParam = dashboardState.secretWord ? "&reveal=true" : "";
+  fetch(`/api/daily?t=${Date.now()}${revealParam}`)
     .then((res) => {
-      if (!res.ok) throw new Error("Fichier data.json indisponible");
+      if (!res.ok) throw new Error("API /api/daily indisponible");
       return res.json();
     })
     .then((json) => {
       dashboardState.data = json;
+      if (json.current && json.current.word) {
+        dashboardState.secretWord = json.current.word;
+      }
       renderDashboard(json);
       if (isManual) showToast("Données synchronisées avec succès");
     })
     .catch((err) => {
-      console.warn("Échec récupération data.json :", err);
+      console.warn("Échec récupération /api/daily :", err);
       if (isManual) showToast("Impossible d'actualiser les données");
     });
 }
@@ -141,9 +193,12 @@ export function renderDashboard(data) {
   const statWinRate = document.getElementById("stat-win-rate");
   const lastUpdated = document.getElementById("last-updated");
 
+  const wordToDisplay = dashboardState.secretWord || current.word;
   if (puzzleBadge) puzzleBadge.textContent = current.puzzle ? `Puzzle #${current.puzzle}` : "Puzzle du jour";
   if (puzzleDate) puzzleDate.textContent = formatDateFr(current.date);
-  if (secretWord) secretWord.textContent = (current.word || "--------").toUpperCase();
+  if (secretWord) {
+    secretWord.textContent = wordToDisplay ? wordToDisplay.toUpperCase() : "••••••••";
+  }
   if (metricTries) metricTries.textContent = current.tries ? `${current.tries} coups` : "--";
   if (metricTime) metricTime.textContent = current.duration_seconds ? `${current.duration_seconds}s` : "--";
 

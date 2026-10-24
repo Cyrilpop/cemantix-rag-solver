@@ -28,8 +28,8 @@ from .daemon import (
 )
 
 VOLUMES_DIR = BASE_DIR / "volumes"
-WEB_DIR = Path(os.getenv("WEB_DIR", str(VOLUMES_DIR / "web")))
-WEB_DATA_FILE = WEB_DIR / "data.json"
+DASHBOARD_DATA_FILE = Path(os.getenv("DASHBOARD_DATA_FILE", str(DATA_DIR / "data.json")))
+WEB_DATA_FILE = DASHBOARD_DATA_FILE  # Rétrocompatibilité
 
 
 def build_web_data(
@@ -121,8 +121,8 @@ def export_web_data(
     history: list = None,
     heartbeat_path: Path = HEARTBEAT_FILE,
 ) -> Path:
-    """Génère et écrit de manière atomique data.json dans le répertoire web."""
-    out_dir = target_dir if target_dir is not None else WEB_DIR
+    """Génère et écrit de manière atomique data.json dans le répertoire cible (défaut : DATA_DIR)."""
+    out_dir = target_dir if target_dir is not None else DATA_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     target_file = out_dir / "data.json"
 
