@@ -43,9 +43,14 @@ def build_web_data(
     if now_dt is None:
         now_dt = datetime.now(PARIS_TZ)
 
-    # 1. Identifier le mot du jour (dernière entrée victorieuse ou dernière entrée)
+    # 1. Identifier le mot du jour (dernière entrée victorieuse par date/puzzle)
     winning_entries = [e for e in history if e.get("win") is True]
-    current = winning_entries[-1] if winning_entries else (history[-1] if history else None)
+    if winning_entries:
+        current = max(winning_entries, key=lambda x: (x.get("date", ""), str(x.get("puzzle", 0))))
+    elif history:
+        current = max(history, key=lambda x: (x.get("date", ""), str(x.get("puzzle", 0))))
+    else:
+        current = None
 
     # 2. Statistiques globales
     total_solved = len(winning_entries)
