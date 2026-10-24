@@ -38,6 +38,11 @@
   --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
   --shadow-glow: 0 0 25px rgba(88, 166, 255, 0.15);
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Scrollbar élégante (Sombre) */
+  --scrollbar-thumb: rgba(255, 255, 255, 0.22);
+  --scrollbar-thumb-hover: #58a6ff;
+  --scrollbar-track: rgba(255, 255, 255, 0.03);
 }
 
 [data-theme="light"] {
@@ -62,6 +67,11 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.1);
   --shadow-glow: 0 0 20px rgba(9, 105, 218, 0.1);
+
+  /* Scrollbar élégante (Clair) */
+  --scrollbar-thumb: rgba(0, 0, 0, 0.22);
+  --scrollbar-thumb-hover: #0969da;
+  --scrollbar-track: rgba(0, 0, 0, 0.03);
 }
 
 /* Base & Reset */
@@ -69,6 +79,30 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* Ascenseurs personnalisés modernes & discrets */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 body {
@@ -651,7 +685,31 @@ body {
   height: 290px;
   max-height: 290px;
   overflow-y: auto;
+  padding-right: 0.4rem;
   transition: opacity 0.2s ease, filter 0.2s ease;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.clues-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.clues-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 9999px;
+  margin: 4px 0;
+}
+
+.clues-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clues-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 /* Overlay pour les indices masqués à taille fixe */
@@ -791,6 +849,28 @@ body {
 .table-responsive {
   width: 100%;
   overflow-x: auto;
+  padding-bottom: 0.35rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 9999px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 .history-table {
