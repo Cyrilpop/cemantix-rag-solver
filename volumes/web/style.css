@@ -13,7 +13,7 @@
   --bg-input: #161b22;
   --border-color: #30363d;
   --border-focus: #58a6ff;
-  
+
   --text-main: #f0f6fc;
   --text-muted: #8b949e;
   --text-dim: #6e7681;
@@ -24,12 +24,30 @@
   --success-glow: rgba(63, 185, 80, 0.25);
   --warning: #d29922;
   --danger: #f85149;
-  
+
   --tier-ice: #38bdf8;
   --tier-cold: #60a5fa;
   --tier-cool: #34d399;
   --tier-warm: #fbbf24;
   --tier-fire: #f87171;
+
+  /* Dégradés thermiques sémantiques */
+  --gradient-dashboard: linear-gradient(90deg,
+      #075985 0%,
+      #075985 16%,
+      #3b82f6 24%,
+      #3b82f6 36%,
+      #10b981 44%,
+      #10b981 56%,
+      #f59e0b 64%,
+      #f59e0b 76%,
+      #c20000 84%,
+      #c20000 100%);
+  --gradient-game: linear-gradient(90deg,
+      #fcf161 0%,
+      #f59e0b 25%,
+      #f97316 60%,
+      #c20000 100%);
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -187,8 +205,17 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.9); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
 }
 
 .status-sleeping .status-pulse {
@@ -392,19 +419,27 @@ body {
   font-weight: 500;
 }
 
-/* Secret Word Area — Taille strictement fixe & stable */
+/* Grille 2 colonnes pour le corps du Hero : Mot secret à gauche, Métriques à droite */
+.hero-body-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+/* Secret Word Area */
 .secret-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 1.5rem 0 2rem 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
 }
 
 .secret-word-card {
   position: relative;
   width: 100%;
-  max-width: 600px;
-  height: 230px;
+  max-width: 100%;
+  height: 100%;
   min-height: 230px;
   box-sizing: border-box;
   background: var(--bg-input);
@@ -504,47 +539,61 @@ body {
   gap: 0.75rem;
 }
 
-/* Metrics Grid */
+/* Metrics Grid — Colonne droite */
 .metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-}
-
-@media (max-width: 850px) {
-  .metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  height: 100%;
 }
 
 .metric-card {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.85rem 1rem;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+
+.metric-card:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(88, 166, 255, 0.35);
+  transform: translateX(2px);
 }
 
 .metric-icon {
   font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(88, 166, 255, 0.08);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
 }
 
 .metric-info {
   display: flex;
   flex-direction: column;
+  gap: 0.15rem;
 }
 
 .metric-label {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
 .metric-value {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-main);
 }
@@ -558,6 +607,25 @@ body {
   text-decoration: underline;
 }
 
+/* Responsiveness pour le Hero */
+@media (max-width: 860px) {
+  .hero-body-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Thermometer & Climat Sémantique */
 .thermometer-visual {
   margin-bottom: 1.5rem;
@@ -569,35 +637,46 @@ body {
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--border-color);
+  background: var(--gradient-dashboard);
   font-size: 0.75rem;
   font-weight: 600;
   text-align: center;
   line-height: 38px;
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15);
 }
 
 .temp-tier {
   flex: 1;
-  transition: transform 0.2s ease;
+  background: transparent;
+  transition: background-color 0.2s ease;
 }
 
 .temp-tier:hover {
-  transform: scaleY(1.1);
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.temp-bar .tier-ice { background: #0284c7; }
-.temp-bar .tier-cold { background: #3b82f6; }
-.temp-bar .tier-cool { background: #10b981; }
-.temp-bar .tier-warm { background: #f59e0b; }
-.temp-bar .tier-fire { background: #ef4444; }
+/* Couleurs sémantiques des températures dans les listes */
+.guess-temp.tier-ice {
+  color: var(--tier-ice);
+}
 
-/* Couleurs sémantiques des températures dans les listes et le spotlight */
-.spotlight-temp.tier-ice, .guess-temp.tier-ice { color: var(--tier-ice); }
-.spotlight-temp.tier-cold, .guess-temp.tier-cold { color: var(--tier-cold); }
-.spotlight-temp.tier-cool, .guess-temp.tier-cool { color: var(--tier-cool); }
-.spotlight-temp.tier-warm, .guess-temp.tier-warm { color: var(--tier-warm); }
-.spotlight-temp.tier-fire, .guess-temp.tier-fire { color: var(--tier-fire); }
+.guess-temp.tier-cold {
+  color: var(--tier-cold);
+}
+
+.guess-temp.tier-cool {
+  color: var(--tier-cool);
+}
+
+.guess-temp.tier-warm {
+  color: var(--tier-warm);
+}
+
+.guess-temp.tier-fire {
+  color: var(--tier-fire);
+}
 
 /* Countdown */
 .countdown-box {
@@ -992,8 +1071,49 @@ body {
 }
 
 .footer-sub {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.footer-author-link,
+.footer-sub a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  position: relative;
+  display: inline;
+  transition: color 0.25s ease, text-shadow 0.25s ease;
+}
+
+.footer-author-link::after,
+.footer-sub a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--accent), #79c0ff);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 1px;
+}
+
+.footer-author-link:hover,
+.footer-sub a:hover {
+  color: #79c0ff;
+  text-shadow: 0 0 12px var(--accent-glow);
+}
+
+.footer-author-link:hover::after,
+.footer-sub a:hover::after {
+  width: 100%;
+}
+
+[data-theme="light"] .footer-author-link:hover,
+[data-theme="light"] .footer-sub a:hover {
+  color: #0550ae;
+  text-shadow: 0 0 8px rgba(9, 105, 218, 0.25);
 }
 
 .footer-right {
@@ -1176,8 +1296,15 @@ body {
 }
 
 @keyframes popIn {
-  0% { opacity: 0; transform: scale(0.95) translateY(-10px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .win-content {
@@ -1286,109 +1413,122 @@ body {
   border: 1px solid var(--warning);
 }
 
-/* Spotlight du Dernier Coup */
+/* Spotlight du Dernier Coup — Refonte Moderne */
 .game-spotlight {
-  padding: 1.25rem 1.5rem;
-  border: 2px solid var(--border-color);
-  transition: border-color 0.2s ease;
+  padding: 1.25rem 1.75rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.04) 0%, rgba(22, 27, 34, 0.95) 100%);
+  border: 1px solid rgba(88, 166, 255, 0.25);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: var(--transition);
 }
 
 .spotlight-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .spotlight-label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   color: var(--text-muted);
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .spotlight-body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1.5rem;
   flex-wrap: wrap;
-  gap: 1rem;
 }
 
 .spotlight-word-group {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .spotlight-word {
   font-family: var(--font-mono);
-  font-size: 1.85rem;
+  font-size: 2.1rem;
   font-weight: 800;
   text-transform: uppercase;
   color: var(--text-main);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
 }
 
 .spotlight-weather {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  padding: 0.25rem 0.65rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 9999px;
-  background: var(--bg-input);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
+  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .spotlight-scores {
   display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.spotlight-temp-wrapper {
-  display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.25rem;
+  gap: 0.5rem;
+}
+
+.spotlight-metrics-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
 }
 
 .spotlight-temp {
   font-family: var(--font-mono);
-  font-size: 1.5rem;
+  font-size: 1.7rem;
   font-weight: 800;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  padding: 0.2rem 0.65rem;
-  border-radius: var(--radius-sm);
-  display: inline-block;
+  color: var(--text-main) !important;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.spotlight-permille {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fcf161;
+  background: rgba(252, 241, 97, 0.12);
+  border: 1px solid rgba(252, 241, 97, 0.35);
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  letter-spacing: 0.04em;
   line-height: 1.2;
 }
 
 .temp-gauge {
-  width: 130px;
-  height: 7px;
-  background: var(--bg-input);
+  width: 190px;
+  height: 9px;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 9999px;
   overflow: hidden;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .temp-gauge-fill {
   height: 100%;
   border-radius: 9999px;
+  background: var(--gradient-game) !important;
+  background-size: 190px 100% !important;
   transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.spotlight-permille {
-  font-family: var(--font-mono);
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  background: var(--bg-input);
-  padding: 0.35rem 0.65rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-color);
+  box-shadow: 0 0 8px rgba(252, 241, 97, 0.25);
 }
 
 /* Listes des Essais du Joueur */
@@ -1468,8 +1608,15 @@ body {
 }
 
 @keyframes fadeIn {
-  0% { opacity: 0; transform: translateY(-4px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 768px) {
@@ -1504,15 +1651,25 @@ body {
   .spotlight-body {
     flex-direction: column;
     align-items: flex-start;
+    gap: 1rem;
   }
 
   .spotlight-scores {
     width: 100%;
+    align-items: stretch;
+  }
+
+  .spotlight-metrics-row {
+    width: 100%;
     justify-content: space-between;
   }
 
-  .spotlight-temp-wrapper {
-    align-items: flex-start;
+  .temp-gauge {
+    width: 100%;
+  }
+
+  .temp-gauge-fill {
+    background-size: 100% 100% !important;
   }
 }
 
@@ -1742,13 +1899,25 @@ body {
 }
 
 @keyframes modalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modalScaleIn {
-  from { opacity: 0; transform: scale(0.96) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 /* Carte de la Modal */
@@ -2059,14 +2228,12 @@ body {
   .trajectory-summary-bar {
     grid-template-columns: repeat(2, 1fr);
   }
+
   .step-mini-gauge {
     display: none;
   }
+
   .step-right {
     gap: 0.5rem;
   }
 }
-
-
-
-

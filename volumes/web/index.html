@@ -38,7 +38,7 @@
 
   <!-- Favicon & Styles -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261024b">
 
   <!-- Données Structurées JSON-LD (Schema.org / Google Rich Snippets & FAQ) -->
   <script type="application/ld+json">
@@ -101,7 +101,7 @@
             "name": "Comment trouver le mot Cémantix du jour ?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Le but de Cémantix est de deviner le mot secret en testant des mots français. Pour chaque mot proposé, un score de similarité sémantique (thermomètre) est calculé. Plus le score est élevé (jusqu'à 1000‰ pour le mot cible), plus vous vous approchez du sens du mot secret."
+              "text": "Le but de Cémantix est de deviner le mot secret en testant des mots français. Pour chaque mot proposé, un score de similarité sémantique (thermomètre) est calculé. Plus le score est élevé (jusqu'à 1000 ‰ pour le mot cible), plus vous vous approchez du sens du mot secret."
             }
           },
           {
@@ -198,62 +198,57 @@
           <span id="win-badge" class="badge badge-success">🏆 Résolu avec succès</span>
         </div>
 
-        <!-- Zone du mot secret avec protection anti-spoiler à taille fixe -->
-        <div class="secret-container">
-          <div id="secret-word-card" class="secret-word-card is-spoiled">
-            <div class="spoiler-overlay">
-              <span class="spoiler-icon-large">🔒</span>
-              <p class="spoiler-prompt">Le mot secret est masqué pour éviter tout spoiler.</p>
-              <button id="reveal-word-btn" class="btn btn-primary">
-                <span class="btn-icon-text">👁️</span> Révéler le mot secret
-              </button>
-            </div>
-            <div class="secret-word-revealed">
-              <span class="secret-label">MOT SECRET DU JOUR</span>
-              <h2 id="secret-word" class="secret-word-text">--------</h2>
-              <div class="secret-actions">
-                <button id="copy-word-btn" class="btn btn-secondary btn-sm" title="Copier le mot dans le presse-papier">
-                  <span>📋</span> Copier
+        <!-- Corps de la carte en 2 colonnes : Mot secret & Métriques -->
+        <div class="hero-body-grid">
+          <!-- Zone du mot secret avec protection anti-spoiler à taille fixe -->
+          <div class="secret-container">
+            <div id="secret-word-card" class="secret-word-card is-spoiled">
+              <div class="spoiler-overlay">
+                <span class="spoiler-icon-large">🔒</span>
+                <p class="spoiler-prompt">Le mot secret est masqué pour éviter tout spoiler.</p>
+                <button id="reveal-word-btn" class="btn btn-primary">
+                  <span class="btn-icon-text">👁️</span> Révéler le mot secret
                 </button>
-                <button id="hide-word-btn" class="btn btn-ghost btn-sm" title="Masquer à nouveau">
-                  <span>🙈</span> Masquer
-                </button>
+              </div>
+              <div class="secret-word-revealed">
+                <span class="secret-label">MOT SECRET DU JOUR</span>
+                <h2 id="secret-word" class="secret-word-text">--------</h2>
+                <div class="secret-actions">
+                  <button id="copy-word-btn" class="btn btn-secondary btn-sm" title="Copier le mot dans le presse-papier">
+                    <span>📋</span> Copier
+                  </button>
+                  <button id="hide-word-btn" class="btn btn-ghost btn-sm" title="Masquer à nouveau">
+                    <span>🙈</span> Masquer
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Badges métriques de la session du jour -->
-        <div class="metrics-grid">
-          <div class="metric-card">
-            <span class="metric-icon">🎯</span>
-            <div class="metric-info">
-              <span class="metric-label">Coups Joués</span>
-              <span id="metric-tries" class="metric-value">-- essais</span>
+          <!-- Badges métriques de la session du jour -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-icon">🎯</span>
+              <div class="metric-info">
+                <span class="metric-label">Coups Joués</span>
+                <span id="metric-tries" class="metric-value">-- essais</span>
+              </div>
             </div>
-          </div>
 
-          <div class="metric-card">
-            <span class="metric-icon">⚡</span>
-            <div class="metric-info">
-              <span class="metric-label">Temps Calcul</span>
-              <span id="metric-time" class="metric-value">-- s</span>
+            <div class="metric-card">
+              <span class="metric-icon">⚡</span>
+              <div class="metric-info">
+                <span class="metric-label">Temps Calcul</span>
+                <span id="metric-time" class="metric-value">-- s</span>
+              </div>
             </div>
-          </div>
 
-          <div class="metric-card">
-            <span class="metric-icon">🧠</span>
-            <div class="metric-info">
-              <span class="metric-label">Moteur IA</span>
-              <span id="metric-source" class="metric-value">100% RAG Pur</span>
-            </div>
-          </div>
-
-          <div class="metric-card">
-            <span class="metric-icon">🌐</span>
-            <div class="metric-info">
-              <span class="metric-label">Site Officiel</span>
-              <span class="metric-value"><a href="https://cemantix.certitudes.org" target="_blank" rel="noopener">Cémantix ↗</a></span>
+            <div class="metric-card">
+              <span class="metric-icon">🌐</span>
+              <div class="metric-info">
+                <span class="metric-label">Site Officiel</span>
+                <span class="metric-value"><a href="https://cemantix.certitudes.org" target="_blank" rel="noopener">Cémantix ↗</a></span>
+              </div>
             </div>
           </div>
         </div>
@@ -412,12 +407,12 @@
 
           <article class="seo-article">
             <h3>🌡️ Comprendre le Thermomètre &amp; Scores</h3>
-            <p>Chaque proposition reçoit un score de similarité (de -100‰ à 1000‰) :</p>
+            <p>Chaque proposition reçoit un score de similarité (de -100 ‰ à 1000 ‰) :</p>
             <ul class="seo-list">
-              <li><strong>Glacé (&lt; 0‰)</strong> : Aucun lien contextuel avec la cible.</li>
-              <li><strong>Froid (0‰ à 200‰)</strong> : Hors du champ lexical direct.</li>
-              <li><strong>Tiède (200‰ à 500‰)</strong> : Domaine ou thématique proche.</li>
-              <li><strong>Chaud (&gt; 500‰, Top 1000)</strong> : Parmi les 1000 mots les plus proches ! Le mot secret vaut <strong>1000‰</strong>.</li>
+              <li><strong>Glacé (&lt; 0 ‰)</strong> : Aucun lien contextuel avec la cible.</li>
+              <li><strong>Froid (0 ‰ à 200 ‰)</strong> : Hors du champ lexical direct.</li>
+              <li><strong>Tiède (200 ‰ à 500 ‰)</strong> : Domaine ou thématique proche.</li>
+              <li><strong>Chaud (&gt; 500 ‰, Top 1000)</strong> : Parmi les 1000 mots les plus proches ! Le mot secret vaut <strong>1000 ‰</strong>.</li>
             </ul>
           </article>
 
@@ -571,13 +566,13 @@
             <span id="spotlight-weather" class="spotlight-weather">🧊 Glacé</span>
           </div>
           <div class="spotlight-scores">
-            <div class="spotlight-temp-wrapper">
-              <span id="spotlight-temp" class="spotlight-temp tier-ice">0.00°C</span>
-              <div class="temp-gauge">
-                <div id="spotlight-gauge-bar" class="temp-gauge-fill" style="width: 10%;"></div>
-              </div>
+            <div class="spotlight-metrics-row">
+              <span id="spotlight-temp" class="spotlight-temp">0.00°C</span>
+              <span id="spotlight-permille" class="spotlight-permille">-- ‰</span>
             </div>
-            <span id="spotlight-permille" class="spotlight-permille">--‰</span>
+            <div id="spotlight-gauge" class="temp-gauge" title="Proximité sémantique" style="display: none;">
+              <div id="spotlight-gauge-bar" class="temp-gauge-fill" style="width: 0%;"></div>
+            </div>
           </div>
         </div>
       </section>
@@ -650,13 +645,6 @@
           </div>
         </div>
         <div class="summary-metric">
-          <span class="metric-icon">⚙️</span>
-          <div class="metric-body">
-            <span class="metric-label">Moteur IA</span>
-            <span id="modal-engine" class="metric-num">--</span>
-          </div>
-        </div>
-        <div class="summary-metric">
           <span class="metric-icon">🔥</span>
           <div class="metric-body">
             <span class="metric-label">Top Proximité</span>
@@ -702,8 +690,8 @@
   <footer class="app-footer">
     <div class="footer-container">
       <div class="footer-left">
-        <p><strong>Cémantix Solver</strong> — Propulsé par RAG vectoriel (frWac Word2Vec + ChromaDB) &amp; Démon autonome 24h/24.</p>
-        <span class="footer-sub">Conçu pour être servi ultra-rapidement via <strong>Caddy</strong> (volume <code>./volumes/web</code>).</span>
+        <p><strong>Cémantix Solver</strong> — Propulsé par RAG vectoriel (frWac Word2Vec + ChromaDB).</p>
+        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>.</span>
       </div>
       <div class="footer-right">
         <span id="last-updated" class="footer-time">Dernière synchro : --</span>
@@ -714,6 +702,6 @@
     </div>
   </footer>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=20261024c"></script>
 </body>
 </html>

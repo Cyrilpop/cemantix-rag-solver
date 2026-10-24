@@ -29,7 +29,7 @@ def make_gauge(s: float, p: int | None, threshold: float, width: int = 20) -> st
     """Génère un thermomètre visuel ASCII adapté à la proximité sémantique."""
     if p is not None:
         ratio = 0.35 + (min(1000, max(1, p)) / 1000.0) * 0.65
-        pct_lbl = f"{p:>4}‰"
+        pct_lbl = f"{p:>4} ‰"
     else:
         norm_s = max(0.0, s) / max(threshold, 0.01)
         ratio = min(0.35, norm_s * 0.35)
@@ -112,7 +112,7 @@ def render_game_board(game, guesses, last_played=None, notice=None, view_mode="t
         log(f"  {'#':<5}  {'Mot':<20} {'Température':<12}  {'Météo':<14}  {'Rang'}")
         log("  " + "─" * 60)
         for w, (s, p, num, w_icon, w_lbl) in items:
-            rk_str = f"{p:>4}‰" if p else "     "
+            rk_str = f"{p:>4} ‰" if p else "      "
             is_last = (last_played and w == last_played[0])
             w_disp = f"{BOLD}{w:<20}{RESET}" if is_last else f"{w:<20}"
             log(f"  [{num:>3}]  {w_disp} {s*100:6.2f}°C     {w_icon}  {w_lbl:<10}  {rk_str}")
@@ -120,7 +120,7 @@ def render_game_board(game, guesses, last_played=None, notice=None, view_mode="t
 
     if last_played:
         w, s, p, num, w_icon, w_lbl, is_best = last_played
-        rk_str = f"({p}‰)" if p else ""
+        rk_str = f"({p} ‰)" if p else ""
         rec_str = "  ⭐  (Nouveau record !)" if is_best else ""
         gauge = make_gauge(s, p, game.p1000_threshold, width=20)
         log(f"Dernier coup : [{num:>3}] {BOLD}{w}{RESET} ({s*100:.2f}°C  {w_icon}  {w_lbl} {rk_str}){rec_str}")
@@ -142,7 +142,7 @@ def format_duel_cell(num: int, w: str, s: float, p: int | None, icon: str, lbl: 
     num_str = f" [{num:>2}] "
     raw_w = f"{w[:17]:<17}"
     w_str = f"{BOLD}{raw_w}{RESET} " if is_last else f"{raw_w} "
-    score_val = f"{p}‰" if p else f"{s*100:5.2f}°C"
+    score_val = f"{p} ‰" if p else f"{s*100:5.2f}°C"
     score_str = f"{score_val:>8}  "
     meteo_str = f"{icon}  {lbl:<5}"
     cell = num_str + w_str + score_str + meteo_str
@@ -201,8 +201,8 @@ def render_duel_board(game_human, guesses_human, last_human,
 
     log("─" * COL_WIDTH + "─┼─" + "─" * COL_WIDTH)
 
-    lh_score = f"{last_human[2]}‰" if (last_human and last_human[2]) else (f"{last_human[1]*100:.1f}°C" if last_human else "")
-    la_score = f"{last_ai[2]}‰" if (last_ai and last_ai[2]) else (f"{last_ai[1]*100:.1f}°C" if last_ai else "")
+    lh_score = f"{last_human[2]} ‰" if (last_human and last_human[2]) else (f"{last_human[1]*100:.1f}°C" if last_human else "")
+    la_score = f"{last_ai[2]} ‰" if (last_ai and last_ai[2]) else (f"{last_ai[1]*100:.1f}°C" if last_ai else "")
 
     lh_str = f"  Dernier : [{last_human[3]:>2}] {last_human[0]} ({lh_score})" if last_human else "  Dernier : -"
     la_str = f"  Dernier : [{last_ai[3]:>2}] {last_ai[0]} ({la_score})" if last_ai else "  Dernier : -"
@@ -268,7 +268,7 @@ def render_duel_debrief(game_human, guesses_human, game_ai, guesses_ai,
         if not b:
             return "-"
         w, (s, p, num, *_) = b
-        sc = f"{p}‰" if p else f"{s*100:.1f}°C"
+        sc = f"{p} ‰" if p else f"{s*100:.1f}°C"
         max_w = COL_WIDTH - 19 - len(f"[{num:>2}] ") - len(f" ({sc})")
         return f"[{num:>2}] {w[:max_w]} ({sc})"
 

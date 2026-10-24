@@ -395,7 +395,7 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
                 if s_h > best_score:
                     best_score = s_h
                     best_word = chosen_hint
-                rk_info = f"{p_h}‰" if p_h else f"{s_h*100:+.2f}°C"
+                rk_info = f"{p_h} ‰" if p_h else f"{s_h*100:+.2f}°C"
                 notice = f"💡  Indice #{len(hints)} accordé : « {chosen_hint.upper()} » ({rk_info}, {w_icon}) — (+1 coup comptabilisé, Essai #{tries_count})"
             else:
                 notice = "💡  Pas d'indice supplémentaire disponible pour le moment."
@@ -405,7 +405,7 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
         norm = store.normalize(cmd)
         if norm in guesses:
             s, p, num, w_icon, w_lbl = guesses[norm]
-            rk_str = f"{p}‰" if p else ""
+            rk_str = f"{p} ‰" if p else ""
             notice = f"⚠️  Déjà essayé (#{num}) : « {norm} » ({s*100:.2f}°C  {w_icon}  {w_lbl} {rk_str})"
             continue
 
@@ -620,13 +620,13 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
             # 2. Meilleur essai adverse
             best_ai = max(ai_player.guesses.items(), key=lambda x: x[1][0])
             w_b, (s_b, p_b, num_b, icon_b, lbl_b) = best_ai
-            sc_b = f"{p_b}‰" if p_b else f"{s_b*100:.1f}°C"
+            sc_b = f"{p_b} ‰" if p_b else f"{s_b*100:.1f}°C"
 
             # 3. Alerte proximité
             if p_b and p_b >= 900:
-                alert = f"🚨 DANGER BRÛLANT : L'IA est dans le Top 100 ({p_b}‰) !"
+                alert = f"🚨 DANGER BRÛLANT : L'IA est dans le Top 100 ({p_b} ‰) !"
             elif p_b:
-                alert = f"⚠️   ALERTE : L'IA est entrée dans le Top 1000 ({p_b}‰) !"
+                alert = f"⚠️   ALERTE : L'IA est entrée dans le Top 1000 ({p_b} ‰) !"
             elif s_b >= 0.15:
                 alert = f"👀 PISTE TIÈDE : L'IA approche votre zone ({s_b*100:.1f}°C)."
             else:
@@ -733,7 +733,7 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
                 hints.append(chosen_hint)
                 # Un indice = 1 coup pour l'humain en duel (l'IA répond son coup)
                 norm_h = chosen_hint
-                rk_info = f"{p_hint}‰" if p_hint else f"{s_hint*100:+.2f}°C"
+                rk_info = f"{p_hint} ‰" if p_hint else f"{s_hint*100:+.2f}°C"
                 notice = f"💡  Indice #{len(hints)} accordé : « {chosen_hint.upper()} » ({rk_info}) — (+1 coup comptabilisé, l'IA joue son tour)"
             else:
                 notice = "💡  Pas d'indice supplémentaire disponible pour le moment."
