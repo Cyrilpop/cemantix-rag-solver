@@ -104,6 +104,7 @@
     spotlightWord: document.getElementById("spotlight-word"),
     spotlightWeather: document.getElementById("spotlight-weather"),
     spotlightTemp: document.getElementById("spotlight-temp"),
+    spotlightGauge: document.getElementById("spotlight-gauge"),
     spotlightGaugeBar: document.getElementById("spotlight-gauge-bar"),
     spotlightPermille: document.getElementById("spotlight-permille"),
 
@@ -136,7 +137,7 @@
   let activeTrajectoryFilter = "all";
 
   // Fonction globale pour copier un mot au clic
-  window.copyToClipboard = function(text) {
+  window.copyToClipboard = function (text) {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
       showToast(`📋 Mot « ${text} » copié !`);
@@ -269,7 +270,7 @@
     } else if (current.source === "seed") {
       sourceLabel = "Graine RAG";
     }
-    DOM.metricSource.textContent = sourceLabel;
+    if (DOM.metricSource) DOM.metricSource.textContent = sourceLabel;
 
     // Statut de résolution
     if (current.win) {
@@ -328,7 +329,7 @@
 
     const html = guesses.slice(0, 8).map((g, idx) => {
       const score = typeof g.score === "number" ? g.score : 0;
-      const permille = g.permille ? `${g.permille}‰` : "";
+      const permille = g.permille ? `${g.permille} ‰` : "";
       const weather = getTierWeatherIcon(score, g.permille);
       const tierClass = getTierClass(score);
 
@@ -457,7 +458,7 @@
 
     const bestWarm = traj.filter(t => t.permille !== 1000).sort((a, b) => (b.permille || 0) - (a.permille || 0))[0];
     if (DOM.modalBestWord) {
-      DOM.modalBestWord.textContent = bestWarm ? `${bestWarm.word} (${bestWarm.permille}‰)` : "--";
+      DOM.modalBestWord.textContent = bestWarm ? `${bestWarm.word} (${bestWarm.permille} ‰)` : "--";
     }
 
     // Mise à jour des compteurs de filtres
@@ -518,7 +519,7 @@
       const isWin = item.permille === 1000;
       const isRecord = item.is_record && !isWin;
       const score = typeof item.score === "number" ? item.score : 0;
-      const permilleText = item.permille !== null ? `${item.permille}‰` : "Hors 1000";
+      const permilleText = item.permille !== null ? `${item.permille} ‰` : "Hors 1000";
       const permilleClass = item.permille !== null ? getTierClass(score) : "tier-ice";
       const weather = item.weather || getTierWeatherIcon(score, item.permille);
       const gaugePercent = item.permille !== null ? Math.min(100, Math.max(8, (item.permille / 10))) : Math.max(0, Math.min(100, (score + 20)));
@@ -571,9 +572,9 @@
       `🎯 Cémantix — Trajectoire Bot (Puzzle #${e.puzzle || "--"} du ${e.date || "--"})`,
       `Mot cible : ${(e.word || "").toUpperCase()}`,
       `Statut : ${e.win ? "Trouvé" : "Non trouvé"} en ${e.tries || "--"} coups (${e.duration_seconds || "--"}s) via ${e.source === "llm" ? "Hybride LLM" : "100% RAG Mathématique"}`,
-      `Meilleur palier chaud : ${bestWarm ? `${bestWarm.word} (${bestWarm.permille}‰, +${bestWarm.score.toFixed(2)}°C)` : "--"}`,
+      `Meilleur palier chaud : ${bestWarm ? `${bestWarm.word} (${bestWarm.permille} ‰, +${bestWarm.score.toFixed(2)}°C)` : "--"}`,
       `\nChronologie des coups joués :`,
-      ...traj.map(t => `  #${t.step.toString().padStart(2, "0")} [${t.source.toUpperCase().padEnd(4, " ")}] ${t.word.padEnd(16, " ")} ${t.score >= 0 ? "+" : ""}${t.score.toFixed(2)}°C ${t.weather} ${t.permille ? `${t.permille}‰` : ""}${t.is_record ? " ⭐" : ""}`),
+      ...traj.map(t => `  #${t.step.toString().padStart(2, "0")} [${t.source.toUpperCase().padEnd(4, " ")}] ${t.word.padEnd(16, " ")} ${t.score >= 0 ? "+" : ""}${t.score.toFixed(2)}°C ${t.weather} ${t.permille ? `${t.permille} ‰` : ""}${t.is_record ? " ⭐" : ""}`),
       `\n🔗 https://cemantix.cyril-randon.fr`
     ];
 
@@ -817,7 +818,7 @@
     gameState.activeTab = tabName;
     try {
       localStorage.setItem(TAB_STORAGE_KEY, tabName);
-    } catch (_) {}
+    } catch (_) { }
 
     if (DOM.tabDashboard && DOM.tabPlay) {
       if (tabName === "dashboard") {
@@ -1185,14 +1186,31 @@
       DOM.spotlightTemp.textContent = `${guess.score >= 0 ? "+" : ""}${guess.score.toFixed(2)}°C`;
     }
 
+    const isWarm = (typeof guess.score === "number" && guess.score >= 20) ||
+                   (guess.permille !== null && guess.permille >= 1);
+
+    const gaugeContainer = DOM.spotlightGauge || DOM.spotlightGaugeBar?.parentElement;
+    if (gaugeContainer) {
+      gaugeContainer.style.display = isWarm ? "block" : "none";
+    }
+
     if (DOM.spotlightGaugeBar) {
-      const pct = Math.max(5, Math.min(100, Math.round(((guess.score + 15) / 115) * 100)));
-      DOM.spotlightGaugeBar.style.width = `${pct}%`;
-      DOM.spotlightGaugeBar.style.backgroundColor = `var(--${tierClass})`;
+      if (isWarm) {
+        let pct = 10;
+        if (guess.permille !== null && guess.permille >= 1) {
+          pct = Math.max(10, Math.min(100, Math.round((guess.permille / 1000) * 100)));
+        } else {
+          pct = Math.max(10, Math.min(100, Math.round(((guess.score - 20) / 80) * 90 + 10)));
+        }
+        DOM.spotlightGaugeBar.style.width = `${pct}%`;
+      } else {
+        DOM.spotlightGaugeBar.style.width = "0%";
+      }
+      DOM.spotlightGaugeBar.style.backgroundColor = "";
     }
 
     if (DOM.spotlightPermille) {
-      DOM.spotlightPermille.textContent = guess.permille ? `${guess.permille}‰` : "--‰";
+      DOM.spotlightPermille.textContent = guess.permille ? `${guess.permille} ‰` : "-- ‰";
       DOM.spotlightPermille.style.display = guess.permille ? "inline-block" : "none";
     }
   }
@@ -1216,7 +1234,7 @@
               <div class="guess-right">
                 <span class="guess-weather">${g.weather ? g.weather.split(" ")[0] : ""}</span>
                 <span class="guess-temp ${tier}">${g.score >= 0 ? "+" : ""}${g.score.toFixed(2)}°C</span>
-                <span class="guess-permille">${g.permille ? `${g.permille}‰` : ""}</span>
+                <span class="guess-permille">${g.permille ? `${g.permille} ‰` : ""}</span>
               </div>
             </div>`;
         }).join("");
@@ -1241,7 +1259,7 @@
               <div class="guess-right">
                 <span class="guess-weather">${g.weather ? g.weather.split(" ")[0] : ""}</span>
                 <span class="guess-temp ${tier}">${g.score >= 0 ? "+" : ""}${g.score.toFixed(2)}°C</span>
-                <span class="guess-permille">${g.permille ? `${g.permille}‰` : ""}</span>
+                <span class="guess-permille">${g.permille ? `${g.permille} ‰` : ""}</span>
               </div>
             </div>`;
         }).join("");
@@ -1411,7 +1429,7 @@
     let savedTab = "dashboard";
     try {
       savedTab = localStorage.getItem(TAB_STORAGE_KEY) || "dashboard";
-    } catch (_) {}
+    } catch (_) { }
 
     if (savedTab === "play") {
       switchTab("play");
