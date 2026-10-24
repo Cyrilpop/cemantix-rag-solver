@@ -23,3 +23,11 @@ services:
     extra_hosts:
       # Permet au conteneur de communiquer avec LM Studio tournant sur l'hôte
       - "host.docker.internal:host-gateway"
+    networks:
+      - default
+      - web-net
+
+networks:
+  default:
+  web-net:
+    external: true
