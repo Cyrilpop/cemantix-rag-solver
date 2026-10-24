@@ -5,6 +5,22 @@
  */
 
 (() => {
+  // --- Neutralisation des erreurs parasites d'extensions navigateur (ex: tabs:outgoing.message.ready) ---
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event?.reason;
+    const msg = (reason && (reason.message || String(reason))) || "";
+    if (msg.includes("tabs:outgoing.message.ready") || msg.includes("No Listener")) {
+      event.preventDefault();
+    }
+  });
+
+  window.addEventListener("error", (event) => {
+    const msg = event?.message || "";
+    if (msg.includes("tabs:outgoing.message.ready") || msg.includes("No Listener")) {
+      event.preventDefault();
+    }
+  });
+
   // --- État de l'application ---
   const state = {
     data: null,
