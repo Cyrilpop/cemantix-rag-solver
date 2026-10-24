@@ -107,6 +107,7 @@ class Solver:
         self.guesses = {}   # mot -> (cosinus, permille)
         self.tried = set()
         self.win_source = None
+        self.trajectory = []  # Chronologie complète de tous les coups joués pour visualisation web
 
     def play_word(self, word: str, source: str) -> bool:
         norm = self.store.normalize(word)
@@ -152,6 +153,15 @@ class Solver:
         best = max([v[0] for v in self.guesses.values()], default=-1)
         is_new_hot_record = (s > best) and (s > 0.15)
         self.guesses[word] = (s, p)
+        self.trajectory.append({
+            "step": len(self.guesses),
+            "word": word,
+            "score": round(s * 100, 2),
+            "permille": p,
+            "source": source,
+            "weather": weather.strip(),
+            "is_record": is_new_hot_record,
+        })
         rank = f"{p:>4}‰" if p else "     "
         flag = "  ⭐" if is_new_hot_record else "    "
         log(f"  [{len(self.guesses):>3}] {source:<4} {word:<20} {s * 100:7.2f}°C  {weather}  {rank}{flag}")
@@ -420,6 +430,7 @@ class Solver:
             "win": False,
             "time": elapsed,
             "top_guesses": top,
+            "trajectory": list(self.trajectory),
         }
 
     def win(self, word: str, elapsed: float = 0.0) -> dict:
@@ -438,6 +449,7 @@ class Solver:
             "win": True,
             "time": elapsed,
             "top_guesses": top,
+            "trajectory": list(self.trajectory),
         }
 
 

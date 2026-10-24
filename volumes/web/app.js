@@ -110,6 +110,39 @@
     // --- Listes des Essais ---
     gameTopList: document.getElementById("game-top-list"),
     gameChronoList: document.getElementById("game-chrono-list"),
+
+    // --- Modal Trajectoire Bot ---
+    trajectoryModal: document.getElementById("trajectory-modal"),
+    modalPuzzleBadge: document.getElementById("modal-puzzle-badge"),
+    modalDateBadge: document.getElementById("modal-date-badge"),
+    modalWinBadge: document.getElementById("modal-win-badge"),
+    modalSecretWord: document.getElementById("modal-secret-word"),
+    modalCloseBtn: document.getElementById("modal-close-btn"),
+    modalBottomCloseBtn: document.getElementById("modal-bottom-close-btn"),
+    modalTries: document.getElementById("modal-tries"),
+    modalDuration: document.getElementById("modal-duration"),
+    modalEngine: document.getElementById("modal-engine"),
+    modalBestWord: document.getElementById("modal-best-word"),
+    trajectoryFilterBtns: document.querySelectorAll("#trajectory-filter-group .pill-btn"),
+    trajectoryList: document.getElementById("trajectory-list"),
+    copyTrajectoryBtn: document.getElementById("copy-trajectory-btn"),
+    countAll: document.getElementById("count-all"),
+    countSeeds: document.getElementById("count-seeds"),
+    countRag: document.getElementById("count-rag"),
+    countHot: document.getElementById("count-hot"),
+  };
+
+  let activeTrajectoryEntry = null;
+  let activeTrajectoryFilter = "all";
+
+  // Fonction globale pour copier un mot au clic
+  window.copyToClipboard = function(text) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(`📋 Mot « ${text} » copié !`);
+    }).catch(() => {
+      showToast("Erreur lors de la copie.");
+    });
   };
 
   // --- Initialisation du Thème & Spoiler ---
@@ -334,7 +367,7 @@
     if (items.length === 0) {
       DOM.historyTbody.innerHTML = `
         <tr>
-          <td colspan="7" class="loading-cell">Aucun puzzle correspondant trouvé.</td>
+          <td colspan="8" class="loading-cell">Aucun puzzle correspondant trouvé.</td>
         </tr>`;
       return;
     }
@@ -343,15 +376,16 @@
       const isWinner = entry.win !== false;
       const wordText = (entry.word || "inconnu").toUpperCase();
       const hideWord = state.globalSpoiler;
+      const trajCount = (entry.trajectory && entry.trajectory.length) || entry.tries || 0;
 
       return `
-        <tr>
+        <tr class="history-row-clickable" data-puzzle="${entry.puzzle || ""}" title="Cliquez pour inspecter la progression du bot">
           <td><strong>${entry.date || "--"}</strong></td>
           <td><span class="badge badge-accent">#${entry.puzzle || "--"}</span></td>
           <td>
             <span class="word-spoiler ${hideWord ? "is-hidden" : ""}" 
-                  onclick="this.classList.toggle('is-hidden')"
-                  title="Cliquez pour afficher / masquer">
+                  data-action="spoiler"
+                  title="Cliquer pour afficher / masquer">
               ${wordText}
             </span>
           </td>
@@ -363,10 +397,178 @@
               ${isWinner ? "✓ Trouvé" : "Échec"}
             </span>
           </td>
+          <td>
+            <button type="button" class="btn-trajectory" data-puzzle="${entry.puzzle || ""}" title="Voir les étapes détaillées de résolution">
+              <span>🚀</span> Trajectoire (${trajCount})
+            </button>
+          </td>
         </tr>`;
     }).join("");
 
     DOM.historyTbody.innerHTML = html;
+  }
+
+  // --- Modal Trajectoire & Progression Bot ---
+  function openTrajectoryModal(puzzleId) {
+    if (!state.data) return;
+    const puzzleStr = String(puzzleId);
+    let entry = (state.data.history || []).find(h => String(h.puzzle) === puzzleStr);
+    if (!entry && state.data.current && String(state.data.current.puzzle) === puzzleStr) {
+      entry = state.data.current;
+    }
+    if (!entry && state.data.history && state.data.history.length > 0) {
+      entry = state.data.history[0];
+    }
+    if (!entry) return;
+
+    activeTrajectoryEntry = entry;
+    activeTrajectoryFilter = "all";
+
+    if (DOM.modalPuzzleBadge) DOM.modalPuzzleBadge.textContent = `Puzzle #${entry.puzzle || "--"}`;
+    if (DOM.modalDateBadge) DOM.modalDateBadge.textContent = entry.date || "--";
+    if (DOM.modalWinBadge) {
+      const isWinner = entry.win !== false;
+      DOM.modalWinBadge.className = `badge ${isWinner ? "badge-success" : ""}`;
+      DOM.modalWinBadge.textContent = isWinner ? "🏆 Trouvé avec succès" : "⏳ Non résolu";
+    }
+    if (DOM.modalSecretWord) {
+      DOM.modalSecretWord.textContent = (entry.word || "inconnu").toUpperCase();
+      DOM.modalSecretWord.classList.add("is-hidden");
+    }
+
+    if (DOM.modalTries) DOM.modalTries.textContent = `${entry.tries || "--"} coups`;
+    if (DOM.modalDuration) DOM.modalDuration.textContent = entry.duration_seconds ? `${entry.duration_seconds}s` : "--";
+    if (DOM.modalEngine) DOM.modalEngine.textContent = entry.source === "llm" ? "Hybride LLM" : "100% RAG Mathématique";
+
+    const traj = entry.trajectory || [];
+    const bestWarm = traj.filter(t => t.permille !== 1000).sort((a, b) => (b.permille || 0) - (a.permille || 0))[0];
+    if (DOM.modalBestWord) {
+      DOM.modalBestWord.textContent = bestWarm ? `${bestWarm.word} (${bestWarm.permille}‰)` : "--";
+    }
+
+    // Mise à jour des compteurs de filtres
+    if (DOM.countAll) DOM.countAll.textContent = traj.length;
+    if (DOM.countSeeds) DOM.countSeeds.textContent = traj.filter(t => t.source === "seed").length;
+    if (DOM.countRag) DOM.countRag.textContent = traj.filter(t => t.source === "rag" || t.source === "sniper" || t.source === "llm").length;
+    if (DOM.countHot) DOM.countHot.textContent = traj.filter(t => t.permille !== null && t.permille >= 1).length;
+
+    if (DOM.trajectoryFilterBtns) {
+      DOM.trajectoryFilterBtns.forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.filter === "all");
+      });
+    }
+
+    renderTrajectoryList();
+
+    if (DOM.trajectoryModal) {
+      DOM.trajectoryModal.style.display = "flex";
+      document.body.style.overflow = "hidden";
+    }
+  }
+
+  function closeTrajectoryModal() {
+    if (DOM.trajectoryModal) {
+      DOM.trajectoryModal.style.display = "none";
+      document.body.style.overflow = "";
+    }
+  }
+
+  function renderTrajectoryList() {
+    if (!DOM.trajectoryList) return;
+    if (!activeTrajectoryEntry || !Array.isArray(activeTrajectoryEntry.trajectory) || activeTrajectoryEntry.trajectory.length === 0) {
+      DOM.trajectoryList.innerHTML = `
+        <div class="clues-empty">
+          <span>Aucune étape détaillée consignée pour ce puzzle.</span>
+        </div>`;
+      return;
+    }
+
+    const traj = activeTrajectoryEntry.trajectory;
+    let filtered = traj;
+    if (activeTrajectoryFilter === "seeds") {
+      filtered = traj.filter(t => t.source === "seed");
+    } else if (activeTrajectoryFilter === "rag") {
+      filtered = traj.filter(t => t.source === "rag" || t.source === "sniper" || t.source === "llm");
+    } else if (activeTrajectoryFilter === "hot") {
+      filtered = traj.filter(t => t.permille !== null && t.permille >= 1);
+    }
+
+    if (filtered.length === 0) {
+      DOM.trajectoryList.innerHTML = `
+        <div class="clues-empty">
+          <span>Aucun coup dans cette catégorie de filtrage.</span>
+        </div>`;
+      return;
+    }
+
+    const html = filtered.map(item => {
+      const isWin = item.permille === 1000;
+      const isRecord = item.is_record && !isWin;
+      const score = typeof item.score === "number" ? item.score : 0;
+      const permilleText = item.permille !== null ? `${item.permille}‰` : "Hors 1000";
+      const permilleClass = item.permille !== null ? getTierClass(score) : "tier-ice";
+      const weather = item.weather || getTierWeatherIcon(score, item.permille);
+      const gaugePercent = item.permille !== null ? Math.min(100, Math.max(8, (item.permille / 10))) : Math.max(0, Math.min(100, (score + 20)));
+
+      let sourceLabel = "⚡ RAG";
+      let sourceClass = "source-rag";
+      if (item.source === "seed") {
+        sourceLabel = "🌱 Graine";
+        sourceClass = "source-seed";
+      } else if (item.source === "llm") {
+        sourceLabel = "🤖 LLM";
+        sourceClass = "source-llm";
+      } else if (item.source === "sniper") {
+        sourceLabel = "🎯 Sniper";
+        sourceClass = "source-sniper";
+      }
+
+      return `
+        <div class="trajectory-step-card ${isWin ? "is-win" : (isRecord ? "is-record" : "")}">
+          <div class="step-left">
+            <span class="step-num">#${item.step}</span>
+            <span class="step-source-badge ${sourceClass}">${sourceLabel}</span>
+            <strong class="step-word" onclick="copyToClipboard('${item.word}')" title="Cliquer pour copier le mot">
+              ${item.word}
+            </strong>
+            ${isRecord ? '<span class="step-record-star" title="Nouveau record thermique du bot !">⭐ Record</span>' : ""}
+            ${isWin ? '<span class="badge badge-success" style="font-size: 0.65rem; padding: 1px 6px;">🏆 Cible</span>' : ""}
+          </div>
+          <div class="step-right">
+            <span class="step-weather" title="Indicateur d'ambiance">${weather}</span>
+            <span class="step-temp">${score > 0 ? "+" : ""}${score.toFixed(2)}°C</span>
+            <span class="step-permille-badge ${permilleClass}">${permilleText}</span>
+            <div class="step-mini-gauge" title="Progression : ${permilleText}">
+              <div class="step-mini-gauge-bar ${permilleClass}" style="width: ${gaugePercent}%;"></div>
+            </div>
+          </div>
+        </div>`;
+    }).join("");
+
+    DOM.trajectoryList.innerHTML = html;
+  }
+
+  function copyTrajectorySummary() {
+    if (!activeTrajectoryEntry) return;
+    const e = activeTrajectoryEntry;
+    const traj = e.trajectory || [];
+    const bestWarm = traj.filter(t => t.permille !== 1000).sort((a, b) => (b.permille || 0) - (a.permille || 0))[0];
+
+    const lines = [
+      `🎯 Cémantix — Trajectoire Bot (Puzzle #${e.puzzle || "--"} du ${e.date || "--"})`,
+      `Mot cible : ${(e.word || "").toUpperCase()}`,
+      `Statut : ${e.win ? "Trouvé" : "Non trouvé"} en ${e.tries || "--"} coups (${e.duration_seconds || "--"}s) via ${e.source === "llm" ? "Hybride LLM" : "100% RAG Mathématique"}`,
+      `Meilleur palier chaud : ${bestWarm ? `${bestWarm.word} (${bestWarm.permille}‰, +${bestWarm.score.toFixed(2)}°C)` : "--"}`,
+      `\nChronologie des coups joués :`,
+      ...traj.map(t => `  #${t.step.toString().padStart(2, "0")} [${t.source.toUpperCase().padEnd(4, " ")}] ${t.word.padEnd(16, " ")} ${t.score >= 0 ? "+" : ""}${t.score.toFixed(2)}°C ${t.weather} ${t.permille ? `${t.permille}‰` : ""}${t.is_record ? " ⭐" : ""}`),
+      `\n🔗 https://cemantix.cyril-randon.fr`
+    ];
+
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      showToast("📋 Trajectoire complète copiée dans le presse-papier !");
+    }).catch(() => {
+      showToast("Erreur lors de la copie.");
+    });
   }
 
   // --- Compte à Rebours Minuit (Europe/Paris) ---
@@ -1078,6 +1280,53 @@
       state.searchQuery = e.target.value;
       renderHistoryTable();
     });
+
+    // --- Événements du Tableau d'Historique & Modal Trajectoire ---
+    if (DOM.historyTbody) {
+      DOM.historyTbody.addEventListener("click", (e) => {
+        const spoiler = e.target.closest('[data-action="spoiler"]');
+        if (spoiler) {
+          spoiler.classList.toggle("is-hidden");
+          return;
+        }
+        const row = e.target.closest("tr[data-puzzle]");
+        if (row && row.dataset.puzzle) {
+          openTrajectoryModal(row.dataset.puzzle);
+        }
+      });
+    }
+
+    if (DOM.modalCloseBtn) {
+      DOM.modalCloseBtn.addEventListener("click", closeTrajectoryModal);
+    }
+    if (DOM.modalBottomCloseBtn) {
+      DOM.modalBottomCloseBtn.addEventListener("click", closeTrajectoryModal);
+    }
+    if (DOM.trajectoryModal) {
+      DOM.trajectoryModal.addEventListener("click", (e) => {
+        if (e.target === DOM.trajectoryModal) closeTrajectoryModal();
+      });
+    }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && DOM.trajectoryModal && DOM.trajectoryModal.style.display === "flex") {
+        closeTrajectoryModal();
+      }
+    });
+
+    if (DOM.trajectoryFilterBtns) {
+      DOM.trajectoryFilterBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          DOM.trajectoryFilterBtns.forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          activeTrajectoryFilter = btn.dataset.filter || "all";
+          renderTrajectoryList();
+        });
+      });
+    }
+
+    if (DOM.copyTrajectoryBtn) {
+      DOM.copyTrajectoryBtn.addEventListener("click", copyTrajectorySummary);
+    }
 
     DOM.manualRefreshBtn.addEventListener("click", async () => {
       DOM.manualRefreshBtn.disabled = true;

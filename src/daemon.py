@@ -159,6 +159,7 @@ def run_daily_solver(args) -> dict:
         "win": result.get("win", False),
         "duration_seconds": round(result.get("time", 0.0), 2),
         "top_guesses": result.get("top_guesses", []),
+        "trajectory": result.get("trajectory", []),
         "timestamp": now.isoformat(),
     }
 
