@@ -49,6 +49,8 @@ def main():
                     help="vérifie la santé du démon pour le HEALTHCHECK Docker")
     ap.add_argument("--export-web", action="store_true",
                     help="génère et exporte les données du mot du jour dans ./volumes/web/data.json pour le serveur web Caddy")
+    ap.add_argument("--force-solve", action="store_true",
+                    help="force la résolution immédiate du mot du jour et régénère l'historique complet avec trajectoire dans data.json")
     ap.add_argument("--api", action="store_true",
                     help="lance le serveur HTTP de l'API locale du jeu interactif")
     ap.add_argument("--api-port", type=int, default=8000,
@@ -103,6 +105,12 @@ def main():
 
     if getattr(args, "export_web", False):
         export_web_data()
+        return
+
+    if getattr(args, "force_solve", False):
+        from src.daemon import run_daily_solver
+        args.rag_only = True
+        run_daily_solver(args)
         return
 
     if getattr(args, "api", False):
