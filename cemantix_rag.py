@@ -49,6 +49,14 @@ def main():
                     help="vérifie la santé du démon pour le HEALTHCHECK Docker")
     ap.add_argument("--export-web", action="store_true",
                     help="génère et exporte les données du mot du jour dans ./volumes/web/data.json pour le serveur web Caddy")
+    ap.add_argument("--api", action="store_true",
+                    help="lance le serveur HTTP de l'API locale du jeu interactif")
+    ap.add_argument("--api-port", type=int, default=8000,
+                    help="port d'écoute de l'API locale du jeu (défaut : 8000)")
+    ap.add_argument("--api-host", type=str, default="0.0.0.0",
+                    help="hôte d'écoute de l'API locale du jeu (défaut : 0.0.0.0)")
+    ap.add_argument("--no-api", action="store_true",
+                    help="désactive l'API locale du jeu en mode démon")
     ap.add_argument("--max-tries", type=int, default=300)
     ap.add_argument("--retrieve", type=int, default=60,
                     help="nb de voisins récupérés par requête ChromaDB")
@@ -96,6 +104,18 @@ def main():
     if getattr(args, "export_web", False):
         export_web_data()
         return
+
+    if getattr(args, "api", False):
+        from src.vocab import VocabStore
+        from src.api import start_api_server
+        store = VocabStore()
+        server = start_api_server(store, host=args.api_host, port=args.api_port)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            log("\n🛑  Arrêt du serveur d'API Cémantix.")
+        return
+
 
     # Lancement automatique du menu interactif si aucun argument CLI n'est passé ou si --menu est spécifié
     if not has_cli_options or args.menu:

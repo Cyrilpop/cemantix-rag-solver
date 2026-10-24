@@ -211,6 +211,20 @@ def run_daemon_loop(args) -> None:
     except Exception:
         pass
 
+    # Démarrage de l'API locale du jeu interactif (partage en mémoire du VocabStore)
+    if not getattr(args, "no_api", False):
+        try:
+            from .vocab import VocabStore
+            from .api import start_api_thread
+            store = getattr(args, "store", None) or VocabStore()
+            args.store = store
+            api_port = getattr(args, "api_port", 8000)
+            api_host = getattr(args, "api_host", "0.0.0.0")
+            start_api_thread(store, host=api_host, port=api_port)
+        except Exception as e:
+            log(f"⚠️  Impossible de démarrer l'API locale du jeu : {e}")
+
+
     # Rattrapage au démarrage : vérifier si le mot d'aujourd'hui est déjà résolu
     skip_on_start = getattr(args, "no_run_on_start", False)
     if not skip_on_start:
