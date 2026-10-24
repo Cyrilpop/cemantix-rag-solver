@@ -13,9 +13,9 @@ function bootstrap() {
   const isDashboardPresent = document.getElementById("view-dashboard") || document.getElementById("secret-word-card");
   const isGamePresent = document.getElementById("view-play") || document.getElementById("game-guess-form");
 
-  // Redirection d'anciennes URLs /index.html#play vers play.html si pages distinctes
+  // Redirection d'anciennes URLs #play vers play/ si pages distinctes
   if (isDashboardPresent && !isGamePresent && window.location.hash === "#play") {
-    window.location.replace("play.html");
+    window.location.replace("play/");
     return;
   }
 
