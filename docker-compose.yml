@@ -4,6 +4,12 @@ services:
     container_name: cemantix_solver
     restart: unless-stopped
     command: ["--daemon", "--rag-only"]
+    healthcheck:
+      test: ["CMD", "python", "cemantix_rag.py", "--healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     volumes:
       # Montage du cache local pour conserver les vecteurs et index ChromaDB (téléchargés 1 seule fois)
       - ./cemantix_data:/app/cemantix_data

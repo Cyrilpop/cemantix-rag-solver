@@ -25,6 +25,10 @@ ENV TZ="Europe/Paris"
 ENV LM_API="http://host.docker.internal:1234/v1"
 ENV LLM_MODEL="qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2"
 
+# Surveillance de l'état de santé du conteneur (HEALTHCHECK)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python cemantix_rag.py --healthcheck || exit 1
+
 # Point d'entrée (par défaut : menu interactif ou commande injectée par compose)
 ENTRYPOINT ["python", "cemantix_rag.py"]
 CMD []

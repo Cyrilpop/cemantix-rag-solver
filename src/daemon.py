@@ -9,6 +9,7 @@ Fonctionnalités :
 - Horloge calée sur le fuseau officiel de Cémantix (Europe/Paris).
 - Veille économe en ressources avec interception propre des signaux SIGTERM/SIGINT (docker stop).
 - Rattrapage immédiat au démarrage si le mot du jour n'a pas encore été résolu.
+- Heartbeat régulier et fonction check_health pour le HEALTHCHECK Docker.
 - Sauvegarde de l'historique dans cemantix_data/daily_history.json.
 - Logs clairs et horodatés sur stdout (visibles via docker logs -f).
 """
@@ -16,6 +17,7 @@ import json
 import os
 import signal
 import sys
+import tempfile
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -26,6 +28,52 @@ from .solvers import Solver
 
 PARIS_TZ = ZoneInfo("Europe/Paris")
 DAILY_HISTORY_FILE = DATA_DIR / "daily_history.json"
+HEARTBEAT_FILE = Path(os.environ.get("DAEMON_HEARTBEAT_FILE", Path(tempfile.gettempdir()) / "daemon_heartbeat.json"))
+
+
+def update_heartbeat(status: str, extra: dict = None) -> None:
+    """Met à jour le fichier de battement de cœur (heartbeat) pour le HEALTHCHECK Docker."""
+    data = {
+        "status": status,
+        "pid": os.getpid(),
+        "timestamp": datetime.now(PARIS_TZ).isoformat(),
+        "updated_at": time.time(),
+    }
+    if extra:
+        data.update(extra)
+    try:
+        HEARTBEAT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp_file = HEARTBEAT_FILE.with_suffix(".tmp")
+        with open(tmp_file, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        tmp_file.replace(HEARTBEAT_FILE)
+    except Exception:
+        pass
+
+
+def check_health(max_age_seconds: int = 90) -> int:
+    """Vérifie l'état de santé du démon pour le HEALTHCHECK Docker.
+    Retourne 0 si sain (healthy), 1 sinon.
+    """
+    if not HEARTBEAT_FILE.exists():
+        sys.stderr.write("HEALTHCHECK FAIL: Fichier heartbeat introuvable\n")
+        return 1
+    try:
+        with open(HEARTBEAT_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        updated_at = data.get("updated_at", 0.0)
+        age = time.time() - updated_at
+        if age > max_age_seconds:
+            sys.stderr.write(f"HEALTHCHECK FAIL: Heartbeat trop ancien ({age:.1f}s > {max_age_seconds}s)\n")
+            return 1
+        status = data.get("status")
+        if status == "stopped":
+            sys.stderr.write("HEALTHCHECK FAIL: Démon marqué comme arrêté\n")
+            return 1
+        return 0
+    except Exception as e:
+        sys.stderr.write(f"HEALTHCHECK FAIL: {e}\n")
+        return 1
 
 
 def load_history(filepath: Path = DAILY_HISTORY_FILE) -> list:
@@ -89,6 +137,7 @@ def format_duration(seconds: float) -> str:
 
 def run_daily_solver(args) -> dict:
     """Exécute une session de résolution du mot du jour et consigne le résultat."""
+    update_heartbeat("solving")
     now = datetime.now(PARIS_TZ)
     today_str = now.strftime("%Y-%m-%d")
     log(f"\n{'═' * 60}")
@@ -118,6 +167,7 @@ def run_daily_solver(args) -> dict:
     save_history(history)
 
     log(f"📝  Résultat enregistré dans {DAILY_HISTORY_FILE}")
+    update_heartbeat("sleeping", {"last_solved_puzzle": puzzle_id, "last_solved_word": result.get("word")})
     return entry
 
 
@@ -130,10 +180,12 @@ def run_daemon_loop(args) -> None:
         sig_name = "SIGTERM" if signum == signal.SIGTERM else "SIGINT"
         log(f"\n🛑  Signal {sig_name} reçu, arrêt propre du démon Cémantix...")
         running = False
+        update_heartbeat("stopped")
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
+    update_heartbeat("starting")
     log("=" * 60)
     log("⏰  DÉMON CÉMANTIX SOLVER — VEILLE QUOTIDIENNE (00h00)")
     log("=" * 60)
@@ -163,10 +215,15 @@ def run_daemon_loop(args) -> None:
         seconds_left, next_target = get_next_run(target_hour=0, target_minute=0, buffer_seconds=10)
         target_str = next_target.strftime("%Y-%m-%d %H:%M:%S %Z")
         log(f"\n💤  Mise en veille du démon jusqu'à 00h00 Paris (prochain réveil : {target_str}, dans {format_duration(seconds_left)}).")
+        update_heartbeat("sleeping", {"next_run": target_str})
 
         # Sommeil par tranche de 1 seconde pour réactivité immédiate à SIGINT/SIGTERM
+        tick = 0
         while running and datetime.now(PARIS_TZ) < next_target:
             time.sleep(1)
+            tick += 1
+            if tick % 15 == 0:
+                update_heartbeat("sleeping", {"next_run": target_str})
 
         if not running:
             break
@@ -186,4 +243,5 @@ def run_daemon_loop(args) -> None:
                             break
                         time.sleep(1)
 
+    update_heartbeat("stopped")
     log("👋  Démon Cémantix arrêté.")

@@ -28,7 +28,7 @@ from src.ui import clear_screen
 from src.solvers import Solver
 from src.modes import run_benchmark, run_battle, run_game
 from src.menu import run_main_menu
-from src.daemon import run_daemon_loop
+from src.daemon import run_daemon_loop, check_health
 
 
 def main():
@@ -42,6 +42,8 @@ def main():
                     help="lance le mode démon 24h/24 : veille permanente et résolution du mot du jour chaque nuit à 00h00")
     ap.add_argument("--no-run-on-start", action="store_true",
                     help="en mode démon, ne résout pas immédiatement si non résolu, attend le prochain cycle de 00h00")
+    ap.add_argument("--healthcheck", action="store_true",
+                    help="vérifie la santé du démon pour le HEALTHCHECK Docker")
     ap.add_argument("--max-tries", type=int, default=300)
     ap.add_argument("--retrieve", type=int, default=60,
                     help="nb de voisins récupérés par requête ChromaDB")
@@ -83,6 +85,9 @@ def main():
                     help="niveau de difficulté de l'IA en mode duel (facile, moyen, expert; défaut: moyen)")
     args = ap.parse_args()
 
+    if args.healthcheck:
+        sys.exit(check_health())
+
     # Lancement automatique du menu interactif si aucun argument CLI n'est passé ou si --menu est spécifié
     if not has_cli_options or args.menu:
         run_main_menu(args)
@@ -115,4 +120,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if "--healthcheck" in sys.argv:
+        from src.daemon import check_health
+        sys.exit(check_health())
     sys.exit(main())
