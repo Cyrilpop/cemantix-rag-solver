@@ -287,6 +287,7 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
+  align-items: stretch;
 }
 
 @media (max-width: 768px) {
@@ -357,7 +358,7 @@ body {
   font-weight: 500;
 }
 
-/* Secret Word Area */
+/* Secret Word Area — Taille strictement fixe & stable */
 .secret-container {
   display: flex;
   justify-content: center;
@@ -369,13 +370,19 @@ body {
   position: relative;
   width: 100%;
   max-width: 600px;
+  height: 230px;
+  min-height: 230px;
+  box-sizing: border-box;
   background: var(--bg-input);
   border: 2px dashed var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 2.25rem 1.5rem;
+  padding: 1.5rem;
   text-align: center;
   overflow: hidden;
-  transition: var(--transition);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .secret-word-card:not(.is-spoiled) {
@@ -384,13 +391,28 @@ body {
   box-shadow: 0 0 30px var(--accent-glow);
 }
 
-/* Spoiler Overlay */
+.secret-word-revealed {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+/* Spoiler Overlay en position absolue (évite tout saut de hauteur) */
 .spoiler-overlay {
   display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--bg-input);
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
+  padding: 1.5rem;
+  z-index: 10;
+  border-radius: calc(var(--radius-lg) - 2px);
 }
 
 .secret-word-card.is-spoiled .spoiler-overlay {
@@ -604,13 +626,59 @@ body {
   color: var(--text-muted);
 }
 
-/* Clues List */
+/* Clues Card & Wrapper — Taille strictement fixe & stable */
+.clues-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.clues-wrapper {
+  position: relative;
+  height: 290px;
+  min-height: 290px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+
 .clues-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  height: 290px;
   max-height: 290px;
   overflow-y: auto;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+/* Overlay pour les indices masqués à taille fixe */
+.clues-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--bg-card);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-md);
+  z-index: 5;
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.clues-wrapper.is-hidden .clues-overlay {
+  display: flex;
+}
+
+.clues-wrapper.is-hidden .clues-list {
+  filter: blur(10px);
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.15;
 }
 
 .clue-item {

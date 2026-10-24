@@ -36,6 +36,7 @@
     cdHours: document.getElementById("cd-hours"),
     cdMinutes: document.getElementById("cd-minutes"),
     cdSeconds: document.getElementById("cd-seconds"),
+    cluesWrapper: document.getElementById("clues-wrapper"),
     cluesContainer: document.getElementById("clues-container"),
     cluesToggleBtn: document.getElementById("clues-toggle-btn"),
     cluesBtnText: document.getElementById("clues-btn-text"),
@@ -307,11 +308,8 @@
     DOM.historyTbody.innerHTML = html;
   }
 
-  // --- Compte à Rebours Minuit (Europe/Paris) ---
-  function updateCountdown() {
-    // Calcul de la cible : 00:00:10 heure de Paris
+  // --- Compte à Rebours Minuit (Europe/Paris) ---\n  function updateCountdown() {
     const now = new Date();
-    // Heure locale de Paris
     const parisTimeStr = now.toLocaleString("en-US", { timeZone: "Europe/Paris" });
     const parisNow = new Date(parisTimeStr);
 
@@ -333,7 +331,6 @@
     DOM.cdMinutes.textContent = String(m).padStart(2, "0");
     DOM.cdSeconds.textContent = String(s).padStart(2, "0");
 
-    // Si on arrive exactement à minuit (+10s), actualiser les données automatiquement
     if (totalSecs <= 2) {
       setTimeout(fetchData, 3000);
     }
@@ -352,6 +349,23 @@
     } catch (err) {
       console.warn("Impossible de charger data.json:", err);
       DOM.lastUpdated.textContent = "⚠️ Échec de synchronisation";
+    }
+  }
+
+  // --- Gestion de la visibilité des indices à taille fixe ---
+  function updateCluesVisibility() {
+    const wrapper = document.getElementById("clues-wrapper");
+    if (wrapper) {
+      if (state.cluesVisible) {
+        wrapper.classList.remove("is-hidden");
+      } else {
+        wrapper.classList.add("is-hidden");
+      }
+    }
+    DOM.cluesBtnText.textContent = state.cluesVisible ? "Masquer" : "Afficher";
+    const icon = DOM.cluesToggleBtn.querySelector("#clues-btn-icon");
+    if (icon) {
+      icon.textContent = state.cluesVisible ? "👁️" : "🙈";
     }
   }
 
@@ -383,9 +397,16 @@
 
     DOM.cluesToggleBtn.addEventListener("click", () => {
       state.cluesVisible = !state.cluesVisible;
-      DOM.cluesContainer.style.display = state.cluesVisible ? "flex" : "none";
-      DOM.cluesBtnText.textContent = state.cluesVisible ? "Masquer" : "Afficher";
+      updateCluesVisibility();
     });
+
+    const revealCluesBtn = document.getElementById("reveal-clues-btn");
+    if (revealCluesBtn) {
+      revealCluesBtn.addEventListener("click", () => {
+        state.cluesVisible = true;
+        updateCluesVisibility();
+      });
+    }
 
     DOM.historySearch.addEventListener("input", (e) => {
       state.searchQuery = e.target.value;
@@ -411,7 +432,6 @@
     fetchData();
     updateCountdown();
     setInterval(updateCountdown, 1000);
-    // Polling toutes les 30 secondes pour détecter le mot du jour dès minuit
     setInterval(fetchData, 30000);
   }
 

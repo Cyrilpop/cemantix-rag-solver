@@ -49,7 +49,7 @@
           <span id="win-badge" class="badge badge-success">🏆 Résolu avec succès</span>
         </div>
 
-        <!-- Zone du mot secret avec protection anti-spoiler -->
+        <!-- Zone du mot secret avec protection anti-spoiler à taille fixe -->
         <div class="secret-container">
           <div id="secret-word-card" class="secret-word-card is-spoiled">
             <div class="spoiler-overlay">
@@ -148,8 +148,8 @@
           </div>
         </div>
 
-        <!-- Podium des Indices & Meilleurs Essais -->
-        <div class="card">
+        <!-- Podium des Indices & Meilleurs Essais à taille fixe -->
+        <div class="card clues-card">
           <div class="card-header">
             <div class="card-title-group">
               <h3>🔍 Indices &amp; Mots d'Approche</h3>
@@ -160,9 +160,18 @@
             </button>
           </div>
 
-          <div id="clues-container" class="clues-list">
-            <div id="clues-placeholder" class="clues-empty">
-              <span>Aucun indice détaillé disponible pour ce puzzle.</span>
+          <div id="clues-wrapper" class="clues-wrapper">
+            <div class="clues-overlay">
+              <span class="spoiler-icon-large">🔒</span>
+              <p class="spoiler-prompt">Les indices sont masqués pour préserver la recherche du mot secret.</p>
+              <button id="reveal-clues-btn" class="btn btn-primary btn-sm">
+                <span>👁️</span> Afficher les indices
+              </button>
+            </div>
+            <div id="clues-container" class="clues-list">
+              <div id="clues-placeholder" class="clues-empty">
+                <span>Aucun indice détaillé disponible pour ce puzzle.</span>
+              </div>
             </div>
           </div>
         </div>
