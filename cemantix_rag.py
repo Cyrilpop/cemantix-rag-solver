@@ -5,6 +5,7 @@ Cémantix RAG Solver — Stratégie B (espace word2vec frWac)
 Point d'entrée principal et CLI du projet Cémantix Solver.
 
 Modes disponibles :
+  - Démon 24h/24 (--daemon : veille et résolution quotidienne chaque nuit à 00h00)
   - Autonome (Hybride LLM ou 100% RAG pur via --rag-only)
   - Simulation Benchmark (--benchmark N ou --mock)
   - Tournoi Battle (--battle N ou --secrets ...)
@@ -17,6 +18,7 @@ Architecture modulaire (package src/) :
   - src/ui.py       : Rendu console, jauges ASCII, dashboard duel & débriefing
   - src/solvers.py  : Algorithmes Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
   - src/modes.py    : Boucles d'orchestration (benchmark, battle, solo, duel)
+  - src/daemon.py   : Démon planificateur 24h/24 (veille et résolution quotidienne à 00h00)
 """
 import argparse
 import sys
@@ -26,6 +28,7 @@ from src.ui import clear_screen
 from src.solvers import Solver
 from src.modes import run_benchmark, run_battle, run_game
 from src.menu import run_main_menu
+from src.daemon import run_daemon_loop
 
 
 def main():
@@ -35,6 +38,10 @@ def main():
     ap = argparse.ArgumentParser(description="Solveur Cémantix par RAG local (frWac)")
     ap.add_argument("--menu", "-i", "--interactive", action="store_true",
                     help="ouvre le menu interactif principal")
+    ap.add_argument("--daemon", action="store_true",
+                    help="lance le mode démon 24h/24 : veille permanente et résolution du mot du jour chaque nuit à 00h00")
+    ap.add_argument("--no-run-on-start", action="store_true",
+                    help="en mode démon, ne résout pas immédiatement si non résolu, attend le prochain cycle de 00h00")
     ap.add_argument("--max-tries", type=int, default=300)
     ap.add_argument("--retrieve", type=int, default=60,
                     help="nb de voisins récupérés par requête ChromaDB")
@@ -79,6 +86,10 @@ def main():
     # Lancement automatique du menu interactif si aucun argument CLI n'est passé ou si --menu est spécifié
     if not has_cli_options or args.menu:
         run_main_menu(args)
+        return
+
+    if args.daemon:
+        run_daemon_loop(args)
         return
 
     if args.duel:
