@@ -6,6 +6,7 @@ Point d'entrée principal et CLI du projet Cémantix Solver.
 
 Modes disponibles :
   - Démon 24h/24 (--daemon : veille et résolution quotidienne chaque nuit à 00h00)
+  - Export web (--export-web : génère data.json dans ./volumes/web pour Caddy)
   - Autonome (Hybride LLM ou 100% RAG pur via --rag-only)
   - Simulation Benchmark (--benchmark N ou --mock)
   - Tournoi Battle (--battle N ou --secrets ...)
@@ -19,6 +20,7 @@ Architecture modulaire (package src/) :
   - src/solvers.py  : Algorithmes Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
   - src/modes.py    : Boucles d'orchestration (benchmark, battle, solo, duel)
   - src/daemon.py   : Démon planificateur 24h/24 (veille et résolution quotidienne à 00h00)
+  - src/web.py      : Exportation et synchronisation des données web pour Caddy
 """
 import argparse
 import sys
@@ -29,6 +31,7 @@ from src.solvers import Solver
 from src.modes import run_benchmark, run_battle, run_game
 from src.menu import run_main_menu
 from src.daemon import run_daemon_loop, check_health
+from src.web import export_web_data
 
 
 def main():
@@ -44,6 +47,18 @@ def main():
                     help="en mode démon, ne résout pas immédiatement si non résolu, attend le prochain cycle de 00h00")
     ap.add_argument("--healthcheck", action="store_true",
                     help="vérifie la santé du démon pour le HEALTHCHECK Docker")
+    ap.add_argument("--export-web", action="store_true",
+                    help="génère et exporte les données du mot du jour dans ./volumes/web/data.json pour le serveur web Caddy")
+    ap.add_argument("--force-solve", action="store_true",
+                    help="force la résolution immédiate du mot du jour et régénère l'historique complet avec trajectoire dans data.json")
+    ap.add_argument("--api", action="store_true",
+                    help="lance le serveur HTTP de l'API locale du jeu interactif")
+    ap.add_argument("--api-port", type=int, default=8000,
+                    help="port d'écoute de l'API locale du jeu (défaut : 8000)")
+    ap.add_argument("--api-host", type=str, default="0.0.0.0",
+                    help="hôte d'écoute de l'API locale du jeu (défaut : 0.0.0.0)")
+    ap.add_argument("--no-api", action="store_true",
+                    help="désactive l'API locale du jeu en mode démon")
     ap.add_argument("--max-tries", type=int, default=300)
     ap.add_argument("--retrieve", type=int, default=60,
                     help="nb de voisins récupérés par requête ChromaDB")
@@ -87,6 +102,28 @@ def main():
 
     if args.healthcheck:
         sys.exit(check_health())
+
+    if getattr(args, "export_web", False):
+        export_web_data()
+        return
+
+    if getattr(args, "force_solve", False):
+        from src.daemon import run_daily_solver
+        args.rag_only = True
+        run_daily_solver(args)
+        return
+
+    if getattr(args, "api", False):
+        from src.vocab import VocabStore
+        from src.api import start_api_server
+        store = VocabStore()
+        server = start_api_server(store, host=args.api_host, port=args.api_port)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            log("\n🛑  Arrêt du serveur d'API Cémantix.")
+        return
+
 
     # Lancement automatique du menu interactif si aucun argument CLI n'est passé ou si --menu est spécifié
     if not has_cli_options or args.menu:

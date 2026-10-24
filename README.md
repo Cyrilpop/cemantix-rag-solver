@@ -7,6 +7,7 @@ Ce projet implémente deux approches d'Intelligence Artificielle en compétition
 2. 🤖 **Hybride RAG + Local LLM** : Coopération itérative entre l'espace vectoriel et un LLM local (via [LM Studio](https://lmstudio.ai/)) pour explorer le champ lexical et affiner les hypothèses sémantiques.
 3. ⚔️ **Mode Battle** : Tournoi en face-à-face sur $N$ manches comparant rigoureusement les deux approches sur le **même mot secret** et avec les **mêmes mots graines** de départ.
 4. ⏰ **Démon 24h/24 & Veille Quotidienne** : Fonctionnement permanent en conteneur Docker en mode sommeil, réveil automatique chaque nuit à 00h00 (heure de Paris) pour trouver le mot officiel du jour dès sa parution et historisation automatique.
+5. 🌐 **Page Web & Publication Caddy** : Interface web moderne et réactive servant le mot du jour en direct depuis le volume obligatoire ./volumes/web (protection anti-spoiler, thermomètre sémantique, compte à rebours minuit et KPIs).
 
 ---
 
@@ -288,6 +289,47 @@ python cemantix_rag.py --duel -d expert
 
 ---
 
+---
+
+### 6. Page Web du Mot du Jour & Serveur Caddy (./volumes/web)
+
+Le projet intègre une interface web complète et réactive déposée dans le volume obligatoire ./volumes/web, conçue pour être servie ultra-efficacement par **Caddy** (ou tout autre serveur HTTP) :
+
+`
+volumes/web/
+├── index.html        # Page web principale (mise en page moderne, responsive et accessible)
+├── style.css         # Feuille de style CSS3 (thèmes sombre/clair, glassmorphism, animations)
+├── app.js            # Logique cliente (anti-spoiler, polling temps réel, compte à rebours)
+└── data.json         # Données dynamiques générées automatiquement par le solveur
+`
+
+#### Fonctionnalités clés de la page web :
+- **Carte Héros du Mot du Jour** : Affiche la date, le numéro du puzzle officiel, le mot secret, le nombre d'essais et la durée de calcul.
+- **Protection Anti-Spoiler Intelligente** : Le mot secret est masqué sous un voile flouté par défaut (👁️ Révéler / 🙈 Masquer, bouton de copie avec toast). Idéal pour consulter les indices ou les statistiques du jour sans se gâcher le plaisir de chercher.
+- **Thermomètre Cémantix & Top Indices d'Approche** : Visualisation de l'échelle thermique officielle (Glacial, Froid, Tiède, Chaud, Brûlant) et des meilleurs mots trouvés par l'IA lors de sa convergence.
+- **Compte à Rebours Minuit en Direct** : Ticker numérique en temps réel décomptant le temps restant avant la parution du prochain mot secret (00h00 heure de Paris).
+- **Tableau de Bord des Performances (KPIs)** : Nombre total de puzzles résolus, moyenne de coups, durée moyenne de calcul et taux de victoire (100%).
+- **Historique & Recherche Instantanée** : Filtre en temps réel pour explorer les archives des puzzles par date ou mot-clé.
+- **Actualisation Automatique** : La page interroge automatiquement data.json toutes les 30 secondes pour afficher le nouveau mot dès que le démon le trouve à minuit.
+
+#### Configuration Caddy (Exemple) :
+Dans votre conteneur Caddy ou votre machine hôte, pointez simplement la racine du serveur web sur ./volumes/web :
+
+`caddy
+:80 {
+    root * /volumes/web
+    file_server
+}
+`
+
+#### Synchronisation manuelle des données web :
+Pour actualiser ou régénérer manuellement olumes/web/data.json à tout moment :
+`ash
+docker compose run --rm -v ./volumes/web:/app/volumes/web cemantix --export-web
+`
+
+---
+
 ## ⚙️ Options en Ligne de Commande
 
 | Option | Type | Défaut | Description |
@@ -336,6 +378,12 @@ cemantix-rag-solver/
 ├── .gitignore               # Exclut les fichiers binaires volumineux et caches
 ├── README.md                # Documentation complète du projet
 ├── CHANGELOG.md             # Historique des versions et refactorings
+├── volumes/                 # Volumes partagés
+│   └── web/                 # Application web servie par Caddy (mot du jour & dashboard)
+│       ├── index.html       # Page web principale
+│       ├── style.css        # Styles modernes et thèmes
+│       ├── app.js           # Client interactif JavaScript
+│       └── data.json        # Données temps réel du mot du jour
 ├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)
 │   ├── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
 │   └── daily_history.json   # Historique persistant des résolutions quotidiennes
@@ -348,7 +396,8 @@ cemantix-rag-solver/
     ├── solvers.py           # Régression Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
     ├── modes.py             # Boucles de jeu (benchmark, battle, solo, duel)
     ├── menu.py              # Menu interactif textuel avec configuration dynamique
-    └── daemon.py            # Démon planificateur 24h/24 (veille et résolution quotidienne à 00h00)
+    ├── daemon.py            # Démon planificateur 24h/24 (veille et résolution quotidienne à 00h00)
+    └── web.py               # Générateur et exportateur de données web pour Caddy
 ```
 
 ---

@@ -11,6 +11,7 @@ Fonctionnalités :
 - Rattrapage immédiat au démarrage si le mot du jour n'a pas encore été résolu.
 - Heartbeat régulier et fonction check_health pour le HEALTHCHECK Docker.
 - Sauvegarde de l'historique dans cemantix_data/daily_history.json.
+- Synchronisation automatique des données web pour le serveur Caddy (volumes/web/data.json).
 - Logs clairs et horodatés sur stdout (visibles via docker logs -f).
 """
 import json
@@ -157,17 +158,27 @@ def run_daily_solver(args) -> dict:
         "source": result.get("source"),
         "win": result.get("win", False),
         "duration_seconds": round(result.get("time", 0.0), 2),
+        "top_guesses": result.get("top_guesses", []),
+        "trajectory": result.get("trajectory", []),
         "timestamp": now.isoformat(),
     }
 
     history = load_history()
-    # Remplacer une éventuelle entrée précédente non victorieuse pour le même puzzle
-    history = [h for h in history if not (h.get("date") == today_str and h.get("win") is False)]
+    # Remplacer toute entrée précédente pour la même date pour garantir l'enregistrement de la trajectoire
+    history = [h for h in history if h.get("date") != today_str]
     history.append(entry)
     save_history(history)
 
     log(f"📝  Résultat enregistré dans {DAILY_HISTORY_FILE}")
     update_heartbeat("sleeping", {"last_solved_puzzle": puzzle_id, "last_solved_word": result.get("word")})
+
+    # Synchronisation automatique de la page web pour Caddy
+    try:
+        from .web import export_web_data
+        export_web_data(history=history)
+    except Exception as e:
+        log(f"⚠️  Export web automatique non disponible : {e}")
+
     return entry
 
 
@@ -193,6 +204,27 @@ def run_daemon_loop(args) -> None:
     log(f"📅  Heure locale (Europe/Paris) : {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
     log(f"💾  Fichier historique          : {DAILY_HISTORY_FILE}")
     log(f"⚙   Mode d'exécution           : {'100% RAG Pur' if getattr(args, 'rag_only', False) else 'Hybride RAG + LLM'}")
+
+    # Synchronisation initiale de la page web au démarrage
+    try:
+        from .web import export_web_data
+        export_web_data()
+    except Exception:
+        pass
+
+    # Démarrage de l'API locale du jeu interactif (partage en mémoire du VocabStore)
+    if not getattr(args, "no_api", False):
+        try:
+            from .vocab import VocabStore
+            from .api import start_api_thread
+            store = getattr(args, "store", None) or VocabStore()
+            args.store = store
+            api_port = getattr(args, "api_port", 8000)
+            api_host = getattr(args, "api_host", "0.0.0.0")
+            start_api_thread(store, host=api_host, port=api_port)
+        except Exception as e:
+            log(f"⚠️  Impossible de démarrer l'API locale du jeu : {e}")
+
 
     # Rattrapage au démarrage : vérifier si le mot d'aujourd'hui est déjà résolu
     skip_on_start = getattr(args, "no_run_on_start", False)

@@ -213,6 +213,11 @@ class VocabStore:
             return False
         return (w in self.valid_lemmas or not self.valid_lemmas) and (w in self.index)
 
+    def has_word(self, word: str) -> bool:
+        """Vérifie si un mot est indexé dans le store vectoriel."""
+        return word.strip().lower() in self.index
+
+
 
     def _ingest(self, words, vecs, batch: int = 5000) -> None:
         log(f"⏳  Indexation ChromaDB de {len(words)} lemmes (une seule fois)...")

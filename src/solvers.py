@@ -53,7 +53,7 @@ def rerank(store: VocabStore, cands: list, G: np.ndarray, s: np.ndarray, q_est: 
 # Couche 4 : Génération (LLM local — PROMPT défini dans config.py)
 # --------------------------------------------------------------------------- #
 def ask_llm(best, worst, candidates_info, n: int, verbose: bool = False) -> list:
-    fmt_guess = lambda g: f"- {g[0]} : {g[1] * 100:.2f}°C" + (f", {g[2]}‰" if g[2] else "")
+    fmt_guess = lambda g: f"- {g[0]} : {g[1] * 100:.2f}°C" + (f", {g[2]} ‰" if g[2] else "")
     fmt_cand = lambda c: f"- {c[0]} (temp. estimée : {c[1]:+.2f}°C)"
     cands_str = "\n".join(fmt_cand(c) for c in candidates_info[:25])
     prompt = PROMPT.format(best="\n".join(map(fmt_guess, best)),
@@ -107,6 +107,7 @@ class Solver:
         self.guesses = {}   # mot -> (cosinus, permille)
         self.tried = set()
         self.win_source = None
+        self.trajectory = []  # Chronologie complète de tous les coups joués pour visualisation web
 
     def play_word(self, word: str, source: str) -> bool:
         norm = self.store.normalize(word)
@@ -152,7 +153,16 @@ class Solver:
         best = max([v[0] for v in self.guesses.values()], default=-1)
         is_new_hot_record = (s > best) and (s > 0.15)
         self.guesses[word] = (s, p)
-        rank = f"{p:>4}‰" if p else "     "
+        self.trajectory.append({
+            "step": len(self.guesses),
+            "word": word,
+            "score": round(s * 100, 2),
+            "permille": p,
+            "source": source,
+            "weather": weather.strip(),
+            "is_record": is_new_hot_record,
+        })
+        rank = f"{p:>4} ‰" if p else "      "
         flag = "  ⭐" if is_new_hot_record else "    "
         log(f"  [{len(self.guesses):>3}] {source:<4} {word:<20} {s * 100:7.2f}°C  {weather}  {rank}{flag}")
         if p == 1000:
@@ -313,7 +323,7 @@ class Solver:
                     best_word_entry = max(self.guesses.items(), key=lambda x: x[1][0])
                     bw_name = best_word_entry[0]
                     bw_score, bw_p = best_word_entry[1]
-                    p_info = f", {bw_p}‰" if bw_p else ""
+                    p_info = f", {bw_p} ‰" if bw_p else ""
                     log(f"\n🔥  [AMORÇAGE ADAPTATIF] Signal chaud détecté sur « {bw_name} » ({bw_score * 100:.2f}°C{p_info}) dès la graine {i}/{len(seeds)} !")
                     log(f"    ➔ Interruption immédiate de l'amorçage pour exploiter la zone chaude en convergence RAG.\n")
                     break
@@ -408,6 +418,10 @@ class Solver:
         log(f"\n❌  Non trouvé après {len(self.guesses)} essais (mot secret : {secret_name}). Top 10 :")
         for w, s, p in self.ranked()[:10]:
             log(f"   {w:<20} {s * 100:6.2f}°C {p or ''}")
+        top = [
+            {"word": w, "score": round(s * 100, 2), "permille": p}
+            for w, s, p in self.ranked()[:10]
+        ]
         return {
             "word": secret_name,
             "tries": len(self.guesses),
@@ -415,12 +429,18 @@ class Solver:
             "source": None,
             "win": False,
             "time": elapsed,
+            "top_guesses": top,
+            "trajectory": list(self.trajectory),
         }
 
     def win(self, word: str, elapsed: float = 0.0) -> dict:
         time_str = f" en {elapsed:.2f}s" if elapsed > 0 else ""
         log(f"\n🥳  Mot trouvé : « {word.upper()} » en {len(self.guesses)} essais "
             f"({len(self.tried)} tentatives) [par {self.win_source}]{time_str}.")
+        top = [
+            {"word": w, "score": round(s * 100, 2), "permille": p}
+            for w, s, p in self.ranked()[:10]
+        ]
         return {
             "word": word,
             "tries": len(self.guesses),
@@ -428,6 +448,8 @@ class Solver:
             "source": self.win_source,
             "win": True,
             "time": elapsed,
+            "top_guesses": top,
+            "trajectory": list(self.trajectory),
         }
 
 
