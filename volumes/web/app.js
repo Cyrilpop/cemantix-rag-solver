@@ -65,6 +65,51 @@
     lastUpdated: document.getElementById("last-updated"),
     manualRefreshBtn: document.getElementById("manual-refresh-btn"),
     toast: document.getElementById("toast"),
+
+    // --- Onglets & Vues ---
+    tabDashboard: document.getElementById("tab-dashboard"),
+    tabPlay: document.getElementById("tab-play"),
+    viewDashboard: document.getElementById("view-dashboard"),
+    viewPlay: document.getElementById("view-play"),
+
+    // --- Mode de Jeu Interactif ---
+    modeDailyBtn: document.getElementById("mode-daily-btn"),
+    modeUnlimitedBtn: document.getElementById("mode-unlimited-btn"),
+    difficultyWrapper: document.getElementById("difficulty-wrapper"),
+    difficultyBtns: document.querySelectorAll("#difficulty-group .pill-btn"),
+    gameNewBtn: document.getElementById("game-new-btn"),
+    gameGiveupBtn: document.getElementById("game-giveup-btn"),
+    gameHintBtn: document.getElementById("game-hint-btn"),
+    gamePuzzleBadge: document.getElementById("game-puzzle-badge"),
+
+    gameModeBadge: document.getElementById("game-mode-badge"),
+    gameStatusText: document.getElementById("game-status-text"),
+    gameTriesCount: document.getElementById("game-tries-count"),
+
+    // --- Bannière Victoire ---
+    gameWinBanner: document.getElementById("game-win-banner"),
+    winTitle: document.getElementById("win-title"),
+    winDesc: document.getElementById("win-desc"),
+    winSecretWord: document.getElementById("win-secret-word"),
+    winTriesCount: document.getElementById("win-tries-count"),
+    winNewGameBtn: document.getElementById("win-new-game-btn"),
+
+    // --- Saisie & Spotlight ---
+    gameGuessForm: document.getElementById("game-guess-form"),
+    gameWordInput: document.getElementById("game-word-input"),
+    gameSubmitBtn: document.getElementById("game-submit-btn"),
+    gameFeedback: document.getElementById("game-feedback"),
+    gameSpotlight: document.getElementById("game-spotlight"),
+    spotlightOrder: document.getElementById("spotlight-order"),
+    spotlightWord: document.getElementById("spotlight-word"),
+    spotlightWeather: document.getElementById("spotlight-weather"),
+    spotlightTemp: document.getElementById("spotlight-temp"),
+    spotlightGaugeBar: document.getElementById("spotlight-gauge-bar"),
+    spotlightPermille: document.getElementById("spotlight-permille"),
+
+    // --- Listes des Essais ---
+    gameTopList: document.getElementById("game-top-list"),
+    gameChronoList: document.getElementById("game-chrono-list"),
   };
 
   // --- Initialisation du Thème & Spoiler ---
@@ -386,6 +431,610 @@
     }
   }
 
+  // ==========================================================================
+  // Logique du Jeu Interactif (Gameplay)
+  // ==========================================================================
+  const gameState = {
+    gameId: null,
+    mode: "daily",
+    difficulty: "moyen",
+    puzzleId: "--",
+    isWon: false,
+    isGivenUp: false,
+    tries: 0,
+    topGuesses: [],
+    history: [],
+    lastGuess: null,
+    secret: null,
+    hints: [],
+    activeTab: "dashboard",
+  };
+
+  const modeSessions = {
+    daily: null,
+    unlimited: null,
+  };
+
+  const GAME_STORAGE_KEY = "cemantix_game_state_v2";
+  const TAB_STORAGE_KEY = "cemantix_active_tab_v1";
+
+  function saveGameState() {
+    try {
+      const mode = gameState.mode || "daily";
+      const payload = {
+        gameId: gameState.gameId,
+        mode: mode,
+        difficulty: gameState.difficulty,
+        puzzleId: gameState.puzzleId,
+        isWon: gameState.isWon,
+        isGivenUp: gameState.isGivenUp,
+        tries: gameState.tries,
+        topGuesses: gameState.topGuesses,
+        history: gameState.history,
+        lastGuess: gameState.lastGuess,
+        secret: gameState.secret,
+        hints: gameState.hints || [],
+        savedAt: Date.now(),
+      };
+      modeSessions[mode] = payload;
+      localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify({
+        currentMode: mode,
+        sessions: modeSessions,
+      }));
+    } catch (e) {
+      console.warn("Erreur sauvegarde locale:", e);
+    }
+  }
+
+  function loadGameState(targetMode) {
+    try {
+      // Vérifier d'abord le format v2
+      let raw = localStorage.getItem(GAME_STORAGE_KEY);
+      let isV1 = false;
+      if (!raw) {
+        // Fallback rétrocompatible format v1
+        raw = localStorage.getItem("cemantix_game_state_v1");
+        isV1 = true;
+      }
+      if (!raw) return false;
+
+      const data = JSON.parse(raw);
+      if (!data) return false;
+
+      let sessionToLoad = null;
+      if (data.sessions) {
+        modeSessions.daily = data.sessions.daily || null;
+        modeSessions.unlimited = data.sessions.unlimited || null;
+        const mode = targetMode || data.currentMode || gameState.mode || "daily";
+        sessionToLoad = modeSessions[mode];
+      } else if (data.gameId) {
+        sessionToLoad = data;
+        modeSessions[data.mode || "daily"] = { ...data };
+      }
+
+      if (!sessionToLoad || !sessionToLoad.gameId) return false;
+
+      // Invalidation si plus de 24 heures
+      if (sessionToLoad.savedAt && (Date.now() - sessionToLoad.savedAt > 24 * 3600 * 1000)) {
+        return false;
+      }
+
+      Object.assign(gameState, sessionToLoad);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function restoreGameUI() {
+    if (DOM.gamePuzzleBadge) DOM.gamePuzzleBadge.textContent = `#${gameState.puzzleId}`;
+    if (DOM.gameModeBadge) {
+      DOM.gameModeBadge.textContent = gameState.mode === "daily" ? "📅 Défi du Jour" : `♾️ Libre (${gameState.difficulty})`;
+    }
+    if (DOM.gameTriesCount) DOM.gameTriesCount.textContent = String(gameState.tries || 0);
+
+    if (DOM.modeDailyBtn && DOM.modeUnlimitedBtn) {
+      DOM.modeDailyBtn.classList.toggle("active", gameState.mode === "daily");
+      DOM.modeUnlimitedBtn.classList.toggle("active", gameState.mode === "unlimited");
+    }
+    if (DOM.difficultyWrapper) {
+      DOM.difficultyWrapper.style.display = gameState.mode === "unlimited" ? "flex" : "none";
+    }
+    if (DOM.difficultyBtns) {
+      DOM.difficultyBtns.forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.diff === gameState.difficulty);
+      });
+    }
+
+    if (gameState.isWon) {
+      if (DOM.gameWordInput) DOM.gameWordInput.disabled = true;
+      if (DOM.gameSubmitBtn) DOM.gameSubmitBtn.disabled = true;
+      if (DOM.gameGiveupBtn) DOM.gameGiveupBtn.disabled = true;
+      if (DOM.gameHintBtn) DOM.gameHintBtn.disabled = true;
+      if (DOM.winTitle) {
+        DOM.winTitle.textContent = "🏆 Victoire triomphale ! Mot secret trouvé !";
+        DOM.winTitle.style.color = "var(--success)";
+      }
+      if (DOM.winDesc) {
+        DOM.winDesc.innerHTML = `Bravo ! Vous avez démasqué le mot <strong style="color: var(--success);">${(gameState.secret || '???').toUpperCase()}</strong> en <strong>${gameState.tries}</strong> coups.`;
+      }
+      if (DOM.gameWinBanner) DOM.gameWinBanner.style.display = "block";
+      if (DOM.gameStatusText) DOM.gameStatusText.textContent = `🏆 Victoire en ${gameState.tries} coups !`;
+    } else if (gameState.isGivenUp) {
+      if (DOM.gameWordInput) DOM.gameWordInput.disabled = true;
+      if (DOM.gameSubmitBtn) DOM.gameSubmitBtn.disabled = true;
+      if (DOM.gameGiveupBtn) DOM.gameGiveupBtn.disabled = true;
+      if (DOM.gameHintBtn) DOM.gameHintBtn.disabled = true;
+      if (DOM.winTitle) {
+        DOM.winTitle.textContent = "Partie terminée (Abandon)";
+        DOM.winTitle.style.color = "var(--text-muted)";
+      }
+      if (DOM.winDesc) {
+        DOM.winDesc.innerHTML = `Le mot secret était <strong style="color: var(--accent);">${(gameState.secret || '???').toUpperCase()}</strong> après <strong>${gameState.tries}</strong> essais.`;
+      }
+      if (DOM.gameWinBanner) DOM.gameWinBanner.style.display = "block";
+      if (DOM.gameStatusText) {
+        DOM.gameStatusText.textContent = `Partie abandonnée. Le mot secret était « ${(gameState.secret || '???').toUpperCase()} ».`;
+      }
+    } else {
+      if (DOM.gameWordInput) DOM.gameWordInput.disabled = false;
+      if (DOM.gameSubmitBtn) DOM.gameSubmitBtn.disabled = false;
+      if (DOM.gameGiveupBtn) DOM.gameGiveupBtn.disabled = false;
+      if (DOM.gameHintBtn) DOM.gameHintBtn.disabled = false;
+      if (DOM.gameWinBanner) DOM.gameWinBanner.style.display = "none";
+      if (DOM.gameStatusText) {
+        DOM.gameStatusText.textContent = gameState.tries > 0
+          ? `Partie en cours (${gameState.tries} coups joués). Continuez à deviner !`
+          : "Partie prête ! Saisissez votre premier mot ci-dessous.";
+      }
+    }
+
+    if (gameState.lastGuess) {
+      renderSpotlight(gameState.lastGuess);
+    } else if (DOM.gameSpotlight) {
+      DOM.gameSpotlight.style.display = "none";
+    }
+
+    renderGameLists();
+  }
+
+  function switchTab(tabName) {
+    gameState.activeTab = tabName;
+    try {
+      localStorage.setItem(TAB_STORAGE_KEY, tabName);
+    } catch (_) {}
+
+    if (DOM.tabDashboard && DOM.tabPlay) {
+      if (tabName === "dashboard") {
+        DOM.tabDashboard.classList.add("active");
+        DOM.tabPlay.classList.remove("active");
+        if (DOM.viewDashboard) DOM.viewDashboard.style.display = "flex";
+        if (DOM.viewPlay) DOM.viewPlay.style.display = "none";
+      } else {
+        DOM.tabPlay.classList.add("active");
+        DOM.tabDashboard.classList.remove("active");
+        if (DOM.viewDashboard) DOM.viewDashboard.style.display = "none";
+        if (DOM.viewPlay) DOM.viewPlay.style.display = "flex";
+
+        // Recharger et restaurer immédiatement l'état du mode actif
+        loadGameState();
+        restoreGameUI();
+        if (gameState.gameId) {
+          resumeGame(gameState.gameId);
+        } else {
+          startNewGame(gameState.mode || "daily", gameState.difficulty || "moyen", false);
+        }
+        setTimeout(() => DOM.gameWordInput?.focus(), 100);
+      }
+    }
+  }
+
+  async function resumeGame(gameId) {
+    if (!gameId) return false;
+    try {
+      const response = await fetch("/api/game/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          game_id: gameId,
+          mode: gameState.mode || "daily",
+          difficulty: gameState.difficulty || "moyen",
+        }),
+      });
+      if (!response.ok) {
+        return false;
+      }
+      const json = await response.json();
+      gameState.gameId = json.game_id;
+      gameState.mode = json.mode;
+      gameState.difficulty = json.difficulty;
+      gameState.puzzleId = json.puzzle_id;
+      gameState.isWon = json.is_won || false;
+      gameState.isGivenUp = json.is_given_up || false;
+      gameState.tries = json.tries || 0;
+      gameState.topGuesses = json.top_guesses || [];
+      gameState.history = json.history || [];
+      gameState.lastGuess = json.last_guess || null;
+      gameState.secret = json.secret || null;
+      gameState.hints = json.hints || [];
+      restoreGameUI();
+      saveGameState();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function setGameMode(mode) {
+    if (gameState.mode === mode && gameState.gameId) return;
+
+    // 1. Sauvegarder la session du mode actuel avant de basculer
+    saveGameState();
+
+    // 2. Tenter de restaurer la session existante pour le mode cible
+    const loaded = loadGameState(mode);
+    if (loaded && gameState.gameId && !gameState.isWon && !gameState.isGivenUp) {
+      restoreGameUI();
+      saveGameState();
+      resumeGame(gameState.gameId);
+      return;
+    }
+
+    // 3. Sinon, démarrer une nouvelle partie pour ce mode
+    gameState.mode = mode;
+    startNewGame(mode, gameState.difficulty, false);
+  }
+
+  function setGameDifficulty(diff) {
+    if (gameState.difficulty === diff && gameState.gameId) return;
+    gameState.difficulty = diff;
+    if (DOM.difficultyBtns) {
+      DOM.difficultyBtns.forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.diff === diff);
+      });
+    }
+    startNewGame(gameState.mode, diff, true);
+  }
+
+  function showGameFeedback(msg, type = "error") {
+    if (!DOM.gameFeedback) return;
+    DOM.gameFeedback.textContent = msg;
+    DOM.gameFeedback.className = `game-feedback is-${type}`;
+    DOM.gameFeedback.style.display = "block";
+    setTimeout(() => {
+      if (DOM.gameFeedback) DOM.gameFeedback.style.display = "none";
+    }, 4000);
+  }
+
+  async function startNewGame(mode = gameState.mode, difficulty = gameState.difficulty, force = false) {
+    if (DOM.gameSubmitBtn) DOM.gameSubmitBtn.disabled = true;
+    if (DOM.gameHintBtn) DOM.gameHintBtn.disabled = true;
+    if (DOM.gameStatusText) DOM.gameStatusText.textContent = "Initialisation de la partie en cours...";
+
+    try {
+      const response = await fetch("/api/game/new", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, difficulty, force }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const json = await response.json();
+      gameState.gameId = json.game_id;
+      gameState.mode = json.mode;
+      gameState.difficulty = json.difficulty;
+      gameState.puzzleId = json.puzzle_id;
+      gameState.isWon = json.is_won || false;
+      gameState.isGivenUp = json.is_given_up || false;
+      gameState.tries = json.tries || 0;
+      gameState.topGuesses = json.top_guesses || [];
+      gameState.history = json.history || [];
+      gameState.lastGuess = json.last_guess || null;
+      gameState.secret = json.secret || null;
+      gameState.hints = json.hints || [];
+
+      // Mise à jour complète de l'interface
+      restoreGameUI();
+      saveGameState();
+      showToast(json.mode === "daily" ? "Défi du jour synchronisé !" : `Partie libre (${json.difficulty}) prête !`);
+    } catch (err) {
+      console.warn("Impossible de contacter l'API du jeu:", err);
+      if (DOM.gameStatusText) DOM.gameStatusText.textContent = "⚠️ API du jeu non accessible (vérifiez que le conteneur tourne).";
+      if (DOM.gameSubmitBtn) DOM.gameSubmitBtn.disabled = false;
+      if (DOM.gameHintBtn) DOM.gameHintBtn.disabled = false;
+    }
+  }
+
+  async function submitGuess(rawWord) {
+    const word = (rawWord || "").trim().toLowerCase();
+    if (!word) return;
+
+    if (!gameState.gameId) {
+      await startNewGame();
+      return;
+    }
+
+    if (gameState.isWon || gameState.isGivenUp) {
+      showGameFeedback("Cette partie est terminée. Cliquez sur « Nouvelle Partie » pour rejouer.", "warning");
+      return;
+    }
+
+    // Vérifier si le mot a déjà été joué
+    if (gameState.history.some(g => g.word === word)) {
+      showGameFeedback(`Vous avez déjà testé le mot « ${word.toUpperCase()} ».`, "warning");
+      if (DOM.gameWordInput) DOM.gameWordInput.value = "";
+      return;
+    }
+
+    if (DOM.gameSubmitBtn) DOM.gameSubmitBtn.disabled = true;
+
+    try {
+      let response = await fetch("/api/game/guess", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game_id: gameState.gameId, word }),
+      });
+
+      // Auto-healing si la session serveur a expiré ou été redémarrée (404)
+      if (response.status === 404) {
+        console.warn("Session introuvable (404), auto-healing en cours...");
+        await startNewGame(gameState.mode || "daily", gameState.difficulty || "moyen");
+        response = await fetch("/api/game/guess", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ game_id: gameState.gameId, word }),
+        });
+      }
+
+      const json = await response.json();
+
+      if (!response.ok || !json.valid) {
+        showGameFeedback(json.error || "Mot invalide ou non reconnu.", "error");
+        if (DOM.gameSubmitBtn) DOM.gameSubmitBtn.disabled = false;
+        if (DOM.gameWordInput) DOM.gameWordInput.select();
+        return;
+      }
+
+      // Mise à jour de l'état
+      gameState.tries = json.tries;
+      gameState.lastGuess = json.last_guess;
+      gameState.topGuesses = json.top_guesses || [];
+      gameState.history.unshift(json.last_guess);
+      if (DOM.gameTriesCount) DOM.gameTriesCount.textContent = String(gameState.tries);
+
+      // Rendu du dernier coup et des listes
+      renderSpotlight(json.last_guess);
+      renderGameLists();
+
+      if (DOM.gameWordInput) {
+        DOM.gameWordInput.value = "";
+        DOM.gameWordInput.focus();
+      }
+
+      // Gestion de la victoire
+      if (json.is_win) {
+        gameState.isWon = true;
+        gameState.secret = json.secret;
+        handleGameWin(json.secret, json.tries);
+      }
+
+      saveGameState();
+    } catch (err) {
+      console.warn("Erreur lors de la soumission du mot:", err);
+      showGameFeedback("Erreur réseau lors de la communication avec l'API.", "error");
+    } finally {
+      if (DOM.gameSubmitBtn) DOM.gameSubmitBtn.disabled = false;
+    }
+  }
+
+  async function requestHint() {
+    if (!gameState.gameId || gameState.isWon || gameState.isGivenUp) return;
+    if (DOM.gameHintBtn) DOM.gameHintBtn.disabled = true;
+
+    try {
+      let response = await fetch("/api/game/hint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game_id: gameState.gameId }),
+      });
+
+      // Auto-healing si 404
+      if (response.status === 404) {
+        console.warn("Session introuvable (404), auto-healing en cours...");
+        await startNewGame(gameState.mode || "daily", gameState.difficulty || "moyen");
+        response = await fetch("/api/game/hint", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ game_id: gameState.gameId }),
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const json = await response.json();
+      if (json.error) {
+        showGameFeedback(json.error, "warning");
+        if (DOM.gameHintBtn) DOM.gameHintBtn.disabled = false;
+        return;
+      }
+
+      // Mise à jour de l'état avec l'indice
+      gameState.tries = json.tries;
+      gameState.topGuesses = json.top_guesses || [];
+      gameState.history.unshift(json.last_guess);
+      gameState.lastGuess = json.last_guess;
+      if (!gameState.hints) gameState.hints = [];
+      gameState.hints.push(json.hint_word);
+
+      if (DOM.gameTriesCount) DOM.gameTriesCount.textContent = String(gameState.tries);
+      if (DOM.gameStatusText) {
+        DOM.gameStatusText.textContent = `💡 Indice obtenu : « ${json.hint_word.toUpperCase()} » (+1 coup au compteur).`;
+      }
+
+      renderSpotlight(json.last_guess);
+      renderGameLists();
+      saveGameState();
+      showToast(`💡 Indice accordé : « ${json.hint_word.toUpperCase()} » (+1 coup)`);
+      setTimeout(() => DOM.gameWordInput?.focus(), 100);
+    } catch (err) {
+      console.warn("Erreur lors de la demande d'indice:", err);
+      showGameFeedback("⚠️ Impossible d'obtenir un indice pour le moment.", "danger");
+    } finally {
+      if (DOM.gameHintBtn && !gameState.isWon && !gameState.isGivenUp) {
+        DOM.gameHintBtn.disabled = false;
+      }
+    }
+  }
+
+  async function giveUpGame() {
+    if (!gameState.gameId || gameState.isWon || gameState.isGivenUp) return;
+    if (!confirm("Voulez-vous vraiment abandonner et révéler le mot secret ?")) return;
+
+    try {
+      let response = await fetch("/api/game/giveup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ game_id: gameState.gameId }),
+      });
+
+      if (response.status === 404) {
+        await startNewGame(gameState.mode || "daily", gameState.difficulty || "moyen");
+        response = await fetch("/api/game/giveup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ game_id: gameState.gameId }),
+        });
+      }
+
+      const json = await response.json();
+      if (json.secret) {
+        gameState.isGivenUp = true;
+        gameState.secret = json.secret;
+        if (DOM.gameWordInput) DOM.gameWordInput.disabled = true;
+        if (DOM.gameSubmitBtn) DOM.gameSubmitBtn.disabled = true;
+        if (DOM.gameGiveupBtn) DOM.gameGiveupBtn.disabled = true;
+        if (DOM.gameHintBtn) DOM.gameHintBtn.disabled = true;
+        if (DOM.gameStatusText) DOM.gameStatusText.textContent = `Partie abandonnée. Le mot secret était « ${json.secret.toUpperCase()} ».`;
+
+        if (DOM.winTitle) {
+          DOM.winTitle.textContent = "Partie terminée (Abandon)";
+          DOM.winTitle.style.color = "var(--text-muted)";
+        }
+        if (DOM.winDesc) {
+          DOM.winDesc.innerHTML = `Le mot secret était <strong style="color: var(--accent);">${json.secret.toUpperCase()}</strong> après <strong>${gameState.tries}</strong> essais.`;
+        }
+        if (DOM.gameWinBanner) DOM.gameWinBanner.style.display = "block";
+        saveGameState();
+        showToast(`Le mot secret était : ${json.secret.toUpperCase()}`);
+      }
+    } catch (err) {
+      console.warn("Erreur lors de l'abandon:", err);
+    }
+  }
+
+
+  function handleGameWin(secretWord, tries) {
+    if (DOM.gameWordInput) DOM.gameWordInput.disabled = true;
+    if (DOM.gameSubmitBtn) DOM.gameSubmitBtn.disabled = true;
+    if (DOM.gameGiveupBtn) DOM.gameGiveupBtn.disabled = true;
+
+    if (DOM.winTitle) {
+      DOM.winTitle.textContent = "🏆 Victoire triomphale ! Mot secret trouvé !";
+      DOM.winTitle.style.color = "var(--success)";
+    }
+    if (DOM.winDesc) {
+      DOM.winDesc.innerHTML = `Bravo ! Vous avez démasqué le mot <strong style="color: var(--success);">${secretWord.toUpperCase()}</strong> en <strong>${tries}</strong> coups.`;
+    }
+    if (DOM.gameWinBanner) DOM.gameWinBanner.style.display = "block";
+    if (DOM.gameStatusText) DOM.gameStatusText.textContent = `🏆 Victoire en ${tries} coups !`;
+
+    showToast(`🥳 Félicitations ! Mot secret « ${secretWord.toUpperCase()} » trouvé en ${tries} coups !`);
+  }
+
+  function renderSpotlight(guess) {
+    if (!guess || !DOM.gameSpotlight) return;
+    DOM.gameSpotlight.style.display = "block";
+
+    if (DOM.spotlightOrder) DOM.spotlightOrder.textContent = `Essai #${guess.order}`;
+    if (DOM.spotlightWord) DOM.spotlightWord.textContent = guess.word.toUpperCase();
+    if (DOM.spotlightWeather) DOM.spotlightWeather.textContent = guess.weather;
+
+    const tierClass = getTierClass(guess.score);
+    if (DOM.spotlightTemp) {
+      DOM.spotlightTemp.className = `spotlight-temp ${tierClass}`;
+      DOM.spotlightTemp.textContent = `${guess.score >= 0 ? "+" : ""}${guess.score.toFixed(2)}°C`;
+    }
+
+    if (DOM.spotlightGaugeBar) {
+      const pct = Math.max(5, Math.min(100, Math.round(((guess.score + 15) / 115) * 100)));
+      DOM.spotlightGaugeBar.style.width = `${pct}%`;
+      DOM.spotlightGaugeBar.style.backgroundColor = `var(--${tierClass})`;
+    }
+
+    if (DOM.spotlightPermille) {
+      DOM.spotlightPermille.textContent = guess.permille ? `${guess.permille}‰` : "--‰";
+      DOM.spotlightPermille.style.display = guess.permille ? "inline-block" : "none";
+    }
+  }
+
+  function renderGameLists() {
+    // 1. Top 10 des meilleurs mots
+    if (DOM.gameTopList) {
+      if (gameState.topGuesses.length === 0) {
+        DOM.gameTopList.innerHTML = `<div class="clues-empty"><span>Vos meilleures tentatives apparaîtront ici.</span></div>`;
+      } else {
+        DOM.gameTopList.innerHTML = gameState.topGuesses.map((g, idx) => {
+          const tier = getTierClass(g.score);
+          const isWinner = g.permille === 1000 || g.score >= 100.0;
+          const hintBadge = g.is_hint ? '<span class="badge-hint" title="Mot obtenu via un indice (+1 coup)">💡 Indice</span>' : '';
+          return `
+            <div class="guess-row ${isWinner ? "is-winner" : ""}">
+              <div class="guess-left">
+                <span class="guess-order">#${idx + 1}</span>
+                <span class="guess-word">${g.word.toUpperCase()}${hintBadge}</span>
+              </div>
+              <div class="guess-right">
+                <span class="guess-weather">${g.weather ? g.weather.split(" ")[0] : ""}</span>
+                <span class="guess-temp ${tier}">${g.score >= 0 ? "+" : ""}${g.score.toFixed(2)}°C</span>
+                <span class="guess-permille">${g.permille ? `${g.permille}‰` : ""}</span>
+              </div>
+            </div>`;
+        }).join("");
+      }
+    }
+
+    // 2. Chronologie de tous les coups
+    if (DOM.gameChronoList) {
+      if (gameState.history.length === 0) {
+        DOM.gameChronoList.innerHTML = `<div class="clues-empty"><span>Aucun mot joué pour le moment.</span></div>`;
+      } else {
+        DOM.gameChronoList.innerHTML = gameState.history.map(g => {
+          const tier = getTierClass(g.score);
+          const isWinner = g.permille === 1000 || g.score >= 100.0;
+          const hintBadge = g.is_hint ? '<span class="badge-hint" title="Mot obtenu via un indice (+1 coup)">💡 Indice</span>' : '';
+          return `
+            <div class="guess-row ${isWinner ? "is-winner" : ""}">
+              <div class="guess-left">
+                <span class="guess-order">[${g.order}]</span>
+                <span class="guess-word">${g.word.toUpperCase()}${hintBadge}</span>
+              </div>
+              <div class="guess-right">
+                <span class="guess-weather">${g.weather ? g.weather.split(" ")[0] : ""}</span>
+                <span class="guess-temp ${tier}">${g.score >= 0 ? "+" : ""}${g.score.toFixed(2)}°C</span>
+                <span class="guess-permille">${g.permille ? `${g.permille}‰` : ""}</span>
+              </div>
+            </div>`;
+        }).join("");
+      }
+    }
+
+  }
+
   // --- Événements & Interactions ---
   function initEvents() {
     DOM.themeToggle.addEventListener("click", toggleTheme);
@@ -438,6 +1087,50 @@
         DOM.manualRefreshBtn.disabled = false;
       }, 1000);
     });
+
+    // --- Événements du Mode de Jeu Interactif ---
+    if (DOM.tabDashboard) {
+      DOM.tabDashboard.addEventListener("click", () => switchTab("dashboard"));
+    }
+    if (DOM.tabPlay) {
+      DOM.tabPlay.addEventListener("click", () => switchTab("play"));
+    }
+
+    if (DOM.modeDailyBtn) {
+      DOM.modeDailyBtn.addEventListener("click", () => setGameMode("daily"));
+    }
+    if (DOM.modeUnlimitedBtn) {
+      DOM.modeUnlimitedBtn.addEventListener("click", () => setGameMode("unlimited"));
+    }
+
+    if (DOM.difficultyBtns) {
+      DOM.difficultyBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (btn.dataset.diff) setGameDifficulty(btn.dataset.diff);
+        });
+      });
+    }
+
+    if (DOM.gameNewBtn) {
+      DOM.gameNewBtn.addEventListener("click", () => startNewGame(gameState.mode, gameState.difficulty, true));
+    }
+    if (DOM.winNewGameBtn) {
+      DOM.winNewGameBtn.addEventListener("click", () => startNewGame(gameState.mode, gameState.difficulty, true));
+    }
+    if (DOM.gameGiveupBtn) {
+      DOM.gameGiveupBtn.addEventListener("click", () => giveUpGame());
+    }
+    if (DOM.gameHintBtn) {
+      DOM.gameHintBtn.addEventListener("click", () => requestHint());
+    }
+
+    if (DOM.gameGuessForm) {
+      DOM.gameGuessForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const word = DOM.gameWordInput ? DOM.gameWordInput.value : "";
+        submitGuess(word);
+      });
+    }
   }
 
   // --- Démarrage de l'Application ---
@@ -450,7 +1143,24 @@
     updateCountdown();
     setInterval(updateCountdown, 1000);
     setInterval(fetchData, 30000);
+
+    // Restauration de l'état du jeu et de l'onglet actif
+    const hasSavedGame = loadGameState();
+    let savedTab = "dashboard";
+    try {
+      savedTab = localStorage.getItem(TAB_STORAGE_KEY) || "dashboard";
+    } catch (_) {}
+
+    if (savedTab === "play") {
+      switchTab("play");
+    } else {
+      restoreGameUI();
+      if (gameState.gameId) {
+        resumeGame(gameState.gameId);
+      }
+    }
   }
 
   document.addEventListener("DOMContentLoaded", init);
+
 })();
