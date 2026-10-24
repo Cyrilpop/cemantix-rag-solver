@@ -11,6 +11,7 @@ Fonctionnalités :
 - Rattrapage immédiat au démarrage si le mot du jour n'a pas encore été résolu.
 - Heartbeat régulier et fonction check_health pour le HEALTHCHECK Docker.
 - Sauvegarde de l'historique dans cemantix_data/daily_history.json.
+- Synchronisation automatique des données web pour le serveur Caddy (volumes/web/data.json).
 - Logs clairs et horodatés sur stdout (visibles via docker logs -f).
 """
 import json
@@ -157,6 +158,7 @@ def run_daily_solver(args) -> dict:
         "source": result.get("source"),
         "win": result.get("win", False),
         "duration_seconds": round(result.get("time", 0.0), 2),
+        "top_guesses": result.get("top_guesses", []),
         "timestamp": now.isoformat(),
     }
 
@@ -168,6 +170,14 @@ def run_daily_solver(args) -> dict:
 
     log(f"📝  Résultat enregistré dans {DAILY_HISTORY_FILE}")
     update_heartbeat("sleeping", {"last_solved_puzzle": puzzle_id, "last_solved_word": result.get("word")})
+
+    # Synchronisation automatique de la page web pour Caddy
+    try:
+        from .web import export_web_data
+        export_web_data(history=history)
+    except Exception as e:
+        log(f"⚠️  Export web automatique non disponible : {e}")
+
     return entry
 
 
@@ -193,6 +203,13 @@ def run_daemon_loop(args) -> None:
     log(f"📅  Heure locale (Europe/Paris) : {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
     log(f"💾  Fichier historique          : {DAILY_HISTORY_FILE}")
     log(f"⚙   Mode d'exécution           : {'100% RAG Pur' if getattr(args, 'rag_only', False) else 'Hybride RAG + LLM'}")
+
+    # Synchronisation initiale de la page web au démarrage
+    try:
+        from .web import export_web_data
+        export_web_data()
+    except Exception:
+        pass
 
     # Rattrapage au démarrage : vérifier si le mot d'aujourd'hui est déjà résolu
     skip_on_start = getattr(args, "no_run_on_start", False)

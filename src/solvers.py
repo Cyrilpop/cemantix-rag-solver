@@ -408,6 +408,10 @@ class Solver:
         log(f"\n❌  Non trouvé après {len(self.guesses)} essais (mot secret : {secret_name}). Top 10 :")
         for w, s, p in self.ranked()[:10]:
             log(f"   {w:<20} {s * 100:6.2f}°C {p or ''}")
+        top = [
+            {"word": w, "score": round(s * 100, 2), "permille": p}
+            for w, s, p in self.ranked()[:10]
+        ]
         return {
             "word": secret_name,
             "tries": len(self.guesses),
@@ -415,12 +419,17 @@ class Solver:
             "source": None,
             "win": False,
             "time": elapsed,
+            "top_guesses": top,
         }
 
     def win(self, word: str, elapsed: float = 0.0) -> dict:
         time_str = f" en {elapsed:.2f}s" if elapsed > 0 else ""
         log(f"\n🥳  Mot trouvé : « {word.upper()} » en {len(self.guesses)} essais "
             f"({len(self.tried)} tentatives) [par {self.win_source}]{time_str}.")
+        top = [
+            {"word": w, "score": round(s * 100, 2), "permille": p}
+            for w, s, p in self.ranked()[:10]
+        ]
         return {
             "word": word,
             "tries": len(self.guesses),
@@ -428,6 +437,7 @@ class Solver:
             "source": self.win_source,
             "win": True,
             "time": elapsed,
+            "top_guesses": top,
         }
 
 
