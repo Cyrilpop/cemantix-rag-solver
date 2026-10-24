@@ -337,17 +337,14 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
             notice = "Affichage basculé sur l'historique chronologique."
             continue
         elif cmd in ("/indice", "/hint"):
-            if len(guesses) < 3:
-                notice = "💡  Jouez au moins 3 mots pour que le RAG puisse calculer un indice pertinent."
-                continue
-
             ranked_words = sorted(guesses.items(), key=lambda x: x[1][0], reverse=True)
-            top_word, (best_s, best_p, *_) = ranked_words[0]
+            top_word, (best_s, best_p, *_) = ranked_words[0] if ranked_words else (None, (-1.0, None))
 
-            if best_s > 0.10:
+            if best_s > 0.10 and top_word:
                 v_best = store.vec(top_word)
                 v_target = 0.35 * v_best + 0.65 * game.v_secret
-                v_target = v_target / np.linalg.norm(v_target)
+                norm_target = np.linalg.norm(v_target)
+                v_target = v_target / norm_target if norm_target > 0 else game.v_secret
                 cands_knn = store.knn(v_target, k=60)
             else:
                 cands_knn = store.knn(game.v_secret, k=150)[40:]
@@ -367,17 +364,43 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
                     res_hint = game.score(w_norm)
                     if res_hint:
                         s_w, p_w = res_hint
-                        if s_w > best_s or (p_w and p_w >= 500):
+                        if s_w > best_s or (p_w and p_w >= 500) or len(guesses) < 3:
                             valid_hints.append((w_norm, s_w, p_w))
+
+            if not valid_hints:
+                # Élargissement si aucun candidat filtré
+                for w in store.knn(game.v_secret, k=300)[30:]:
+                    w_norm = store.normalize(w)
+                    if (w_norm not in guesses
+                            and w_norm not in hints
+                            and w_norm != game.secret
+                            and len(w_norm) >= 4
+                            and w_norm not in STOPWORDS
+                            and not w_norm.startswith(secret_stem)
+                            and not game.secret.startswith(w_norm[:min(5, len(w_norm))])
+                            and store.is_valid_french(w_norm)):
+                        res_hint = game.score(w_norm)
+                        if res_hint:
+                            valid_hints.append((w_norm, res_hint[0], res_hint[1]))
 
             if valid_hints:
                 valid_hints.sort(key=lambda x: x[1])
-                chosen_hint = valid_hints[len(valid_hints) // 2][0]
+                chosen_hint, s_h, p_h = valid_hints[len(valid_hints) // 2]
                 hints.append(chosen_hint)
-                notice = f"💡  Nouvel indice #{len(hints)} débloqué : « {chosen_hint} » !"
+                # Un indice = 1 coup officiel au compteur
+                tries_count += 1
+                w_icon, w_lbl = weather_for_score(s_h, p_h)
+                guesses[chosen_hint] = (s_h, p_h, tries_count, w_icon, f"{w_lbl} 💡")
+                history_guesses.append((tries_count, chosen_hint, s_h, p_h, w_icon, f"{w_lbl} 💡"))
+                if s_h > best_score:
+                    best_score = s_h
+                    best_word = chosen_hint
+                rk_info = f"{p_h}‰" if p_h else f"{s_h*100:+.2f}°C"
+                notice = f"💡  Indice #{len(hints)} accordé : « {chosen_hint.upper()} » ({rk_info}, {w_icon}) — (+1 coup comptabilisé, Essai #{tries_count})"
             else:
                 notice = "💡  Pas d'indice supplémentaire disponible pour le moment."
             continue
+
 
         norm = store.normalize(cmd)
         if norm in guesses:
@@ -661,15 +684,13 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
             notice = "Commandes : /espion (rapport tactique sur l'IA), /solo, /diff, /facile, /moyen, /expert, /indice, /rejouer, /abandon, /quitter"
             continue
         elif cmd in ("/indice", "/hint"):
-            if len(guesses_human) < 3:
-                notice = "💡  Jouez au moins 3 mots pour calculer un indice pertinent."
-                continue
             ranked_words = sorted(guesses_human.items(), key=lambda x: x[1][0], reverse=True)
-            top_word, (best_s, best_p, *_) = ranked_words[0]
-            if best_s > 0.10:
+            top_word, (best_s, best_p, *_) = ranked_words[0] if ranked_words else (None, (-1.0, None))
+            if best_s > 0.10 and top_word:
                 v_best = store.vec(top_word)
                 v_target = 0.35 * v_best + 0.65 * game_human.v_secret
-                v_target = v_target / np.linalg.norm(v_target)
+                norm_tgt = np.linalg.norm(v_target)
+                v_target = v_target / norm_tgt if norm_tgt > 0 else game_human.v_secret
                 cands_knn = store.knn(v_target, k=60)
             else:
                 cands_knn = store.knn(game_human.v_secret, k=150)[40:]
@@ -689,29 +710,48 @@ def run_duel_loop(store: VocabStore, stats: dict | None = None, initial_difficul
                     res_hint = game_human.score(w_norm)
                     if res_hint:
                         s_w, p_w = res_hint
-                        if s_w > best_s or (p_w and p_w >= 500):
+                        if s_w > best_s or (p_w and p_w >= 500) or len(guesses_human) < 3:
                             valid_hints.append((w_norm, s_w, p_w))
+            if not valid_hints:
+                for w in store.knn(game_human.v_secret, k=300)[30:]:
+                    w_norm = store.normalize(w)
+                    if (w_norm not in guesses_human
+                            and w_norm not in hints
+                            and w_norm != game_human.secret
+                            and len(w_norm) >= 4
+                            and w_norm not in STOPWORDS
+                            and not w_norm.startswith(secret_stem)
+                            and not game_human.secret.startswith(w_norm[:min(5, len(w_norm))])
+                            and store.is_valid_french(w_norm)):
+                        res_hint = game_human.score(w_norm)
+                        if res_hint:
+                            valid_hints.append((w_norm, res_hint[0], res_hint[1]))
+
             if valid_hints:
                 valid_hints.sort(key=lambda x: x[1])
-                chosen_hint = valid_hints[len(valid_hints) // 2][0]
+                chosen_hint, s_hint, p_hint = valid_hints[len(valid_hints) // 2]
                 hints.append(chosen_hint)
-                notice = f"💡  Nouvel indice #{len(hints)} débloqué : « {chosen_hint} » !"
+                # Un indice = 1 coup pour l'humain en duel (l'IA répond son coup)
+                norm_h = chosen_hint
+                rk_info = f"{p_hint}‰" if p_hint else f"{s_hint*100:+.2f}°C"
+                notice = f"💡  Indice #{len(hints)} accordé : « {chosen_hint.upper()} » ({rk_info}) — (+1 coup comptabilisé, l'IA joue son tour)"
             else:
                 notice = "💡  Pas d'indice supplémentaire disponible pour le moment."
-            continue
+                continue
+        else:
+            norm_h = store.normalize(cmd)
+            if norm_h in guesses_human:
+                notice = f"⚠️   Déjà essayé : « {norm_h} »"
+                continue
 
-        norm_h = store.normalize(cmd)
-        if norm_h in guesses_human:
-            notice = f"⚠️   Déjà essayé : « {norm_h} »"
-            continue
+            if norm_h in ENGLISH_WORDS:
+                notice = f"❌   Mot « {raw} » rejeté (mot anglais non autorisé dans Cémantix)."
+                continue
 
-        if norm_h in ENGLISH_WORDS:
-            notice = f"❌   Mot « {raw} » rejeté (mot anglais non autorisé dans Cémantix)."
-            continue
+            if not store.is_valid_french(norm_h) or norm_h not in store:
+                notice = f"❌   Mot « {raw} » non reconnu (lemmes français au singulier uniquement)."
+                continue
 
-        if not store.is_valid_french(norm_h) or norm_h not in store:
-            notice = f"❌   Mot « {raw} » non reconnu (lemmes français au singulier uniquement)."
-            continue
 
         res_h = game_human.score(norm_h)
         if res_h is None:
