@@ -10,3 +10,4 @@ from .ui import *
 from .solvers import Solver, CemantixSolver, RagDuelPlayer
 from .modes import run_benchmark, run_battle, run_solo_loop, run_duel_loop, run_game
 from .menu import run_main_menu
+from .daemon import run_daemon_loop

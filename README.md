@@ -6,6 +6,7 @@ Ce projet implémente deux approches d'Intelligence Artificielle en compétition
 1. ⚡ **100% RAG Mathématique Pur** : Estimation analytique par régression Ridge de la direction du mot secret dans l'espace vectoriel, reranking géométrique multi-indices et détection vectorielle directe (*Sniper RAG*). **Zéro appel LLM, zéro GPU requis, résolution en moins d'une seconde.**
 2. 🤖 **Hybride RAG + Local LLM** : Coopération itérative entre l'espace vectoriel et un LLM local (via [LM Studio](https://lmstudio.ai/)) pour explorer le champ lexical et affiner les hypothèses sémantiques.
 3. ⚔️ **Mode Battle** : Tournoi en face-à-face sur $N$ manches comparant rigoureusement les deux approches sur le **même mot secret** et avec les **mêmes mots graines** de départ.
+4. ⏰ **Démon 24h/24 & Veille Quotidienne** : Fonctionnement permanent en conteneur Docker en mode sommeil, réveil automatique chaque nuit à 00h00 (heure de Paris) pour trouver le mot officiel du jour dès sa parution et historisation automatique.
 
 ---
 
@@ -107,17 +108,43 @@ Le conteneur Docker isole l'environnement et monte un volume hôte pour conserve
 #### 1. Construire l'image Docker
 ```bash
 docker compose build
-# Ou avec docker build direct :
-# docker build -t cemantix-rag .
 ```
 
-#### 2. Lancer une commande
-Avec Docker Compose, le dossier `./cemantix_data` est automatiquement préservé sur votre machine :
+#### 2. Lancement du Démon 24h/24 (Veille Permanente & Résolution à 00h00)
+Le conteneur est configuré par défaut pour tourner en tâche de fond permanente (`restart: unless-stopped`). Il se met en sommeil léger et se réveille chaque nuit à **00h00 (heure de Paris)** pour résoudre le mot du jour en mode RAG pur :
+
 ```bash
-# Afficher l'aide
+# Lancer le démon en arrière-plan :
+docker compose up -d
+
+# Suivre les logs de veille et les résolutions en temps réel :
+docker compose logs -f cemantix
+
+# Arrêter proprement le démon :
+docker compose down
+```
+
+> [!NOTE]
+> - **Historique automatique** : Chaque mot trouvé est consigné dans `./cemantix_data/daily_history.json` (date, numéro du puzzle, mot secret, nombre d'essais, durée).
+> - **Rattrapage au démarrage** : Si le mot d'aujourd'hui n'a pas encore été résolu, le démon le trouve dès le démarrage avant de s'endormir jusqu'au prochain minuit.
+
+#### 3. Lancer une commande ponctuelle ou interactive
+Sans arrêter le démon, vous pouvez exécuter n'importe quelle commande interactive ou de test :
+
+```bash
+# Afficher l'aide CLI
 docker compose run --rm cemantix --help
 
-# Lancer une partie en mode 100% RAG pur
+# Lancer le menu interactif complet
+docker compose run --rm -it cemantix --menu
+
+# Jouer une partie Solo interactive
+docker compose run --rm -it cemantix --play
+
+# Défier l'IA en mode Duel croisé
+docker compose run --rm -it cemantix --play --duel
+
+# Lancer une partie ponctuelle en mode 100% RAG pur
 docker compose run --rm cemantix --rag-only
 
 # Lancer un tournoi Battle de 3 manches
@@ -160,6 +187,10 @@ Ce menu centralise et permet de piloter toutes les fonctionnalités du projet :
 
 Vous pouvez également lancer directement le solveur en ligne de commande avec des options :
 
+- **Mode Démon 24h/24 (Veille et résolution quotidienne chaque nuit à 00h00)** :
+  ```bash
+  python cemantix_rag.py --daemon --rag-only
+  ```
 - **Mode 100% RAG Pur (Ultra-rapide, 0 LLM requis)** :
   ```bash
   python cemantix_rag.py --rag-only
@@ -243,7 +274,7 @@ python cemantix_rag.py --play --secret "volcan"
 Face-à-face en simultané type « Bataille Navale sémantique » opposant un joueur humain et l'IA RAG :
 - **Mots secrets croisés :** L'Humain cherche le mot de l'IA ; l'IA cherche le mot choisi par l'Humain (ou tiré au sort avec `/random`).
 - **Dashboard miroir synchronisé :** Affichage côte à côte des deux progressions (thermomètres ASCII, météo, Top coups).
-- **Niveaux de difficulté :** 3 profils d'IA (`facile`, `moyen`, `expert`) sélectionnables au départ ou via `/diff`, `/facile`, `/moyen`, `/expert`.
+- **Niveaux de difficulté :** 3 profils d'IA (`facile`, `moyen`, `expert`) sélectionnables au départ ou via `/diff`, `/facile`, `/moyen`, `/expert`.\
 - **Coup spécial d'espionnage (`/espion`) :** 1 crédit par match pour intercepter les projections Ridge de l'IA (disciplines surveillées, niveau de danger).
 - **Débriefing comparatif d'après-match :** Bilan exhaustif côte à côte (vainqueur, première étincelle, répartition météo).
 
@@ -261,6 +292,8 @@ python cemantix_rag.py --duel -d expert
 
 | Option | Type | Défaut | Description |
 | :--- | :---: | :---: | :--- |
+| `--daemon` | Flag | `False` | Lance le mode démon 24h/24 : reste en veille et résout le mot du jour chaque nuit à 00h00 (Europe/Paris). |
+| `--no-run-on-start` | Flag | `False` | En mode démon, ne résout pas immédiatement si non résolu, attend le cycle de 00h00. |
 | `--duel` | Flag | `False` | Lance le mode duel croisé interactif (Humain vs IA RAG). |
 | `--difficulty`, `-d` | Choix (`facile`, `moyen`, `expert`) | `moyen` | Règle le niveau d'agressivité de l'IA en mode duel. |
 | `--play`, `--game` | Flag | `False` | Active le mode jeu interactif solo dans le terminal. |
@@ -285,6 +318,7 @@ Ces variables peuvent être définies dans votre shell ou dans un fichier `.env`
 
 | Variable | Défaut | Description |
 | :--- | :--- | :--- |
+| `TZ` | `Europe/Paris` | Fuseau horaire officiel pour le planificateur de veille 00h00. |
 | `LM_API` | `http://host.docker.internal:1234/v1` (ou `http://localhost:1234/v1`) | URL de l'API OpenAI compatible de LM Studio. |
 | `LLM_MODEL` | `qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2` | Identifiant du modèle chargé dans LM Studio. |
 | `W2V_FILE` | `frWac_no_postag_phrase_500_cbow_cut10.bin` | Nom du fichier word2vec hébergé sur embeddings.net. |
@@ -297,13 +331,14 @@ Ces variables peuvent être définies dans votre shell ou dans un fichier `.env`
 cemantix-rag-solver/
 ├── cemantix_rag.py          # Point d'entrée CLI et orchestration générale
 ├── requirements.txt         # Dépendances Python (NumPy, ChromaDB, Requests)
-├── Dockerfile               # Image conteneurisée prête à l'emploi
-├── docker-compose.yml       # Configuration Docker avec persistance du volume de données
+├── Dockerfile               # Image conteneurisée prête à l'emploi (tzdata, Python 3.12)
+├── docker-compose.yml       # Configuration Docker Daemon (restart: unless-stopped)
 ├── .gitignore               # Exclut les fichiers binaires volumineux et caches
 ├── README.md                # Documentation complète du projet
 ├── CHANGELOG.md             # Historique des versions et refactorings
 ├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)
-│   └── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
+│   ├── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
+│   └── daily_history.json   # Historique persistant des résolutions quotidiennes
 └── src/                     # Architecture modulaire
     ├── __init__.py          # Expose les classes et fonctions du package
     ├── config.py            # Constantes, styles ANSI, chemins et configuration LLM
@@ -311,7 +346,9 @@ cemantix-rag-solver/
     ├── clients.py           # Clients API officiel (CemantixClient) & simulation locale (MockClient)
     ├── ui.py                # Rendu console, jauges ASCII, dashboard duel & débriefing
     ├── solvers.py           # Régression Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
-    └── modes.py             # Boucles de jeu (benchmark, battle, solo, duel)
+    ├── modes.py             # Boucles de jeu (benchmark, battle, solo, duel)
+    ├── menu.py              # Menu interactif textuel avec configuration dynamique
+    └── daemon.py            # Démon planificateur 24h/24 (veille et résolution quotidienne à 00h00)
 ```
 
 ---
