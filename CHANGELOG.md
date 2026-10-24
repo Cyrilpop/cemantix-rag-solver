@@ -7,6 +7,20 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Non publié] - 2026-10-24
 
 ### Ajouté
+- **Interface Web Mot du Jour & Volume Caddy (`./volumes/web`)** :
+  - **Dépose des fichiers web complets dans `./volumes/web`** : mise à disposition d'une application web autonome et réactive prête à être servie directement par Caddy via un simple montage de volume (`./volumes/web`).
+  - **Fichiers statiques légers sans framework lourd ni PHP** :
+    - `volumes/web/index.html` : structure sémantique moderne avec carte héro du mot du jour, badges, thermomètre, compte à rebours minuit, tableau de bord des statistiques et historique archivé.
+    - `volumes/web/style.css` : feuille de style complète avec thème sombre et clair commutable, glassmorphism, responsive design et animations soignées.
+    - `volumes/web/app.js` : application JavaScript vanilla avec gestion d'état, auto-polling de `data.json` toutes les 30s, compte à rebours en direct vers minuit (Europe/Paris), copie presse-papier avec notifications toast et recherche instantanée.
+    - `volumes/web/data.json` : fichier de données temps réel maintenu à jour automatiquement.
+  - **Mode Anti-Spoiler interactif** : protection par défaut du mot secret sous un voile flouté avec bouton de révélation/masquage au clic et bouton de bascule globale, idéal pour consulter les statistiques du jour sans se gâcher le puzzle en cours.
+  - **Échelle Thermique & Indices d'Approche** : visualisation des paliers Cémantix officiels (Glacial, Froid, Tiède, Chaud, Brûlant) et affichage des meilleurs candidats sémantiques ayant convergé vers la cible avec leurs températures et rangs en pourmille (‰).
+  - **Compte à rebours minuit en direct** : horloge numérique décomptant en temps réel les heures, minutes et secondes jusqu'au basculement officiel de Cémantix à 00h00 heure de Paris.
+  - **Tableau de bord de performance (KPIs)** : total de puzzles résolus, moyenne d'essais, temps moyen de résolution et taux de succès (100%).
+  - **Module d'exportation Python (`src/web.py`)** : génération et écriture atomique (via `.tmp` sécurisé) de `data.json`, synchronisé automatiquement au démarrage et à chaque résolution du démon (`src/daemon.py`).
+  - **Option CLI `--export-web`** : commande permettant d'exporter ou régénérer les données web à tout moment depuis le terminal ou Docker.
+  - **Montage du volume dans `docker-compose.yml`** : ajout du point de montage `- ./volumes/web:/app/volumes/web` pour une synchronisation transparente et continue entre le solveur en tâche de fond et le serveur web Caddy.
 - **Mode Démon 24h/24 & Veille automatique (`src/daemon.py`, `--daemon`)** :
   - **Exécution en arrière-plan permanente sous Docker** : le conteneur reste en sommeil léger et se réveille chaque nuit à **00h00 (heure de Paris / Europe/Paris)** pour résoudre le mot officiel Cémantix en mode 100% RAG pur.
   - **Interception gracieuse des signaux POSIX** : écoute de `SIGTERM` et `SIGINT` avec boucle de sommeil par tranche de 1 seconde permettant un arrêt immédiat sans délai (`docker stop` / `docker compose down`).
@@ -46,26 +60,3 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - **Pool de candidats enrichi** : élargissement de l'exploration vectorielle à 60-80 candidats combinant la direction Ridge `q_est` et les voisins des meilleurs coups connus.
   - **Amorçage adaptatif affiné (12 graines)** : interruption précoce dès 3 graines si un signal $\ge 20^\circ\text{C}$ (Top 1000) est détecté, et tir sniper dès détection d'un candidat brûlant ($\ge 65^\circ\text{C}$ et cohérence extrême).
   - **Résultat de référence** : résolution de mots cibles courants (ex: *planifier*) en 11 à 14 essais (médiane : 12 essais, min : 8 essais, temps moyen ~0.25s) contre 19 à 31 essais précédemment.
-
-### Ajouté
-- **Amorçage par graines orthogonales garanties (Farthest Point Sampling) & Détection Adaptative** :
-  - Sélection géométrique itérative sur l'hypersphère unitaire à 500 dimensions minimisant la similarité cosinus maximale entre les graines sélectionnées.
-  - Diversification dynamique du point d'ancrage initial permettant de renouveler automatiquement la combinaison de graines à chaque partie tout en conservant une orthogonalité stricte.
-  - Amorçage adaptatif en temps réel : interruption immédiate des graines restantes dès la détection d'une zone prometteuse dès le 3ᵉ mot joué pour basculer en convergence RAG ciblée sans gaspiller de coups.
-  - Intégration dans le solveur autonome, les benchmarks, le menu de configuration et extension de la suite de tests unitaires dédiée (`tests/test_seeds.py`).
-- **Menu interactif principal complet (`src/menu.py`)** :
-  - Lancement automatique du menu d'accueil lors d'une exécution sans argument (`python cemantix_rag.py`) ou via l'option `--menu` / `-i`.
-  - Accès centralisé à l'ensemble des modes : puzzle du jour, jeu solo, duel croisé, battle comparatif, mock local, benchmark autonome et réglages.
-  - Résolution du puzzle du jour avec choix dynamique du moteur (Hybride ou 100% RAG pur), réglage du nombre de graines d'amorçage et répétition de la résolution sur le même puzzle avec bilan statistique (taux de victoire, moyenne, médiane, min/max, répartition des sources et temps).
-  - Navigation universelle `/menu` (ou `menu`) opérationnelle depuis n'importe quel écran, sous-menu ou prompt de saisie pour revenir instantanément au menu principal sans surcharger visuellement les invites.
-  - Nettoyage d'écran automatique (`clear_screen`) avec fallback ANSI (`\033[H\033[2J`) garantissant un rendu propre et isolé sous tous les terminaux et conteneurs Docker.
-  - Panneau de réglages interactif pour basculer le mode verbeux, ajuster les délais réseau, la limite d'essais, les graines et les paramètres LLM en cours de session.
-- **Mode duel croisé interactif (`--duel`)** :
-  - Duel en face-à-face « Bataille Navale sémantique » opposant Joueur Humain vs IA RAG.
-  - Deux mots cibles distincts : l'Humain cherche le mot de l'IA ; l'IA cherche le mot de l'Humain (choisi manuellement ou tiré au sort via `/random`).
-  - Dashboard console en deux colonnes synchronisées (89 colonnes, 43 caractères par colonne), thermomètres ASCII et météos Cémantix en miroir sans troncature des lemmes longs (jusqu'à 17 caractères).
-  - Affichage persistant des indices vectoriels débloqués (`/indice`) conservés tout au long de la manche (`Indice #1`, `Indice #2`, etc.).
-  - Affichage paramétrable des meilleurs coups via `DUEL_TOP_WORDS` (par défaut Top 10).
-  - Compteur de manches et score cumulé de session persistant (`🧑   X — Y  🤖`) dans le bandeau supérieur.
-  - 3 niveaux de difficulté pour l'IA (`Facile`, `Moyen`, `Expert`) ajustant le nombre de graines, le seuil de chauffe et le choix des candidats rerankés.
-  - Configuration d'avant-match guidée en deux étapes (niveau puis cible de l'IA).
