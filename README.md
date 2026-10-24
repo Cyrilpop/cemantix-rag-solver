@@ -295,13 +295,28 @@ python cemantix_rag.py --duel -d expert
 
 Le projet intègre une interface web complète et réactive déposée dans le volume obligatoire ./volumes/web, conçue pour être servie ultra-efficacement par **Caddy** (ou tout autre serveur HTTP) :
 
-`
+```
 volumes/web/
-├── index.html        # Page web principale (mise en page moderne, responsive et accessible)
-├── style.css         # Feuille de style CSS3 (thèmes sombre/clair, glassmorphism, animations)
-├── app.js            # Logique cliente (anti-spoiler, polling temps réel, compte à rebours)
+├── index.html        # Tableau de bord du mot du jour (URL : /)
+├── play/             # Interface dédiée au jeu interactif (URL propre : /play/)
+│   └── index.html    # Page de jeu (mode défi du jour, mode illimité)
+├── css/              # Feuilles de style atomiques
+│   ├── variables.css # Thèmes clair/sombre, tokens de couleurs et dégradés thermiques
+│   ├── base.css      # Reset, boutons, badges, cartes et notifications toast
+│   ├── layout.css    # En-tête, navigation par onglets et pied de page fixe
+│   ├── dashboard.css # Styles du tableau de bord, thermomètre et guide SEO
+│   ├── game.css      # Styles de l'interface de jeu, saisie et spotlight
+│   └── modal.css     # Modale de débriefing de trajectoire IA
+├── js/               # Modules JavaScript atomiques (ES Modules)
+│   ├── app.js        # Point d'entrée léger et initialisation ciblée
+│   ├── utils.js      # Formatage, dates, presse-papier, helpers
+│   ├── theme.js      # Gestion du thème clair/sombre et protection anti-spoiler
+│   ├── countdown.js  # Horloge décomptant en temps réel le saut de minuit
+│   ├── dashboard.js  # Rendu du mot du jour, des indices et polling temps réel
+│   ├── trajectory.js # Visualisation et filtres de la trajectoire IA
+│   └── game.js       # Moteur complet du jeu interactif (API locale)
 └── data.json         # Données dynamiques générées automatiquement par le solveur
-`
+```
 
 #### Fonctionnalités clés de la page web :
 - **Carte Héros du Mot du Jour** : Affiche la date, le numéro du puzzle officiel, le mot secret, le nombre d'essais et la durée de calcul.
@@ -379,10 +394,12 @@ cemantix-rag-solver/
 ├── README.md                # Documentation complète du projet
 ├── CHANGELOG.md             # Historique des versions et refactorings
 ├── volumes/                 # Volumes partagés
-│   └── web/                 # Application web servie par Caddy (mot du jour & dashboard)
-│       ├── index.html       # Page web principale
-│       ├── style.css        # Styles modernes et thèmes
-│       ├── app.js           # Client interactif JavaScript
+│   └── web/                 # Application web servie par Caddy (mot du jour, jeu & API)
+│       ├── index.html       # Tableau de bord principal (URL : /)
+│       ├── play/            # Interface de jeu interactif (URL propre : /play/)
+│       │   └── index.html   # Page de jeu (défi du jour, illimité)
+│       ├── css/             # Styles atomiques (variables, base, layout, dashboard, game, modal)
+│       ├── js/              # Modules JavaScript atomiques (app, utils, theme, game, dashboard...)
 │       └── data.json        # Données temps réel du mot du jour
 ├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)
 │   ├── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
