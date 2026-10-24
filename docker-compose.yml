@@ -13,6 +13,8 @@ services:
     volumes:
       # Montage du cache local pour conserver les vecteurs et index ChromaDB (téléchargés 1 seule fois)
       - ./cemantix_data:/app/cemantix_data
+      # Publication automatique des données vers la page web servie par Caddy
+      - ./volumes/web:/app/volumes/web
     environment:
       - TZ=Europe/Paris
       - PYTHONUNBUFFERED=1
