@@ -264,7 +264,7 @@ body {
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 1.5rem 1.5rem 7.5rem 1.5rem;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -842,7 +842,7 @@ body {
 /* Toast */
 .toast {
   position: fixed;
-  bottom: 2rem;
+  bottom: 5.5rem;
   right: 2rem;
   background: var(--accent);
   color: #ffffff;
@@ -863,12 +863,30 @@ body {
   transform: translateY(0);
 }
 
-/* Footer */
+/* Footer Fixe */
 .app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
   border-top: 1px solid var(--border-color);
   background: var(--bg-card);
-  padding: 1.25rem 1.5rem;
-  margin-top: auto;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 0.85rem 1.5rem;
+  z-index: 100;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding-bottom: 9.5rem;
+  }
+
+  .toast {
+    bottom: 8rem;
+    right: 1rem;
+  }
 }
 
 .footer-container {
