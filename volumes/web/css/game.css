@@ -1,0 +1,494 @@
+/* ==========================================================================
+   Cémantix Solver — Styles Spécifiques au Jeu Interactif
+   ========================================================================== */
+
+.game-control-card {
+  padding: 1.25rem 1.5rem;
+}
+
+.game-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.game-mode-toggle,
+.game-difficulty-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.control-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pill-group {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.pill-btn {
+  background: transparent;
+  border: none;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.pill-btn:hover:not(.active) {
+  color: var(--text-main);
+}
+
+.pill-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.game-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.game-status-bar {
+  border-top: 1px solid var(--border-color);
+  padding-top: 0.75rem;
+  margin-top: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.game-status-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.game-status-note {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.tries-counter {
+  font-size: 0.85rem;
+  color: var(--text-main);
+}
+
+.tries-counter strong {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 1rem;
+}
+
+/* Bannière de Victoire */
+.game-win-banner {
+  background: linear-gradient(135deg, rgba(63, 185, 80, 0.15) 0%, rgba(26, 127, 55, 0.25) 100%);
+  border: 2px solid var(--success);
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 30px var(--success-glow);
+  animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.win-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.win-trophy {
+  font-size: 2.75rem;
+  filter: drop-shadow(0 0 12px rgba(63, 185, 80, 0.5));
+}
+
+.win-text h3 {
+  font-size: 1.3rem;
+  color: var(--success);
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.win-text p {
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.win-text strong {
+  color: var(--success);
+  font-weight: 700;
+}
+
+/* Champ de Saisie Interactive */
+.game-input-section {
+  width: 100%;
+}
+
+.guess-form {
+  width: 100%;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 0.35rem 0.5rem 0.35rem 1.15rem;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.input-wrapper:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.input-icon {
+  font-size: 1.35rem;
+  margin-right: 0.75rem;
+}
+
+.game-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  min-width: 180px;
+}
+
+.game-input::placeholder {
+  color: var(--text-dim);
+  font-weight: 400;
+  font-family: var(--font-main);
+  font-size: 0.95rem;
+}
+
+.btn-guess {
+  font-size: 0.95rem;
+  padding: 0.65rem 1.4rem;
+  border-radius: calc(var(--radius-lg) - 4px);
+}
+
+.game-feedback {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  animation: fadeIn 0.2s ease;
+}
+
+.game-feedback.is-error {
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.game-feedback.is-warning {
+  background: rgba(210, 153, 34, 0.15);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+/* Spotlight du Dernier Coup */
+.game-spotlight {
+  padding: 1.25rem 1.75rem;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.04) 0%, rgba(22, 27, 34, 0.95) 100%);
+  border: 1px solid rgba(88, 166, 255, 0.25);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: var(--transition);
+}
+
+.spotlight-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.spotlight-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.spotlight-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.spotlight-word-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.spotlight-word {
+  font-family: var(--font-mono);
+  font-size: 2.1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-main);
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+}
+
+.spotlight-weather {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.spotlight-scores {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.spotlight-metrics-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.spotlight-temp {
+  font-family: var(--font-mono);
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--text-main) !important;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.spotlight-permille {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fcf161;
+  background: rgba(252, 241, 97, 0.12);
+  border: 1px solid rgba(252, 241, 97, 0.35);
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.temp-gauge {
+  width: 190px;
+  height: 9px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.temp-gauge-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--gradient-game) !important;
+  background-size: 190px 100% !important;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(252, 241, 97, 0.25);
+}
+
+/* Listes des Essais du Joueur */
+.game-guesses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 320px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+}
+
+.guess-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  transition: var(--transition);
+  animation: fadeIn 0.2s ease;
+}
+
+.guess-row:hover {
+  border-color: rgba(88, 166, 255, 0.4);
+  transform: translateX(2px);
+}
+
+.guess-row.is-winner {
+  border-color: var(--success);
+  background: var(--success-glow);
+}
+
+.guess-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.guess-order {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 28px;
+}
+
+.guess-word {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.guess-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.guess-weather {
+  font-size: 0.9rem;
+}
+
+.guess-temp {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.guess-permille {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 45px;
+  text-align: right;
+}
+
+.badge-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(210, 153, 34, 0.18);
+  color: #e3b341;
+  border: 1px solid rgba(210, 153, 34, 0.45);
+  margin-left: 6px;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .game-control-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .game-mode-toggle,
+  .game-difficulty-toggle {
+    justify-content: space-between;
+  }
+
+  .game-actions {
+    justify-content: stretch;
+  }
+
+  .game-actions .btn {
+    flex: 1;
+  }
+
+  .spotlight-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .spotlight-scores {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .spotlight-metrics-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .temp-gauge {
+    width: 100%;
+  }
+
+  .temp-gauge-fill {
+    background-size: 100% 100% !important;
+  }
+}

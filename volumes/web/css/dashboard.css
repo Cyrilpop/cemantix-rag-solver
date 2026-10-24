@@ -1,0 +1,781 @@
+/* ==========================================================================
+   Cémantix Solver — Styles Spécifiques au Tableau de Bord & Mot du Jour
+   ========================================================================== */
+
+/* Hero Card (Mot du Jour) */
+.hero-card {
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.05) 0%, rgba(63, 185, 80, 0.05) 100%), var(--bg-card);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  box-shadow: var(--shadow-glow);
+}
+
+.hero-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.puzzle-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.meta-date {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Grille 2 colonnes pour le corps du Hero : Mot secret à gauche, Métriques à droite */
+.hero-body-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+/* Secret Word Area */
+.secret-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.secret-word-card {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  min-height: 230px;
+  box-sizing: border-box;
+  background: var(--bg-input);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  text-align: center;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.secret-word-card:not(.is-spoiled) {
+  border-style: solid;
+  border-color: var(--accent);
+  box-shadow: 0 0 30px var(--accent-glow);
+}
+
+.secret-word-revealed {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+/* Spoiler Overlay en position absolue */
+.spoiler-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--bg-input);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  z-index: 10;
+  border-radius: calc(var(--radius-lg) - 2px);
+}
+
+.secret-word-card.is-spoiled .spoiler-overlay {
+  display: flex;
+}
+
+.secret-word-card.is-spoiled .secret-word-revealed {
+  filter: blur(14px);
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.15;
+}
+
+.spoiler-icon-large {
+  font-size: 2.5rem;
+}
+
+.spoiler-prompt {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  max-width: 320px;
+}
+
+.secret-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.secret-word-text {
+  font-family: var(--font-mono);
+  font-size: 2.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-main);
+  margin-bottom: 1rem;
+  text-shadow: 0 0 20px var(--accent-glow);
+}
+
+@media (max-width: 640px) {
+  .secret-word-text {
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+  }
+}
+
+.secret-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+/* Metrics Grid — Colonne droite */
+.metrics-grid {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  height: 100%;
+}
+
+.metric-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+
+.metric-card:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(88, 166, 255, 0.35);
+  transform: translateX(2px);
+}
+
+.metric-icon {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(88, 166, 255, 0.08);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.metric-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.metric-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.metric-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.metric-value a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.metric-value a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 860px) {
+  .hero-body-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Thermometer & Climat Sémantique */
+.thermometer-visual {
+  margin-bottom: 1.5rem;
+}
+
+.temp-bar {
+  display: flex;
+  height: 38px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--gradient-dashboard);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 38px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
+.temp-tier {
+  flex: 1;
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.temp-tier:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Couleurs sémantiques des températures dans les listes */
+.guess-temp.tier-ice { color: var(--tier-ice); }
+.guess-temp.tier-cold { color: var(--tier-cold); }
+.guess-temp.tier-cool { color: var(--tier-cool); }
+.guess-temp.tier-warm { color: var(--tier-warm); }
+.guess-temp.tier-fire { color: var(--tier-fire); }
+
+/* Countdown */
+.countdown-box {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.countdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.countdown-icon {
+  font-size: 1.2rem;
+}
+
+.countdown-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.countdown-timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.time-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.65rem;
+  min-width: 54px;
+}
+
+.time-num {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.time-unit {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-left: 2px;
+}
+
+.time-sep {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.countdown-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Clues Card & Wrapper */
+.clues-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.clues-wrapper {
+  position: relative;
+  height: 290px;
+  min-height: 290px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+
+.clues-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 290px;
+  max-height: 290px;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.clues-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.clues-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 9999px;
+  margin: 4px 0;
+}
+
+.clues-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.clues-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.clues-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--bg-card);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-md);
+  z-index: 5;
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.clues-wrapper.is-hidden .clues-overlay {
+  display: flex;
+}
+
+.clues-wrapper.is-hidden .clues-list {
+  filter: blur(10px);
+  user-select: none;
+  pointer-events: none;
+  opacity: 0.15;
+}
+
+.clue-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+.clue-word {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.clue-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.clue-temp {
+  font-weight: 700;
+}
+
+.clue-permille {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.clues-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Stats Row (KPIs) */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.stat-card {
+  text-align: center;
+  padding: 1.25rem 1rem;
+}
+
+.stat-icon {
+  font-size: 1.75rem;
+  margin-bottom: 0.25rem;
+  display: inline-block;
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 0.2rem;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* History Table */
+.history-header {
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.75rem;
+}
+
+.search-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  min-width: 220px;
+}
+
+.search-icon {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 9999px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.history-table th {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.history-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+.history-table tr:hover td {
+  background: var(--bg-card-hover);
+}
+
+.history-row-clickable {
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.history-row-clickable:hover {
+  background: rgba(88, 166, 255, 0.08) !important;
+}
+
+.word-spoiler {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  transition: var(--transition);
+}
+
+.word-spoiler.is-hidden {
+  filter: blur(6px);
+  user-select: none;
+}
+
+.word-spoiler.is-hidden:hover {
+  filter: blur(3px);
+}
+
+.btn-trajectory {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: rgba(88, 166, 255, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.btn-trajectory:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+/* Section SEO & FAQ Guide */
+.seo-section {
+  margin-top: 2rem;
+}
+
+.seo-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(8px);
+}
+
+.seo-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.seo-header h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.35rem;
+}
+
+.seo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.seo-article {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.seo-article h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.seo-article p {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.seo-article strong {
+  color: var(--text-main);
+}
+
+.seo-list {
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.seo-list li {
+  margin-bottom: 0.35rem;
+}
+
+.seo-list strong {
+  color: var(--text-main);
+}
+
+.seo-faq-container {
+  border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.seo-faq-container h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+}
+
+.faq-item {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.faq-item[open] {
+  border-color: var(--accent);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+.faq-question {
+  padding: 1rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.faq-question::-webkit-details-marker {
+  display: none;
+}
+
+.faq-question::after {
+  content: "▾";
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.faq-item[open] .faq-question::after {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.faq-answer {
+  padding: 0 1.25rem 1.25rem 1.25rem;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.faq-answer strong {
+  color: var(--text-main);
+}
+
+.faq-answer p {
+  margin: 0;
+}
