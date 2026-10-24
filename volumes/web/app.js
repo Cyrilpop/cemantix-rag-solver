@@ -440,7 +440,21 @@
     if (DOM.modalDuration) DOM.modalDuration.textContent = entry.duration_seconds ? `${entry.duration_seconds}s` : "--";
     if (DOM.modalEngine) DOM.modalEngine.textContent = entry.source === "llm" ? "Hybride LLM" : "100% RAG Mathématique";
 
-    const traj = entry.trajectory || [];
+    let traj = entry.trajectory || [];
+    // Fallback gracieux si l'historique ancien n'a que top_guesses :
+    if (traj.length === 0 && Array.isArray(entry.top_guesses) && entry.top_guesses.length > 0) {
+      traj = entry.top_guesses.map((g, idx) => ({
+        step: idx + 1,
+        word: g.word,
+        score: typeof g.score === "number" ? g.score : 0,
+        permille: g.permille || null,
+        source: "rag",
+        weather: getTierWeatherIcon(g.score, g.permille),
+        is_record: idx === 0,
+      }));
+    }
+    entry._computedTrajectory = traj;
+
     const bestWarm = traj.filter(t => t.permille !== 1000).sort((a, b) => (b.permille || 0) - (a.permille || 0))[0];
     if (DOM.modalBestWord) {
       DOM.modalBestWord.textContent = bestWarm ? `${bestWarm.word} (${bestWarm.permille}‰)` : "--";
@@ -475,15 +489,14 @@
 
   function renderTrajectoryList() {
     if (!DOM.trajectoryList) return;
-    if (!activeTrajectoryEntry || !Array.isArray(activeTrajectoryEntry.trajectory) || activeTrajectoryEntry.trajectory.length === 0) {
+    const traj = (activeTrajectoryEntry && (activeTrajectoryEntry._computedTrajectory || activeTrajectoryEntry.trajectory)) || [];
+    if (traj.length === 0) {
       DOM.trajectoryList.innerHTML = `
         <div class="clues-empty">
           <span>Aucune étape détaillée consignée pour ce puzzle.</span>
         </div>`;
       return;
     }
-
-    const traj = activeTrajectoryEntry.trajectory;
     let filtered = traj;
     if (activeTrajectoryFilter === "seeds") {
       filtered = traj.filter(t => t.source === "seed");

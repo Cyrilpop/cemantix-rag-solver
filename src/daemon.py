@@ -164,8 +164,8 @@ def run_daily_solver(args) -> dict:
     }
 
     history = load_history()
-    # Remplacer une éventuelle entrée précédente non victorieuse pour le même puzzle
-    history = [h for h in history if not (h.get("date") == today_str and h.get("win") is False)]
+    # Remplacer toute entrée précédente pour la même date pour garantir l'enregistrement de la trajectoire
+    history = [h for h in history if h.get("date") != today_str]
     history.append(entry)
     save_history(history)
 
