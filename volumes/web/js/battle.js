@@ -45,6 +45,8 @@ export const battleState = {
   },
 };
 
+let modalSelectedDiff = "moyen";
+
 export function initBattle() {
   initErrorHandling();
   initTheme();
@@ -57,21 +59,21 @@ export function initBattle() {
   const guessForm = document.getElementById("battle-guess-form");
   const wordInput = document.getElementById("battle-word-input");
 
-  // Sélecteur de difficulté
+  // Sélecteur de difficulté (barre de jeu) -> ouvre la modale avec ce niveau pré-sélectionné
   diffBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
       const diff = btn.dataset.diff;
-      if (diff && diff !== battleState.difficulty) {
-        setBattleDifficulty(diff);
+      if (diff) {
+        openBattleNewModal(diff);
       }
     });
   });
 
   if (newBtn) {
-    newBtn.addEventListener("click", () => startNewBattle(battleState.difficulty, false));
+    newBtn.addEventListener("click", () => openBattleNewModal(battleState.difficulty));
   }
   if (replayBtn) {
-    replayBtn.addEventListener("click", () => startNewBattle(battleState.difficulty, true));
+    replayBtn.addEventListener("click", () => openBattleNewModal(battleState.difficulty));
   }
   if (giveupBtn) {
     giveupBtn.addEventListener("click", giveUpBattle);
@@ -88,18 +90,118 @@ export function initBattle() {
     });
   }
 
+  // Configuration de la modale de lancement
+  setupBattleNewModal();
+
   // Toggle mobile
   setupMobileDuelToggle();
 
-  // Restauration de l'état local ou démarrage
+  // Restauration de l'état local ou ouverture de la modale de démarrage
   const hasSaved = loadBattleState();
   if (hasSaved && battleState.battleId) {
     resumeBattle(battleState.battleId);
   } else {
-    startNewBattle(battleState.difficulty || "moyen", false);
+    // Premier lancement : afficher directement la modale avec effet blur au premier plan
+    openBattleNewModal(battleState.difficulty || "moyen");
   }
 
   setTimeout(() => wordInput?.focus(), 150);
+}
+
+function setupBattleNewModal() {
+  const modal = document.getElementById("battle-new-modal");
+  const modalClose = document.getElementById("battle-modal-close");
+  const modalCancel = document.getElementById("battle-modal-cancel");
+  const modalForm = document.getElementById("battle-modal-form");
+  const modalDiffCards = document.querySelectorAll("#modal-diff-group .modal-diff-card");
+
+  modalDiffCards.forEach((card) => {
+    card.addEventListener("click", () => {
+      modalDiffCards.forEach((c) => c.classList.remove("active"));
+      card.classList.add("active");
+      modalSelectedDiff = card.dataset.diff || "moyen";
+    });
+  });
+
+  if (modalClose) {
+    modalClose.addEventListener("click", () => closeBattleNewModal());
+  }
+  if (modalCancel) {
+    modalCancel.addEventListener("click", () => closeBattleNewModal());
+  }
+
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        closeBattleNewModal();
+      }
+    });
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const modalEl = document.getElementById("battle-new-modal");
+      if (modalEl && modalEl.style.display !== "none") {
+        closeBattleNewModal();
+      }
+    }
+  });
+
+  if (modalForm) {
+    modalForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const activeCard = document.querySelector("#modal-diff-group .modal-diff-card.active");
+      const diff = activeCard ? activeCard.dataset.diff : (modalSelectedDiff || "moyen");
+      const aiInput = document.getElementById("modal-ai-word-input");
+      const aiWord = aiInput ? aiInput.value.trim().toLowerCase() : "";
+
+      await startNewBattle(diff, Boolean(battleState.battleId), aiWord, true);
+    });
+  }
+}
+
+export function openBattleNewModal(preferredDiff = null) {
+  const modal = document.getElementById("battle-new-modal");
+  if (!modal) return;
+
+  const targetDiff = preferredDiff || battleState.difficulty || "moyen";
+  modalSelectedDiff = targetDiff;
+
+  const modalDiffCards = document.querySelectorAll("#modal-diff-group .modal-diff-card");
+  modalDiffCards.forEach((c) => {
+    c.classList.toggle("active", c.dataset.diff === targetDiff);
+  });
+
+  const modalError = document.getElementById("modal-battle-error");
+  if (modalError) {
+    modalError.style.display = "none";
+    modalError.textContent = "";
+  }
+
+  const aiInput = document.getElementById("modal-ai-word-input");
+  if (aiInput) {
+    aiInput.value = "";
+  }
+
+  modal.style.display = "flex";
+
+  setTimeout(() => {
+    if (aiInput) aiInput.focus();
+  }, 120);
+}
+
+export function closeBattleNewModal(force = false) {
+  const modal = document.getElementById("battle-new-modal");
+  if (!modal) return;
+  modal.style.display = "none";
+
+  // Si l'utilisateur ferme sans valider et qu'aucune partie n'est initialisée
+  if (!force && !battleState.battleId) {
+    startNewBattle(modalSelectedDiff || "moyen", false, "", false);
+  } else {
+    const wordInput = document.getElementById("battle-word-input");
+    if (wordInput && !battleState.isFinished) wordInput.focus();
+  }
 }
 
 function saveBattleState() {
@@ -131,13 +233,21 @@ function loadBattleState() {
   }
 }
 
-async function startNewBattle(difficulty = "moyen", keepStats = true) {
+async function startNewBattle(difficulty = "moyen", keepStats = true, aiWord = "", isFromModal = false) {
   const newBtn = document.getElementById("battle-new-btn");
+  const modalSubmitBtn = document.getElementById("battle-modal-submit");
+  const modalError = document.getElementById("modal-battle-error");
   const wordInput = document.getElementById("battle-word-input");
-  const customAiInput = document.getElementById("battle-custom-ai-input");
-  const aiWord = customAiInput ? customAiInput.value.trim() : "";
 
   if (newBtn) newBtn.disabled = true;
+  if (modalSubmitBtn) {
+    modalSubmitBtn.disabled = true;
+    modalSubmitBtn.innerHTML = `<span>⏳</span> Lancement...`;
+  }
+  if (modalError) {
+    modalError.style.display = "none";
+    modalError.textContent = "";
+  }
 
   try {
     const payload = {
@@ -153,18 +263,24 @@ async function startNewBattle(difficulty = "moyen", keepStats = true) {
 
     const json = await response.json();
     if (!response.ok || !json.valid) {
-      showToast(json.error || "Erreur lors de l'initialisation du duel.", "error");
-      if (customAiInput) customAiInput.select();
-      return;
+      const errorMsg = json.error || "Erreur lors de l'initialisation du duel.";
+      if (isFromModal && modalError) {
+        modalError.innerHTML = `<span>⚠️</span> <span>${errorMsg}</span>`;
+        modalError.style.display = "flex";
+        const aiInput = document.getElementById("modal-ai-word-input");
+        if (aiInput) aiInput.select();
+      } else {
+        showToast(errorMsg, "error");
+      }
+      return false;
     }
 
     syncStateFromAPI(json);
     renderBattleUI();
     saveBattleState();
 
-    if (customAiInput) {
-      customAiInput.value = "";
-    }
+    // Fermeture de la modale après succès
+    closeBattleNewModal(true);
 
     if (wordInput) {
       wordInput.value = "";
@@ -173,11 +289,22 @@ async function startNewBattle(difficulty = "moyen", keepStats = true) {
     }
     const aiTargetMsg = aiWord ? `Cible de l'IA : « ${json.ai.target.toUpperCase()} »` : "Cible IA tirée au sort 🎲";
     showToast(`⚔️ Manche #${battleState.stats.match} lancée (${battleState.difficulty.toUpperCase()}) — ${aiTargetMsg} !`, "info");
+    return true;
   } catch (err) {
     console.warn("Erreur startNewBattle:", err);
-    showToast("Erreur réseau de communication avec le serveur.", "error");
+    if (isFromModal && modalError) {
+      modalError.innerHTML = `<span>⚠️</span> <span>Erreur réseau de communication avec le serveur.</span>`;
+      modalError.style.display = "flex";
+    } else {
+      showToast("Erreur réseau de communication avec le serveur.", "error");
+    }
+    return false;
   } finally {
     if (newBtn) newBtn.disabled = false;
+    if (modalSubmitBtn) {
+      modalSubmitBtn.disabled = false;
+      modalSubmitBtn.innerHTML = `<span>⚔️</span> Démarrer le Duel`;
+    }
   }
 }
 
@@ -206,11 +333,7 @@ async function resumeBattle(battleId) {
 }
 
 function setBattleDifficulty(diff) {
-  battleState.difficulty = diff;
-  const diffBtns = document.querySelectorAll("#battle-diff-group .pill-btn");
-  diffBtns.forEach((b) => b.classList.toggle("active", b.dataset.diff === diff));
-  // Nouvelle manche sous le niveau choisi
-  startNewBattle(diff, true);
+  openBattleNewModal(diff);
 }
 
 async function submitBattleGuess(rawWord) {

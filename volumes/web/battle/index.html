@@ -45,7 +45,8 @@
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/layout.css">
   <link rel="stylesheet" href="../css/game.css">
-  <link rel="stylesheet" href="../css/battle.css">
+  <link rel="stylesheet" href="../css/modal.css?v=20261025b">
+  <link rel="stylesheet" href="../css/battle.css?v=20261025b">
 
   <!-- Données Structurées JSON-LD (Schema.org / GameApplication, Fil d'Ariane & FAQ) -->
   <script type="application/ld+json">
@@ -199,17 +200,6 @@
             <button type="button" id="battle-giveup-btn" class="btn btn-secondary btn-sm" title="Abandonner la manche et dévoiler les mots secrets">
               <span>🏳️</span> Forfait
             </button>
-          </div>
-        </div>
-
-        <!-- Option : Choix du mot secret de l'IA -->
-        <div class="battle-setup-row">
-          <div class="battle-custom-ai-group">
-            <label for="battle-custom-ai-input" class="control-label">🎯 Mot secret pour l'IA (optionnel) :</label>
-            <div class="custom-ai-input-wrap">
-              <input type="text" id="battle-custom-ai-input" class="custom-ai-input" placeholder="Laisser vide = tirage aléatoire 🎲" maxlength="35" autocomplete="off">
-              <span class="custom-ai-hint">Assigné au bot lors du lancement d'une manche.</span>
-            </div>
           </div>
         </div>
 
@@ -435,6 +425,94 @@
     </div>
   </main>
 
+  <!-- Modal de Lancement d'une Nouvelle Manche (Choix Difficulté & Mot Secret IA) -->
+  <div id="battle-new-modal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="battle-modal-title">
+    <div class="card battle-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h2 id="battle-modal-title">⚔️ Nouvelle Manche de Battle</h2>
+          <span class="card-subtitle">Configurez les paramètres du duel avant de vous lancer</span>
+        </div>
+        <button type="button" id="battle-modal-close" class="modal-close-btn" aria-label="Fermer la fenêtre">✕</button>
+      </div>
+
+      <form id="battle-modal-form" autocomplete="off">
+        <div class="battle-modal-body">
+          <!-- 1. Sélection de la Difficulté -->
+          <div class="modal-field-group">
+            <label class="modal-field-label">
+              <span>🎚️ Niveau de l'IA &amp; Complexité des mots :</span>
+            </label>
+            <div class="modal-diff-grid" id="modal-diff-group">
+              <button type="button" class="modal-diff-card" data-diff="facile">
+                <span class="diff-badge">🟢 Facile</span>
+                <span class="diff-name">Explorateur</span>
+                <span class="diff-desc">Vocabulaire accessible, IA prudente</span>
+              </button>
+              <button type="button" class="modal-diff-card active" data-diff="moyen">
+                <span class="diff-badge">🟡 Moyen</span>
+                <span class="diff-name">Équilibré</span>
+                <span class="diff-desc">Mots courants, IA tactique</span>
+              </button>
+              <button type="button" class="modal-diff-card" data-diff="expert">
+                <span class="diff-badge">🔴 Expert</span>
+                <span class="diff-name">Redoutable</span>
+                <span class="diff-desc">Vocabulaire pointu, IA Ridge agressive</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Mot secret pour l'IA (Optionnel) -->
+          <div class="modal-field-group">
+            <div class="modal-field-header">
+              <label for="modal-ai-word-input" class="modal-field-label">
+                <span>🎯 Mot secret attribué au Bot IA :</span>
+              </label>
+              <span class="modal-tag-optional">Optionnel</span>
+            </div>
+            <div class="modal-input-container">
+              <span class="modal-input-icon">🤖</span>
+              <input 
+                type="text" 
+                id="modal-ai-word-input" 
+                class="modal-input-field" 
+                placeholder="Laisser vide = tirage aléatoire 🎲" 
+                maxlength="35" 
+                autocomplete="off"
+                spellcheck="false"
+              >
+            </div>
+            <p class="modal-help-text">
+              Définissez le mot précis que l'IA devra démasquer (ex: <em>science</em>, <em>voyage</em>). Si laissé vide, un mot secret est tiré au sort dans le dictionnaire officiel.
+            </p>
+            <div id="modal-battle-error" class="modal-error-banner" style="display: none;" role="alert"></div>
+          </div>
+
+          <!-- 3. Rappels de jeu tactiques -->
+          <div class="modal-tactics-box">
+            <div class="tactic-item">
+              <span class="tactic-icon">🔄</span>
+              <span><strong>Duel tour par tour :</strong> L'IA réplique immédiatement à chacun de vos essais.</span>
+            </div>
+            <div class="tactic-item">
+              <span class="tactic-icon">💡</span>
+              <span><strong>3 Indices graduels :</strong> Vous pouvez demander jusqu'à 3 indices (1 indice = 1 tour).</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="battle-modal-cancel" class="btn btn-secondary">
+            Annuler
+          </button>
+          <button type="submit" id="battle-modal-submit" class="btn btn-primary btn-start-duel">
+            <span>⚔️</span> Démarrer le Duel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
@@ -456,6 +534,6 @@
     </div>
   </footer>
 
-  <script type="module" src="../js/battle.js?v=20261025a"></script>
+  <script type="module" src="../js/battle.js?v=20261025b"></script>
 </body>
 </html>
