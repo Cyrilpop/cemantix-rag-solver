@@ -419,17 +419,39 @@ cemantix-rag-solver/
 ├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)
 │   ├── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
 │   └── daily_history.json   # Historique persistant des résolutions quotidiennes
-└── src/                     # Architecture modulaire
-    ├── __init__.py          # Expose les classes et fonctions du package
+└── src/                     # Architecture modulaire découplée
+    ├── __init__.py          # Expose les classes et fonctions du package avec rétrocompatibilité
     ├── config.py            # Constantes, styles ANSI, chemins et configuration LLM
-    ├── vocab.py             # VocabStore (lexique, word2vec, embeddings ChromaDB)
-    ├── clients.py           # Clients API officiel (CemantixClient) & simulation locale (MockClient)
-    ├── ui.py                # Rendu console, jauges ASCII, dashboard duel & débriefing
-    ├── solvers.py           # Régression Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
-    ├── modes.py             # Boucles de jeu (benchmark, battle, solo, duel)
-    ├── menu.py              # Menu interactif textuel avec configuration dynamique
-    ├── daemon.py            # Démon planificateur 24h/24 (veille et résolution quotidienne à 00h00)
-    └── web.py               # Générateur et exportateur de données web pour Caddy
+    ├── engine/              # Moteur mathématique, RAG & clients réseau (Core Engine)
+    │   ├── __init__.py      # Point d'entrée et exports du moteur
+    │   ├── vocab.py         # VocabStore (lexique Lexique383, vecteurs frWac, ChromaDB)
+    │   ├── clients.py       # Clients API Cémantix officiel (IPv4/retry) & local (MockClient)
+    │   └── solvers.py       # Régression Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
+    ├── game/                # Moteurs de jeu purs et gestionnaires de session (Domain Layer)
+    │   ├── __init__.py      # Point d'accès et ré-exports des sessions
+    │   ├── common.py        # Utilitaires partagés (météo sémantique, fichiers de persistance)
+    │   ├── solo.py          # Moteur de session Solo & Défi du Jour (GameSession)
+    │   ├── battle.py        # Moteur de duel Joueur vs Bot IA (BattleSession)
+    │   ├── multi.py         # Moteur de salon et tours Multijoueur 1v1 (MultiplayerSession)
+    │   └── manager.py       # Gestionnaire d'état, persistance disque et pools (GameManager)
+    ├── api/                 # Couche d'exposition HTTP & API REST modulaire (Web API)
+    │   ├── __init__.py      # Point d'accès du paquet API & exports rétrocompatibles
+    │   ├── server.py        # Serveur HTTP, parsing JSON, gestion CORS & cycle de vie
+    │   └── routes/          # Contrôleurs HTTP découplés par domaine
+    │       ├── __init__.py  # Point d'accès unifié des routes
+    │       ├── system.py    # Métriques système et données web (/api/health, /api/daily)
+    │       ├── solo.py      # Contrôleur du Mode Solo (/api/game/*)
+    │       ├── battle.py    # Contrôleur du Mode Battle IA (/api/battle/*)
+    │       └── multi.py     # Contrôleur du Mode Multijoueur 1v1 (/api/multi/*)
+    ├── cli/                 # Interface en ligne de commande & Terminal UI (Console UX)
+    │   ├── __init__.py      # Point d'entrée du package CLI
+    │   ├── ui.py            # Rendu console, jauges ASCII, dashboard duel & débriefing
+    │   ├── menu.py          # Menu interactif textuel avec configuration dynamique
+    │   └── modes.py         # Boucles d'exécution interactives (solo, duel, battle, benchmark)
+    └── services/            # Services d'arrière-plan & synchronisation (Background Services)
+        ├── __init__.py      # Point d'entrée des services
+        ├── daemon.py        # Démon planificateur 24h/24 (veille et résolution quotidienne à 00h00)
+        └── web.py           # Générateur et exportateur de données web pour Caddy/Nginx (data.json)
 ```
 
 ---
