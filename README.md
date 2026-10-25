@@ -334,16 +334,52 @@ volumes/web/
 - **Historique & Recherche Instantanée** : Filtre en temps réel pour explorer les archives des puzzles par date ou mot-clé.
 - **Actualisation Automatique** : La page interroge automatiquement l'API locale `/api/daily` toutes les 30 secondes pour afficher le nouveau mot dès que le démon le trouve à minuit.
 
-#### Configuration Caddy (Exemple) :
-Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volumes/web` et redirigez l'API vers le conteneur du solveur :
+#### Configuration Caddy (Production & Anti-Cache Automatique) :
+Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volumes/web` et appliquez la politique de cache HTTP optimisée.
+
+> [!TIP]
+> **Pourquoi aucun paramètre de version (`?v=...`) dans le code HTML/JS ?**
+> Les paramètres de requête manuels (`?v=202610...`) sont proscrits : ils compliquent les imports ES modules imbriqués et sont redondants avec les capacités natives de Caddy / Nginx. En configurant `Cache-Control: "no-cache, must-revalidate"` sur les fichiers `.js` et `.css`, le navigateur valide automatiquement l'empreinte ETag du fichier auprès du serveur. Dès qu'un `git pull` met à jour un fichier sur disque, le navigateur reçoit instantanément la nouvelle version sans nécessiter de purge manuelle de cache (`Ctrl+F5`).
 
 ```caddy
-:80 {
+cemantix.cyril-randon.fr {
     root * /volumes/web
+
+    # En-têtes de sécurité
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # 1. Polices web immuables (cache 1 an)
+    @fonts path *.woff *.woff2
+    header @fonts Cache-Control "public, max-age=31536000, immutable"
+
+    # 2. Images revalidées automatiquement (cache 24h avec ETag)
+    @images path *.ico *.png *.jpg *.jpeg *.webp *.svg
+    header @images Cache-Control "public, max-age=86400, must-revalidate"
+
+    # 3. Code applicatif JS & CSS : rechargement immédiat sans mise en cache bloquante
+    @code path *.css *.js *.mjs
+    header @code Cache-Control "no-cache, must-revalidate"
+
+    # 4. Pages HTML : revalidation rapide
+    @html path *.html
+    header @html Cache-Control "public, max-age=3600, must-revalidate"
+
+    # API du Solveur (prioritaire et exclusive)
     handle /api/* {
         reverse_proxy cemantix_solver:8000
     }
-    file_server
+
+    # Fichiers statiques et routes propres (/play, /battle, /multi)
+    handle {
+        try_files {path} {path}/index.html {path}/ /index.html
+        file_server
+    }
+
+    encode zstd gzip
 }
 ```
 

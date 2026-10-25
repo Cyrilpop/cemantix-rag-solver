@@ -7,6 +7,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ## [Non publié] - 2026-10-25
 
 ### Refactorisé
+- **Gestion du Cache HTTP & Suppression des Paramètres de Version (`?v=...`)** :
+  - Suppression complète de tous les suffixes de version manuels (`?v=XXXXXXXXX`) dans l'ensemble des pages HTML (`index.html`, `play/`, `battle/`, `multi/`) et des imports ES Modules JavaScript (`app.js`, `game.js`, `battle.js`, `multi.js`).
+  - Déplacement de la politique de cache vers le serveur web Caddy / Nginx avec en-têtes `Cache-Control: "no-cache, must-revalidate"` et ETag automatique, garantissant la mise à jour immédiate des navigateurs à chaque `git pull` sans purge manuelle.
+  - Documentation de la configuration Caddy de production recommandée dans `README.md`.
 - **Refonte Architecturale Complète de `src/` en 5 Sous-Packages Découplés** :
   - Disparition totale des fichiers "en vrac" à la racine de `src/` au profit d'une organisation modulaire stricte par responsabilité, avec rétrocompatibilité totale à 100% via `src/__init__.py`.
   - **1. Cœur Algorithmique & RAG (`src/engine/`)** :
