@@ -25,6 +25,51 @@
   flex-wrap: wrap;
 }
 
+.battle-setup-row {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.battle-custom-ai-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.custom-ai-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 240px;
+}
+
+.custom-ai-input {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.75rem;
+  font-size: 16px;
+  font-family: var(--font-mono);
+  max-width: 290px;
+  width: 100%;
+  transition: border-color var(--transition-fast);
+}
+
+.custom-ai-input:focus {
+  outline: none;
+  border-color: #f0883e;
+  box-shadow: 0 0 0 2px rgba(240, 136, 62, 0.2);
+}
+
+.custom-ai-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 .battle-status-bar {
   display: flex;
   justify-content: center;

@@ -766,8 +766,13 @@ class GameManager:
         self._save_sessions()
         return session.to_dict(reveal_secret=True)
 
-    def new_battle(self, difficulty: str = "moyen", battle_id: Optional[str] = None) -> BattleSession:
-        """Initialise une nouvelle manche de Mode Battle."""
+    def new_battle(
+        self,
+        difficulty: str = "moyen",
+        battle_id: Optional[str] = None,
+        ai_word: Optional[str] = None,
+    ) -> tuple[Optional[BattleSession], Optional[str]]:
+        """Initialise une nouvelle manche de Mode Battle (avec mot IA optionnel)."""
         difficulty = difficulty.lower() if difficulty in ("facile", "moyen", "expert") else "moyen"
 
         previous_stats = None
@@ -789,9 +794,18 @@ class GameManager:
             pool = self.medium_pool
 
         player_secret = str(np.random.choice(pool))
-        ai_secret = str(np.random.choice(pool))
-        while ai_secret == player_secret and len(pool) > 1:
+
+        # Mot cible pour le bot IA : défini par le joueur ou tiré aléatoirement
+        if ai_word and ai_word.strip():
+            cleaned_ai = re.sub(r"[^a-zA-ZÀ-ÿ\-]", "", ai_word.strip()).lower()
+            norm_ai = self.store.normalize(cleaned_ai)
+            if not norm_ai or norm_ai not in self.store or not self.store.is_valid_french(norm_ai):
+                return None, f"Le mot « {ai_word} » n'est pas reconnu dans le dictionnaire officiel."
+            ai_secret = norm_ai
+        else:
             ai_secret = str(np.random.choice(pool))
+            while ai_secret == player_secret and len(pool) > 1:
+                ai_secret = str(np.random.choice(pool))
 
         new_id = battle_id if battle_id else uuid.uuid4().hex
         session = BattleSession(
@@ -807,8 +821,9 @@ class GameManager:
             self._cleanup_stale()
             self.battle_sessions[new_id] = session
 
-        log(f"⚔️   [API BATTLE] Manche #{session.stats['match']} ({difficulty}) | ID: {new_id} | Humain: ??? | IA: {ai_secret.upper()}")
-        return session
+        custom_tag = " (choisi par le joueur)" if ai_word and ai_word.strip() else " (tirage aléatoire)"
+        log(f"⚔️   [API BATTLE] Manche #{session.stats['match']} ({difficulty}) | ID: {new_id} | Humain: ??? | IA: {ai_secret.upper()}{custom_tag}")
+        return session, None
 
     def get_battle(self, battle_id: str) -> Optional[BattleSession]:
         with self.lock:
@@ -994,7 +1009,11 @@ class GameAPIHandler(BaseHTTPRequestHandler):
         if path == "/api/battle/new":
             difficulty = data.get("difficulty", "moyen")
             battle_id = data.get("battle_id")
-            session = _manager.new_battle(difficulty=difficulty, battle_id=battle_id)
+            ai_word = data.get("ai_word", "")
+            session, err = _manager.new_battle(difficulty=difficulty, battle_id=battle_id, ai_word=ai_word)
+            if err:
+                self._send_json({"error": err, "valid": False}, status=400)
+                return
             self._send_json(session.to_dict(reveal_secret=False))
             return
 
@@ -1005,7 +1024,7 @@ class GameAPIHandler(BaseHTTPRequestHandler):
             session = _manager.get_battle(battle_id) if battle_id else None
             if not session:
                 log(f"🔄  [API BATTLE] Session « {battle_id} » expirée/inconnue -> nouvelle manche ({difficulty})")
-                session = _manager.new_battle(difficulty=difficulty, battle_id=None)
+                session, _ = _manager.new_battle(difficulty=difficulty, battle_id=None)
             self._send_json(session.to_dict(reveal_secret=False))
             return
 

@@ -134,12 +134,16 @@ function loadBattleState() {
 async function startNewBattle(difficulty = "moyen", keepStats = true) {
   const newBtn = document.getElementById("battle-new-btn");
   const wordInput = document.getElementById("battle-word-input");
+  const customAiInput = document.getElementById("battle-custom-ai-input");
+  const aiWord = customAiInput ? customAiInput.value.trim() : "";
+
   if (newBtn) newBtn.disabled = true;
 
   try {
     const payload = {
       difficulty,
       battle_id: keepStats ? battleState.battleId : null,
+      ai_word: aiWord || null,
     };
     const response = await fetch("/api/battle/new", {
       method: "POST",
@@ -147,22 +151,28 @@ async function startNewBattle(difficulty = "moyen", keepStats = true) {
       body: JSON.stringify(payload),
     });
 
-    if (!response.ok) {
-      showToast("Erreur lors de l'initialisation du duel.", "error");
+    const json = await response.json();
+    if (!response.ok || !json.valid) {
+      showToast(json.error || "Erreur lors de l'initialisation du duel.", "error");
+      if (customAiInput) customAiInput.select();
       return;
     }
 
-    const json = await response.json();
     syncStateFromAPI(json);
     renderBattleUI();
     saveBattleState();
+
+    if (customAiInput) {
+      customAiInput.value = "";
+    }
 
     if (wordInput) {
       wordInput.value = "";
       wordInput.disabled = false;
       wordInput.focus();
     }
-    showToast(`⚔️ Manche #${battleState.stats.match} démarrée (${battleState.difficulty.toUpperCase()}) !`, "info");
+    const aiTargetMsg = aiWord ? `Cible de l'IA : « ${json.ai.target.toUpperCase()} »` : "Cible IA tirée au sort 🎲";
+    showToast(`⚔️ Manche #${battleState.stats.match} lancée (${battleState.difficulty.toUpperCase()}) — ${aiTargetMsg} !`, "info");
   } catch (err) {
     console.warn("Erreur startNewBattle:", err);
     showToast("Erreur réseau de communication avec le serveur.", "error");
