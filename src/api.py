@@ -19,8 +19,10 @@ from typing import Optional
 
 import numpy as np
 
+from .clients import MockClient
 from .config import DATA_DIR, STOPWORDS, log
 from .daemon import DAILY_HISTORY_FILE, load_history
+from .solvers import RagDuelPlayer
 from .vocab import VocabStore, strip_accents
 
 WEB_SESSIONS_FILE = DATA_DIR / "web_sessions.json"
@@ -290,12 +292,322 @@ class GameSession:
         }
 
 
+class BattleSession:
+    """Représente une manche ou session active de Mode Battle (Joueur vs Bot IA)."""
+
+    def __init__(
+        self,
+        battle_id: str,
+        difficulty: str,
+        player_secret: str,
+        ai_secret: str,
+        store: VocabStore,
+        stats: Optional[dict] = None,
+    ):
+        self.battle_id = battle_id
+        self.difficulty = difficulty.lower() if difficulty in ("facile", "moyen", "expert") else "moyen"
+        self.player_secret = player_secret.strip().lower()
+        self.ai_secret = ai_secret.strip().lower()
+        self.store = store
+
+        self.game_human = MockClient(store, secret=self.player_secret)
+        self.game_ai = MockClient(store, secret=self.ai_secret)
+        self.ai_player = RagDuelPlayer(store, self.game_ai, difficulty=self.difficulty)
+
+        self.turn_no = 0
+        self.player_guesses: dict[str, dict] = {}
+        self.ai_guesses: dict[str, dict] = {}
+        self.hints_used: list[dict] = []  # max 3
+        self.last_player_guess: Optional[dict] = None
+        self.last_ai_guess: Optional[dict] = None
+
+        self.winner: Optional[str] = None  # "player", "ai", "draw", "giveup"
+        self.is_finished = False
+        self.created_at = time.time()
+        self.last_activity = time.time()
+
+        self.stats = stats if stats else {
+            "player": 0,
+            "ai": 0,
+            "draws": 0,
+            "match": 1,
+            "difficulty": self.difficulty,
+        }
+
+    def _calc_progress(self, guesses: dict[str, dict]) -> tuple[float, Optional[int], float]:
+        """Retourne (meilleur score °C, meilleur permille, pourcentage de progression 0-100%)."""
+        if not guesses:
+            return 0.0, None, 0.0
+        best_p = max([g["permille"] for g in guesses.values() if g["permille"] is not None], default=None)
+        best_s = max([g["score"] for g in guesses.values()], default=0.0)
+        if best_p is not None:
+            pct = round(min(100.0, max(0.0, best_p / 10.0)), 1)
+        else:
+            # En dehors du top 1000, progression graduée jusqu'à 35% max
+            pct = round(min(35.0, max(0.0, (best_s / 40.0) * 35.0)), 1)
+        return best_s, best_p, pct
+
+    def record_player_guess(self, word: str) -> dict:
+        """Traite le mot joué par le joueur, fait répliquer le bot, et évalue l'issue."""
+        if self.is_finished:
+            return {"error": "Cette manche est déjà terminée.", "valid": False}
+
+        self.last_activity = time.time()
+        norm = self.store.normalize(word)
+        if norm not in self.store or not self.store.is_valid_french(norm):
+            return {
+                "error": f"Le mot « {word} » n'est pas dans le dictionnaire ou la base vectorielle.",
+                "valid": False,
+            }
+
+        if norm in self.player_guesses:
+            return {
+                "error": f"Vous avez déjà testé le mot « {word.upper()} » dans cette manche.",
+                "valid": False,
+            }
+
+        # 1. Évaluation du coup humain
+        res_h = self.game_human.score(norm)
+        if res_h is None:
+            return {"error": f"Le mot « {word} » a été rejeté par le moteur de jeu.", "valid": False}
+        s_h, p_h = res_h
+        score_deg_h = round(s_h * 100, 2)
+        weather_h = get_weather_tier(score_deg_h, p_h)
+
+        self.turn_no += 1
+        guess_data_h = {
+            "order": self.turn_no,
+            "word": norm,
+            "score": score_deg_h,
+            "permille": p_h,
+            "weather": weather_h,
+            "is_hint": False,
+            "timestamp": round(self.last_activity, 2),
+        }
+        self.player_guesses[norm] = guess_data_h
+        self.last_player_guess = guess_data_h
+        player_won = (norm == self.player_secret or p_h == 1000)
+
+        # 2. Réplique immédiate du Bot IA
+        w_ai, s_ai, p_ai, icon_ai, lbl_ai = self.ai_player.play_turn(self.turn_no)
+        score_deg_ai = round(s_ai * 100, 2)
+        weather_ai = f"{icon_ai} {lbl_ai}"
+        guess_data_ai = {
+            "order": self.turn_no,
+            "word": w_ai,
+            "score": score_deg_ai,
+            "permille": p_ai,
+            "weather": weather_ai,
+            "timestamp": round(self.last_activity, 2),
+        }
+        self.ai_guesses[w_ai] = guess_data_ai
+        self.last_ai_guess = guess_data_ai
+        ai_won = (w_ai == self.ai_secret or p_ai == 1000)
+
+        # 3. Vérification des conditions de victoire
+        if player_won or ai_won:
+            self.is_finished = True
+            if player_won and ai_won:
+                self.winner = "draw"
+                self.stats["draws"] += 1
+            elif player_won:
+                self.winner = "player"
+                self.stats["player"] += 1
+            else:
+                self.winner = "ai"
+                self.stats["ai"] += 1
+
+        return self.to_dict(reveal_secret=self.is_finished)
+
+    def request_hint(self) -> dict:
+        """Génère 1 des 3 indices autorisés (du plus général au plus proche) et consomme 1 tour."""
+        if self.is_finished:
+            return {"error": "Cette manche est déjà terminée.", "valid": False}
+        if len(self.hints_used) >= 3:
+            return {"error": "Vous avez déjà utilisé vos 3 indices autorisés pour cette manche.", "valid": False}
+
+        self.last_activity = time.time()
+        tier = len(self.hints_used) + 1  # 1, 2 ou 3
+        tier_label = "Général" if tier == 1 else ("Intermédiaire" if tier == 2 else "Proche")
+
+        v_sec = self.game_human.v_secret
+        secret_stem = self.player_secret[:min(4, len(self.player_secret))]
+
+        # Sélection des candidats gradués selon le palier (du plus général au plus proche)
+        if tier == 1:
+            # Indice 1 (Général) : Voisins modérément proches (rangs 120 à 300)
+            raw_cands = self.store.knn(v_sec, k=min(320, len(self.store.words)))[100:]
+        elif tier == 2:
+            # Indice 2 (Intermédiaire) : Voisins plus proches (rangs 35 à 110)
+            raw_cands = self.store.knn(v_sec, k=min(120, len(self.store.words)))[30:110]
+        else:
+            # Indice 3 (Proche) : Voisins très proches / brûlants (rangs 2 à 30)
+            raw_cands = self.store.knn(v_sec, k=min(35, len(self.store.words)))[1:35]
+
+        valid_hints = []
+        for raw_w in raw_cands:
+            w = self.store.normalize(raw_w)
+            if (
+                w not in self.player_guesses
+                and w not in [h["word"] for h in self.hints_used]
+                and w != self.player_secret
+                and len(w) >= 4
+                and w not in STOPWORDS
+                and not w.startswith(secret_stem)
+                and not self.player_secret.startswith(w[:min(4, len(w))])
+                and self.store.is_valid_french(w)
+            ):
+                res = self.game_human.score(w)
+                if res:
+                    valid_hints.append((w, res[0], res[1]))
+
+        # Fallback de secours si la tranche ciblée est vide
+        if not valid_hints:
+            broader = self.store.knn(v_sec, k=min(400, len(self.store.words)))
+            for raw_w in broader:
+                w = self.store.normalize(raw_w)
+                if (
+                    w not in self.player_guesses
+                    and w not in [h["word"] for h in self.hints_used]
+                    and w != self.player_secret
+                    and len(w) >= 4
+                    and w not in STOPWORDS
+                    and not w.startswith(secret_stem)
+                    and self.store.is_valid_french(w)
+                ):
+                    res = self.game_human.score(w)
+                    if res:
+                        valid_hints.append((w, res[0], res[1]))
+                        if len(valid_hints) >= 20:
+                            break
+
+        if not valid_hints:
+            return {"error": "Aucun indice supplémentaire disponible.", "valid": False}
+
+        # Tri par score croissant pour choisir le milieu de tranche
+        valid_hints.sort(key=lambda x: x[1])
+        chosen_hint, s_h, p_h = valid_hints[len(valid_hints) // 2]
+
+        score_deg_h = round(s_h * 100, 2)
+        weather_h = get_weather_tier(score_deg_h, p_h)
+
+        # 1 tour consommé pour le joueur
+        self.turn_no += 1
+        guess_data_h = {
+            "order": self.turn_no,
+            "word": chosen_hint,
+            "score": score_deg_h,
+            "permille": p_h,
+            "weather": weather_h,
+            "is_hint": True,
+            "hint_tier": tier,
+            "timestamp": round(self.last_activity, 2),
+        }
+        self.player_guesses[chosen_hint] = guess_data_h
+        self.last_player_guess = guess_data_h
+        player_won = (chosen_hint == self.player_secret or p_h == 1000)
+
+        hint_info = {
+            "tier": tier,
+            "tier_label": tier_label,
+            "word": chosen_hint,
+            "score": score_deg_h,
+            "permille": p_h,
+            "weather": weather_h,
+            "turn": self.turn_no,
+        }
+        self.hints_used.append(hint_info)
+
+        # Réplique immédiate du bot IA pour ce tour consommé
+        w_ai, s_ai, p_ai, icon_ai, lbl_ai = self.ai_player.play_turn(self.turn_no)
+        score_deg_ai = round(s_ai * 100, 2)
+        weather_ai = f"{icon_ai} {lbl_ai}"
+        guess_data_ai = {
+            "order": self.turn_no,
+            "word": w_ai,
+            "score": score_deg_ai,
+            "permille": p_ai,
+            "weather": weather_ai,
+            "timestamp": round(self.last_activity, 2),
+        }
+        self.ai_guesses[w_ai] = guess_data_ai
+        self.last_ai_guess = guess_data_ai
+        ai_won = (w_ai == self.ai_secret or p_ai == 1000)
+
+        if player_won or ai_won:
+            self.is_finished = True
+            if player_won and ai_won:
+                self.winner = "draw"
+                self.stats["draws"] += 1
+            elif player_won:
+                self.winner = "player"
+                self.stats["player"] += 1
+            else:
+                self.winner = "ai"
+                self.stats["ai"] += 1
+
+        res = self.to_dict(reveal_secret=self.is_finished)
+        res["hint_awarded"] = hint_info
+        return res
+
+    def give_up(self) -> dict:
+        """Déclare forfait : le point va au bot IA et les mots secrets sont révélés."""
+        if not self.is_finished:
+            self.is_finished = True
+            self.winner = "giveup"
+            self.stats["ai"] += 1
+        return self.to_dict(reveal_secret=True)
+
+    def to_dict(self, reveal_secret: bool = False) -> dict:
+        """Convertit l'état du duel en structure JSON optimisée pour l'IHM."""
+        sorted_player = sorted(self.player_guesses.values(), key=lambda x: x["score"], reverse=True)
+        chrono_player = sorted(self.player_guesses.values(), key=lambda x: x["order"], reverse=True)
+        best_s_p, best_perm_p, prog_p = self._calc_progress(self.player_guesses)
+
+        sorted_ai = sorted(self.ai_guesses.values(), key=lambda x: x["score"], reverse=True)
+        chrono_ai = sorted(self.ai_guesses.values(), key=lambda x: x["order"], reverse=True)
+        best_s_ai, best_perm_ai, prog_ai = self._calc_progress(self.ai_guesses)
+
+        return {
+            "valid": True,
+            "battle_id": self.battle_id,
+            "difficulty": self.difficulty,
+            "turn_no": self.turn_no,
+            "is_finished": self.is_finished,
+            "winner": self.winner,
+            "stats": self.stats,
+            "hints_used": self.hints_used,
+            "hints_remaining": max(0, 3 - len(self.hints_used)),
+            "player": {
+                "last_guess": self.last_player_guess,
+                "top_guesses": sorted_player[:15],
+                "history": chrono_player,
+                "best_score": best_s_p,
+                "best_permille": best_perm_p,
+                "progress_pct": prog_p,
+                "secret": self.player_secret if (self.is_finished or reveal_secret) else None,
+            },
+            "ai": {
+                "target": self.ai_secret,
+                "last_guess": self.last_ai_guess,
+                "top_guesses": sorted_ai[:15],
+                "history": chrono_ai,
+                "best_score": best_s_ai,
+                "best_permille": best_perm_ai,
+                "progress_pct": prog_ai,
+                "secret": self.ai_secret,
+            },
+            "created_at": self.created_at,
+        }
+
+
 class GameManager:
     """Gestionnaire centralisé des parties en mémoire et sur disque (persistance volume)."""
 
     def __init__(self, store: VocabStore):
         self.store = store
         self.sessions: dict[str, GameSession] = {}
+        self.battle_sessions: dict[str, BattleSession] = {}
         self.lock = threading.Lock()
         self._init_difficulty_pools()
         self._load_sessions()
@@ -454,7 +766,68 @@ class GameManager:
         self._save_sessions()
         return session.to_dict(reveal_secret=True)
 
+    def new_battle(
+        self,
+        difficulty: str = "moyen",
+        battle_id: Optional[str] = None,
+        ai_word: Optional[str] = None,
+    ) -> tuple[Optional[BattleSession], Optional[str]]:
+        """Initialise une nouvelle manche de Mode Battle (avec mot IA optionnel)."""
+        difficulty = difficulty.lower() if difficulty in ("facile", "moyen", "expert") else "moyen"
 
+        previous_stats = None
+        if battle_id and battle_id in self.battle_sessions:
+            old = self.battle_sessions[battle_id]
+            previous_stats = {
+                "player": old.stats.get("player", 0),
+                "ai": old.stats.get("ai", 0),
+                "draws": old.stats.get("draws", 0),
+                "match": old.stats.get("match", 1) + 1,
+                "difficulty": difficulty,
+            }
+
+        if difficulty == "facile":
+            pool = self.easy_pool
+        elif difficulty == "expert":
+            pool = self.expert_pool
+        else:
+            pool = self.medium_pool
+
+        player_secret = str(np.random.choice(pool))
+
+        # Mot cible pour le bot IA : défini par le joueur ou tiré aléatoirement
+        if ai_word and ai_word.strip():
+            cleaned_ai = re.sub(r"[^a-zA-ZÀ-ÿ\-]", "", ai_word.strip()).lower()
+            norm_ai = self.store.normalize(cleaned_ai)
+            if not norm_ai or norm_ai not in self.store or not self.store.is_valid_french(norm_ai):
+                return None, f"Le mot « {ai_word} » n'est pas reconnu dans le dictionnaire officiel."
+            ai_secret = norm_ai
+        else:
+            ai_secret = str(np.random.choice(pool))
+            while ai_secret == player_secret and len(pool) > 1:
+                ai_secret = str(np.random.choice(pool))
+
+        new_id = battle_id if battle_id else uuid.uuid4().hex
+        session = BattleSession(
+            battle_id=new_id,
+            difficulty=difficulty,
+            player_secret=player_secret,
+            ai_secret=ai_secret,
+            store=self.store,
+            stats=previous_stats,
+        )
+
+        with self.lock:
+            self._cleanup_stale()
+            self.battle_sessions[new_id] = session
+
+        custom_tag = " (choisi par le joueur)" if ai_word and ai_word.strip() else " (tirage aléatoire)"
+        log(f"⚔️   [API BATTLE] Manche #{session.stats['match']} ({difficulty}) | ID: {new_id} | Humain: ??? | IA: {ai_secret.upper()}{custom_tag}")
+        return session, None
+
+    def get_battle(self, battle_id: str) -> Optional[BattleSession]:
+        with self.lock:
+            return self.battle_sessions.get(battle_id)
 
     def _cleanup_stale(self, max_age: float = 7200.0):
         """Nettoie les sessions inactives depuis plus de 2 heures."""
@@ -462,6 +835,9 @@ class GameManager:
         to_del = [gid for gid, s in self.sessions.items() if (now - s.last_activity) > max_age]
         for gid in to_del:
             del self.sessions[gid]
+        to_del_battle = [bid for bid, b in self.battle_sessions.items() if (now - b.last_activity) > max_age]
+        for bid in to_del_battle:
+            del self.battle_sessions[bid]
 
 
 # Instance globale du gestionnaire de jeu
@@ -623,6 +999,81 @@ class GameAPIHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": "Session introuvable."}, status=404)
                 return
             self._send_json(res)
+            return
+
+        # =====================================================================
+        # ROUTES MODE BATTLE (DUEL JOUEUR VS BOT IA)
+        # =====================================================================
+
+        # 5. Nouvelle manche de Battle
+        if path == "/api/battle/new":
+            difficulty = data.get("difficulty", "moyen")
+            battle_id = data.get("battle_id")
+            ai_word = data.get("ai_word", "")
+            session, err = _manager.new_battle(difficulty=difficulty, battle_id=battle_id, ai_word=ai_word)
+            if err:
+                self._send_json({"error": err, "valid": False}, status=400)
+                return
+            self._send_json(session.to_dict(reveal_secret=False))
+            return
+
+        # 6. Reprise / Synchronisation de Battle
+        if path == "/api/battle/resume":
+            battle_id = data.get("battle_id", "")
+            difficulty = data.get("difficulty", "moyen")
+            session = _manager.get_battle(battle_id) if battle_id else None
+            if not session:
+                log(f"🔄  [API BATTLE] Session « {battle_id} » expirée/inconnue -> nouvelle manche ({difficulty})")
+                session, _ = _manager.new_battle(difficulty=difficulty, battle_id=None)
+            self._send_json(session.to_dict(reveal_secret=False))
+            return
+
+        # 7. Coup joué par le joueur en Battle (tour par tour immédiat)
+        if path == "/api/battle/guess":
+            battle_id = data.get("battle_id", "")
+            raw_word = data.get("word", "").strip()
+
+            session = _manager.get_battle(battle_id)
+            if not session:
+                self._send_json({"error": "Session de duel introuvable ou expirée. Veuillez relancer une manche.", "expired": True, "valid": False}, status=404)
+                return
+
+            if not raw_word:
+                self._send_json({"error": "Veuillez saisir un mot valide.", "valid": False}, status=400)
+                return
+
+            cleaned = re.sub(r"[^a-zA-ZÀ-ÿ\-]", "", raw_word).lower()
+            if not cleaned:
+                self._send_json({"error": "Le mot contient des caractères non autorisés.", "valid": False}, status=400)
+                return
+
+            result = session.record_player_guess(cleaned)
+            status_code = 400 if "error" in result and not result.get("valid") else 200
+            self._send_json(result, status=status_code)
+            return
+
+        # 8. Demande d'indice en Battle (3 max, du général au proche, 1 indice = 1 tour)
+        if path == "/api/battle/hint":
+            battle_id = data.get("battle_id", "")
+            session = _manager.get_battle(battle_id)
+            if not session:
+                self._send_json({"error": "Session de duel introuvable ou expirée. Relancez une manche.", "expired": True, "valid": False}, status=404)
+                return
+
+            result = session.request_hint()
+            status_code = 400 if "error" in result and not result.get("valid") else 200
+            self._send_json(result, status=status_code)
+            return
+
+        # 9. Forfait / Abandon en Battle
+        if path == "/api/battle/giveup":
+            battle_id = data.get("battle_id", "")
+            session = _manager.get_battle(battle_id)
+            if not session:
+                self._send_json({"error": "Session de duel introuvable.", "valid": False}, status=404)
+                return
+            result = session.give_up()
+            self._send_json(result)
             return
 
         self._send_json({"error": "Route introuvable"}, status=404)

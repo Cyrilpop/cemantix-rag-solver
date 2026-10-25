@@ -35,6 +35,7 @@
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/layout.css">
   <link rel="stylesheet" href="../css/game.css">
+  <link rel="stylesheet" href="../css/modal.css?v=20261025b">
 
   <!-- Données Structurées JSON-LD (Schema.org / GameApplication & Fil d'Ariane) -->
   <script type="application/ld+json">
@@ -123,8 +124,12 @@
       </a>
       <a href="./" id="tab-play" class="nav-tab active">
         <span class="tab-icon">🎮</span>
-        <span>Jouer à Cémantix</span>
-        <span class="tab-badge">Interactif</span>
+        <span>Jouer Solo</span>
+      </a>
+      <a href="../battle/" id="tab-battle" class="nav-tab">
+        <span class="tab-icon">⚔️</span>
+        <span>Mode Battle</span>
+        <span class="tab-badge">Versus IA</span>
       </a>
     </nav>
 
@@ -279,10 +284,13 @@
         <a href="../" class="btn btn-ghost btn-sm" title="Retour au Tableau de Bord">
           <span>📊</span> Tableau de bord
         </a>
+        <a href="../battle/" class="btn btn-ghost btn-sm" title="Défier l'IA en Mode Battle">
+          <span>⚔️</span> Mode Battle
+        </a>
       </div>
     </div>
   </footer>
 
-  <script type="module" src="../js/app.js?v=20261024d"></script>
+  <script type="module" src="../js/app.js?v=20261025b"></script>
 </body>
 </html>

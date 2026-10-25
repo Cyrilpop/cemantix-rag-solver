@@ -133,6 +133,19 @@ body {
   border-color: var(--accent);
 }
 
+.btn-danger {
+  background: var(--danger, #da3633);
+  border-color: rgba(248, 81, 73, 0.45);
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background: #f85149;
+  border-color: #f85149;
+  box-shadow: 0 0 14px rgba(248, 81, 73, 0.45);
+  transform: translateY(-1px);
+}
+
 .btn-ghost {
   background: transparent;
   border-color: var(--border-color);

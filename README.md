@@ -398,10 +398,14 @@ cemantix-rag-solver/
 ├── volumes/                 # Volumes partagés
 │   └── web/                 # Application web servie par Caddy (mot du jour, jeu & API)
 │       ├── index.html       # Tableau de bord principal (URL : /)
-│       ├── play/            # Interface de jeu interactif (URL propre : /play/)
+│       ├── play/            # Interface de jeu interactif Solo (URL : /play/)
 │       │   └── index.html   # Page de jeu (défi du jour, illimité)
-│       ├── css/             # Styles atomiques (variables, base, layout, dashboard, game, modal)
-│       ├── js/              # Modules JavaScript atomiques (app, utils, theme, game, dashboard...)
+│       ├── battle/          # Arène de duel tour par tour contre l'IA (URL : /battle/)
+│       │   └── index.html   # Page Mode Battle (versus IA, double jauge, indices)
+│       ├── css/             # Styles atomiques (variables, base, layout, dashboard, game, battle, modal)
+│       ├── js/              # Modules JavaScript atomiques (app, utils, theme, game, battle, dashboard...)
+│       ├── robots.txt       # Directives d'exploration pour les moteurs de recherche
+│       └── sitemap.xml      # Plan de site XML officiel pour l'indexation Google
 ├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)
 │   ├── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
 │   └── daily_history.json   # Historique persistant des résolutions quotidiennes

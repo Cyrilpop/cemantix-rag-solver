@@ -90,3 +90,112 @@ export function getTierWeatherIcon(score, permille) {
   if (score >= 0) return "🥶";
   return "🧊";
 }
+
+/**
+ * Modale de confirmation personnalisée avec flou d'arrière-plan (glassmorphism).
+ * Remplace window.confirm() par une interface moderne et élégante.
+ *
+ * @param {Object} options
+ * @param {string} [options.title="Confirmation"] - Titre de la modale
+ * @param {string} [options.message=""] - Message / question explicative
+ * @param {string} [options.icon="⚠️"] - Icône ou emoji d'en-tête
+ * @param {string} [options.confirmText="Confirmer"] - Texte du bouton d'action
+ * @param {string} [options.cancelText="Annuler"] - Texte du bouton d'annulation
+ * @param {"danger"|"primary"} [options.confirmType="danger"] - Style du bouton de confirmation
+ * @returns {Promise<boolean>} Résout true si confirmé, false si annulé
+ */
+export function showConfirmDialog({
+  title = "Confirmation",
+  message = "Êtes-vous sûr de vouloir continuer ?",
+  icon = "⚠️",
+  confirmText = "Confirmer",
+  cancelText = "Annuler",
+  confirmType = "danger",
+} = {}) {
+  return new Promise((resolve) => {
+    let backdrop = document.getElementById("global-confirm-modal");
+    if (!backdrop) {
+      backdrop = document.createElement("div");
+      backdrop.id = "global-confirm-modal";
+      backdrop.className = "modal-backdrop";
+      backdrop.style.display = "none";
+      backdrop.setAttribute("role", "dialog");
+      backdrop.setAttribute("aria-modal", "true");
+      backdrop.setAttribute("aria-labelledby", "confirm-modal-title");
+      backdrop.innerHTML = `
+        <div class="card confirm-modal-card" role="document">
+          <div class="confirm-modal-body">
+            <span class="confirm-modal-icon" id="confirm-modal-icon">⚠️</span>
+            <h3 class="confirm-modal-title" id="confirm-modal-title">Titre</h3>
+            <p class="confirm-modal-message" id="confirm-modal-message">Message</p>
+          </div>
+          <div class="confirm-modal-footer">
+            <button type="button" class="btn btn-secondary" id="confirm-modal-cancel-btn">Annuler</button>
+            <button type="button" class="btn" id="confirm-modal-ok-btn">Confirmer</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(backdrop);
+    }
+
+    const card = backdrop.querySelector(".confirm-modal-card");
+    const iconEl = backdrop.querySelector("#confirm-modal-icon");
+    const titleEl = backdrop.querySelector("#confirm-modal-title");
+    const msgEl = backdrop.querySelector("#confirm-modal-message");
+    const cancelBtn = backdrop.querySelector("#confirm-modal-cancel-btn");
+    const okBtn = backdrop.querySelector("#confirm-modal-ok-btn");
+
+    if (iconEl) iconEl.textContent = icon;
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.textContent = message;
+    if (cancelBtn) cancelBtn.textContent = cancelText;
+
+    if (okBtn) {
+      okBtn.textContent = confirmText;
+      okBtn.className = confirmType === "danger" ? "btn btn-danger" : "btn btn-primary";
+    }
+
+    if (card) {
+      card.classList.toggle("is-accent", confirmType !== "danger");
+    }
+
+    let isResolved = false;
+    function cleanup(value) {
+      if (isResolved) return;
+      isResolved = true;
+      backdrop.style.display = "none";
+      document.removeEventListener("keydown", handleKeyDown);
+      backdrop.removeEventListener("click", handleBackdropClick);
+      resolve(value);
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cleanup(false);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        cleanup(true);
+      }
+    }
+
+    function handleBackdropClick(e) {
+      if (e.target === backdrop) {
+        cleanup(false);
+      }
+    }
+
+    cancelBtn.onclick = () => cleanup(false);
+    okBtn.onclick = () => cleanup(true);
+    backdrop.addEventListener("click", handleBackdropClick);
+    document.addEventListener("keydown", handleKeyDown);
+
+    backdrop.style.display = "flex";
+    setTimeout(() => {
+      cancelBtn.focus();
+    }, 50);
+  });
+}
+
+// Rendre également accessible globalement sur window pour commodité
+window.showConfirmDialog = showConfirmDialog;

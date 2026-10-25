@@ -1,7 +1,7 @@
 /**
  * Cémantix Solver — Moteur de Jeu Interactif (Défi du Jour & Mode Illimité)
  */
-import { getTierClass, showToast } from "./utils.js";
+import { getTierClass, showToast, showConfirmDialog } from "./utils.js?v=20261025b";
 
 const GAME_STORAGE_KEY = "cemantix_game_state_v2";
 
@@ -499,7 +499,16 @@ async function requestHint() {
 
 async function giveUpGame() {
   if (!gameState.gameId || gameState.isWon || gameState.isGivenUp) return;
-  if (!confirm("Voulez-vous vraiment abandonner et révéler le mot secret ?")) return;
+
+  const confirmed = await showConfirmDialog({
+    title: "Abandonner la partie ?",
+    message: "Voulez-vous vraiment abandonner et révéler le mot secret ? Cette partie sera comptabilisée comme un échec.",
+    icon: "🏳️",
+    confirmText: "Révéler le mot secret",
+    confirmType: "danger",
+    cancelText: "Continuer à chercher",
+  });
+  if (!confirmed) return;
 
   const gameWordInput = document.getElementById("game-word-input");
   const gameSubmitBtn = document.getElementById("game-submit-btn");

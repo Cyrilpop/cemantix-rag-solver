@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- ======================================================================
+       SEO & Référencement Naturel Google
+       ====================================================================== -->
+  <title>Cémantix Battle : Défiez l'IA en Duel Tour par Tour | Cémantix Solver</title>
+  <meta name="title" content="Cémantix Battle : Défiez l'IA en Duel Tour par Tour | Cémantix Solver">
+  <meta name="description" content="Défiez notre IA sémantique en direct dans le Mode Battle Cémantix ! Duel tour par tour, 3 niveaux de difficulté (Facile, Moyen, Expert) et 3 indices tactiques. Qui trouvera le mot secret en premier ?">
+  <meta name="keywords" content="duel cemantix, battle cemantix, jouer contre ia, cemantix tour par tour, bot cemantix, defi semantique, semantix duel, jeu cemantix versus, cemantix combat, intelligence artificielle cemantix">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Cyril Randon">
+  <meta name="publisher" content="Cyril Randon">
+  <link rel="canonical" href="https://cemantix.cyril-randon.fr/battle/">
+  <meta name="theme-color" content="#0d1117">
+
+  <!-- Open Graph / Facebook / LinkedIn -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://cemantix.cyril-randon.fr/battle/">
+  <meta property="og:title" content="Cémantix Battle : Défiez l'IA en Duel Tour par Tour">
+  <meta property="og:description" content="Affrontez notre IA RAG dans un duel sémantique au tour par tour ! Double jauge en direct, 3 difficultés et 3 indices graduels.">
+  <meta property="og:image" content="https://cemantix.cyril-randon.fr/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Cémantix Battle — Duel contre l'IA Sémantique">
+  <meta property="og:site_name" content="Cémantix Solver">
+  <meta property="og:locale" content="fr_FR">
+
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://cemantix.cyril-randon.fr/battle/">
+  <meta name="twitter:title" content="Cémantix Battle : Défiez l'IA en Duel Tour par Tour">
+  <meta name="twitter:description" content="Qui devinera son mot secret en premier ? Vous ou le bot IA ? Relevez le défi Cémantix Battle !">
+  <meta name="twitter:image" content="https://cemantix.cyril-randon.fr/og-image.jpg">
+
+  <!-- Favicon & Feuilles de style atomiques -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/game.css">
+  <link rel="stylesheet" href="../css/modal.css?v=20261025b">
+  <link rel="stylesheet" href="../css/battle.css?v=20261025b">
+
+  <!-- Données Structurées JSON-LD (Schema.org / GameApplication, Fil d'Ariane & FAQ) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["WebApplication", "Game"],
+        "@id": "https://cemantix.cyril-randon.fr/battle/#game",
+        "name": "Cémantix Battle — Duel Tour par Tour contre l'IA",
+        "url": "https://cemantix.cyril-randon.fr/battle/",
+        "description": "Arène de duel sémantique en direct opposant un joueur humain à une IA RAG avancée. Tour par tour, 3 indices graduels et double jauge de progression thermique.",
+        "applicationCategory": "GameApplication",
+        "genre": "Jeu de réflexion et duel sémantique",
+        "operatingSystem": "All",
+        "inLanguage": "fr-FR",
+        "image": "https://cemantix.cyril-randon.fr/og-image.jpg",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Cyril Randon",
+          "url": "https://cyril-randon.fr"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://cemantix.cyril-randon.fr/battle/#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://cemantix.cyril-randon.fr/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Mode Battle vs IA",
+            "item": "https://cemantix.cyril-randon.fr/battle/"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://cemantix.cyril-randon.fr/battle/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Comment fonctionne le Mode Battle contre l'IA de Cémantix ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Le Mode Battle est un affrontement tour par tour. Vous et le bot IA devez deviner un mot secret. À chaque mot testé par le joueur, le bot IA calcule et joue immédiatement son propre coup. Le premier qui atteint 1000 ‰ remporte la manche."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Quels sont les niveaux de difficulté du bot adverse ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Trois difficultés sont disponibles : Facile (vocabulaire simple, bot IA tempéré avec exploration large), Moyen (mots courants, bot équilibré) et Expert (vocabulaire conceptuel, bot exploitant la régression Ridge vectorielle au maximum pour converger en très peu de coups)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Comment fonctionnent les 3 indices du joueur ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Vous disposez de 3 indices par manche. Chaque indice consomme 1 tour et déclenche la réplique immédiate de l'IA. Les indices progressent du plus général au plus proche : le 1er indice donne une orientation thématique, le 2nd resserre la zone sémantique et le 3ème offre un mot brûlant proche de votre cible."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <span class="brand-icon">🎯</span>
+        <div class="brand-text">
+          <h1>Cémantix Solver</h1>
+          <span class="brand-subtitle">Mot du Jour &amp; IA Sémantique</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div id="daemon-badge" class="status-badge status-sleeping" title="État du démon d'automatisation">
+          <span class="status-pulse"></span>
+          <span id="daemon-status-text">Veille active (00h00)</span>
+        </div>
+
+        <button id="theme-toggle" class="btn-icon" aria-label="Changer de thème" title="Basculer Mode Clair / Sombre">
+          <span class="theme-icon">☀️</span>
+        </button>
+
+        <button id="global-spoiler-toggle" class="btn-icon" aria-label="Mode anti-spoiler" title="Activer / Désactiver le flou anti-spoiler">
+          <span class="spoiler-icon">🛡️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Navigation des Vues Principales (Maillage Interne Complet) -->
+    <nav class="nav-tabs" aria-label="Navigation des vues">
+      <a href="../" id="tab-dashboard" class="nav-tab">
+        <span class="tab-icon">📊</span>
+        <span>Tableau de Bord</span>
+      </a>
+      <a href="../play/" id="tab-play" class="nav-tab">
+        <span class="tab-icon">🎮</span>
+        <span>Jouer Solo</span>
+      </a>
+      <a href="./" id="tab-battle" class="nav-tab active">
+        <span class="tab-icon">⚔️</span>
+        <span>Mode Battle</span>
+        <span class="tab-badge">Versus IA</span>
+      </a>
+    </nav>
+
+    <!-- Zone de Jeu Interactive : Mode Battle -->
+    <div id="view-battle" class="view-content active">
+      <!-- Barre de Contrôles & Paramètres de Match -->
+      <section class="card game-control-card battle-control-card" aria-label="Contrôles du duel">
+        <div class="game-control-header">
+          <!-- Sélecteur de Difficulté -->
+          <div class="battle-difficulty-wrapper">
+            <span class="control-label">Niveau de l'IA &amp; Mots :</span>
+            <div class="pill-group" id="battle-diff-group">
+              <button type="button" class="pill-btn" data-diff="facile">🟢 Facile</button>
+              <button type="button" class="pill-btn active" data-diff="moyen">🟡 Moyen</button>
+              <button type="button" class="pill-btn" data-diff="expert">🔴 Expert</button>
+            </div>
+          </div>
+
+          <!-- Actions de Jeu -->
+          <div class="game-actions battle-actions">
+            <button type="button" id="battle-hint-btn" class="btn btn-secondary btn-sm" title="Demander 1 indice sémantique (consomme 1 tour)">
+              <span>💡</span> Indice (<span id="battle-hint-count">3/3</span>)
+            </button>
+            <button type="button" id="battle-new-btn" class="btn btn-primary btn-sm" title="Lancer une nouvelle manche">
+              <span>⚔️</span> Nouvelle Manche
+            </button>
+            <button type="button" id="battle-giveup-btn" class="btn btn-secondary btn-sm" title="Abandonner la manche et dévoiler les mots secrets">
+              <span>🏳️</span> Forfait
+            </button>
+          </div>
+        </div>
+
+        <!-- Tableau d'Affichage du Match (Score Session & Tour) -->
+        <div class="battle-status-bar">
+          <div class="battle-scoreboard">
+            <div class="score-item score-player">
+              <span class="score-icon">🧑</span>
+              <span class="score-label">Vous</span>
+              <span id="score-player-val" class="score-value">0</span>
+            </div>
+            <div class="score-divider">
+              <span class="score-match-badge" id="battle-match-badge">Manche #1</span>
+              <span class="score-vs-label">VS</span>
+              <span class="score-turn-badge" id="battle-turn-badge">Tour #1</span>
+            </div>
+            <div class="score-item score-ai">
+              <span id="score-ai-val" class="score-value">0</span>
+              <span class="score-label">Bot IA</span>
+              <span class="score-icon">🤖</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HUD de Confrontation : Double Jauge de Progression Temps Réel -->
+      <section class="card battle-hud-card" aria-label="Progression du duel">
+        <div class="battle-hud-grid">
+          <!-- Camp Joueur -->
+          <div class="hud-side hud-player">
+            <div class="hud-side-header">
+              <div class="hud-entity">
+                <span class="entity-avatar">🧑</span>
+                <div class="entity-meta">
+                  <span class="entity-name">VOUS</span>
+                  <span class="entity-target">Cible : <strong class="target-secret">🔒 Secret</strong></span>
+                </div>
+              </div>
+              <div class="hud-score-badge">
+                <span id="player-progress-pct" class="progress-pct">0%</span>
+                <span id="player-best-metric" class="best-metric">-- ‰</span>
+              </div>
+            </div>
+            <div class="battle-gauge-wrapper" title="Proximité de votre cible (0 à 1000 ‰)">
+              <div id="player-gauge-bar" class="battle-gauge-fill player-gauge" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <!-- Séparateur central VS -->
+          <div class="hud-vs-divider" aria-hidden="true">
+            <span class="hud-vs-badge">⚔️</span>
+          </div>
+
+          <!-- Camp Bot IA -->
+          <div class="hud-side hud-ai">
+            <div class="hud-side-header">
+              <div class="hud-entity">
+                <span class="entity-avatar">🤖</span>
+                <div class="entity-meta">
+                  <span class="entity-name">BOT IA (RAG)</span>
+                  <span class="entity-target">Cible : <strong id="ai-target-label" class="target-revealed">------</strong></span>
+                </div>
+              </div>
+              <div class="hud-score-badge">
+                <span id="ai-progress-pct" class="progress-pct">0%</span>
+                <span id="ai-best-metric" class="best-metric">-- ‰</span>
+              </div>
+            </div>
+            <div class="battle-gauge-wrapper" title="Proximité de la cible du Bot (0 à 1000 ‰)">
+              <div id="ai-gauge-bar" class="battle-gauge-fill ai-gauge" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bannière de Fin de Manche (Victoire / Défaite / Débriefing) -->
+      <div id="battle-banner" class="battle-banner card" style="display: none;" role="region" aria-live="polite">
+        <div class="battle-banner-content">
+          <span id="battle-banner-icon" class="battle-banner-icon">🏆</span>
+          <div class="battle-banner-text">
+            <h3 id="battle-banner-title">Manche Terminée</h3>
+            <p id="battle-banner-desc">Débriefing du duel en cours...</p>
+            <div class="battle-banner-words">
+              <span class="word-reveal-tag">Votre mot secret : <strong id="banner-player-word">????</strong></span>
+              <span class="word-reveal-tag">Mot secret de l'IA : <strong id="banner-ai-word">????</strong></span>
+            </div>
+          </div>
+          <button type="button" id="battle-replay-btn" class="btn btn-primary">
+            <span>🔄</span> Manche Suivante
+          </button>
+        </div>
+      </div>
+
+      <!-- Zone de Saisie Interactive -->
+      <section class="game-input-section battle-input-section" aria-label="Saisie de mot">
+        <form id="battle-guess-form" class="guess-form" autocomplete="off">
+          <div class="input-wrapper">
+            <span class="input-icon">🎯</span>
+            <input type="text" id="battle-word-input" class="game-input" placeholder="Entrez un mot français pour attaquer ce tour..." maxlength="35" required autofocus>
+            <button type="submit" id="battle-submit-btn" class="btn btn-primary btn-guess">
+              <span>Jouer</span> ↵
+            </button>
+          </div>
+          <div id="battle-feedback" class="game-feedback" style="display: none;"></div>
+        </form>
+      </section>
+
+      <!-- Spotlight Face-à-Face du Dernier Tour Joué -->
+      <section id="battle-spotlight" class="card battle-spotlight-card" style="display: none;" aria-label="Dernier tour joué">
+        <div class="spotlight-header">
+          <span class="spotlight-label">⚔️ Dernier échange (Tour #<span id="spotlight-turn-num">1</span>)</span>
+          <span id="spotlight-status-tag" class="badge badge-accent">En cours</span>
+        </div>
+        <div class="battle-spotlight-grid">
+          <!-- Dernier coup du joueur -->
+          <div class="spotlight-cell spotlight-cell-player">
+            <div class="spotlight-cell-header">
+              <span class="cell-entity">🧑 Votre mot :</span>
+              <span id="spotlight-player-weather" class="spotlight-weather">🧊 Glacé</span>
+            </div>
+            <div class="spotlight-cell-body">
+              <span id="spotlight-player-word" class="spotlight-word">-------</span>
+              <div class="spotlight-scores">
+                <span id="spotlight-player-temp" class="spotlight-temp">0.00°C</span>
+                <span id="spotlight-player-permille" class="spotlight-permille">-- ‰</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dernier coup du bot IA -->
+          <div class="spotlight-cell spotlight-cell-ai">
+            <div class="spotlight-cell-header">
+              <span class="cell-entity">🤖 Réplique de l'IA :</span>
+              <span id="spotlight-ai-weather" class="spotlight-weather">🧊 Glacé</span>
+            </div>
+            <div class="spotlight-cell-body">
+              <span id="spotlight-ai-word" class="spotlight-word">-------</span>
+              <div class="spotlight-scores">
+                <span id="spotlight-ai-temp" class="spotlight-temp">0.00°C</span>
+                <span id="spotlight-ai-permille" class="spotlight-permille">-- ‰</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sélecteur d'Affichage Mobile (Segmented Control pour Smartphone) -->
+      <div class="mobile-duel-toggle" id="mobile-duel-toggle">
+        <button type="button" class="mobile-toggle-btn active" data-target="player">
+          <span>🧑</span> Mes Essais (<span id="mobile-player-count">0</span>)
+        </button>
+        <button type="button" class="mobile-toggle-btn" data-target="ai">
+          <span>🤖</span> Essais de l'IA (<span id="mobile-ai-count">0</span>)
+        </button>
+      </div>
+
+      <!-- Grille 2 Colonnes Synchronisées : Vos Essais vs Essais de l'IA -->
+      <section class="grid-2col battle-results-grid">
+        <!-- Colonne 1 : Essais du Joueur -->
+        <div class="card battle-list-card" id="col-player-guesses">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h3>🧑 Vos Meilleurs Mots (Top 10)</h3>
+              <span class="card-subtitle">Classés par proximité avec votre mot secret</span>
+            </div>
+          </div>
+          <div id="battle-player-list" class="clues-list game-guesses-list">
+            <div class="clues-empty">
+              <span>Saisissez votre premier mot pour débuter le duel.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Colonne 2 : Essais du Bot IA -->
+        <div class="card battle-list-card" id="col-ai-guesses">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h3>🤖 Meilleurs Mots du Bot IA (Top 10)</h3>
+              <span class="card-subtitle">Traque de sa cible en temps réel</span>
+            </div>
+          </div>
+          <div id="battle-ai-list" class="clues-list game-guesses-list">
+            <div class="clues-empty">
+              <span>Le bot répliquera dès votre premier essai.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section Éditoriale & Guide Sémantique Indexable (SEO & Règles) -->
+      <section class="card battle-guide-card" aria-label="Règles du Mode Battle">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2>📖 Comment fonctionne le Mode Battle contre l'IA ?</h2>
+            <span class="card-subtitle">Règles officielles du duel sémantique croisé et tactiques</span>
+          </div>
+        </div>
+        <div class="battle-guide-content">
+          <div class="guide-grid">
+            <div class="guide-item">
+              <span class="guide-icon">🔄</span>
+              <h4>Tour par tour synchrone</h4>
+              <p>À chaque essai que vous soumettez, le bot adverse calcule et joue son propre coup instantanément. Chaque seconde compte et chaque tentative fait avancer l'adversaire vers sa cible.</p>
+            </div>
+            <div class="guide-item">
+              <span class="guide-icon">🧠</span>
+              <h4>Intelligence artificielle RAG</h4>
+              <p>Le bot s'appuie sur la régression Ridge vectorielle et des plongements frWac pour déduire géométriquement la position du mot secret dans l'espace euclidien sémantique.</p>
+            </div>
+            <div class="guide-item">
+              <span class="guide-icon">💡</span>
+              <h4>3 Indices du plus général au plus proche</h4>
+              <p>Vous disposez de 3 jokers tactiques : le 1er indice donne la thématique, le 2nd resserre la zone et le 3ème délivre un mot brûlant du top 1000. Mais attention : <strong>1 indice = 1 tour consommé</strong> !</p>
+            </div>
+            <div class="guide-item">
+              <span class="guide-icon">🎚️</span>
+              <h4>3 Niveaux d'affrontement</h4>
+              <p>En mode <strong>Facile</strong>, le bot explore largement avec 6 mots d'amorce. En mode <strong>Moyen</strong>, il resserre le top 2. En mode <strong>Expert</strong>, il vise le top 1 absolu à chaque tour.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Modal de Lancement d'une Nouvelle Manche (Choix Difficulté & Mot Secret IA) -->
+  <div id="battle-new-modal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="battle-modal-title">
+    <div class="card battle-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h2 id="battle-modal-title">⚔️ Nouvelle Manche de Battle</h2>
+          <span class="card-subtitle">Configurez les paramètres du duel avant de vous lancer</span>
+        </div>
+        <button type="button" id="battle-modal-close" class="modal-close-btn" aria-label="Fermer la fenêtre">✕</button>
+      </div>
+
+      <form id="battle-modal-form" autocomplete="off">
+        <div class="battle-modal-body">
+          <!-- 1. Sélection de la Difficulté -->
+          <div class="modal-field-group">
+            <label class="modal-field-label">
+              <span>🎚️ Niveau de l'IA &amp; Complexité des mots :</span>
+            </label>
+            <div class="modal-diff-grid" id="modal-diff-group">
+              <button type="button" class="modal-diff-card" data-diff="facile">
+                <span class="diff-badge">🟢 Facile</span>
+                <span class="diff-name">Explorateur</span>
+                <span class="diff-desc">Vocabulaire accessible, IA prudente</span>
+              </button>
+              <button type="button" class="modal-diff-card active" data-diff="moyen">
+                <span class="diff-badge">🟡 Moyen</span>
+                <span class="diff-name">Équilibré</span>
+                <span class="diff-desc">Mots courants, IA tactique</span>
+              </button>
+              <button type="button" class="modal-diff-card" data-diff="expert">
+                <span class="diff-badge">🔴 Expert</span>
+                <span class="diff-name">Redoutable</span>
+                <span class="diff-desc">Vocabulaire pointu, IA Ridge agressive</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Mot secret pour l'IA (Optionnel) -->
+          <div class="modal-field-group">
+            <div class="modal-field-header">
+              <label for="modal-ai-word-input" class="modal-field-label">
+                <span>🎯 Mot secret attribué au Bot IA :</span>
+              </label>
+              <span class="modal-tag-optional">Optionnel</span>
+            </div>
+            <div class="modal-input-container">
+              <span class="modal-input-icon">🤖</span>
+              <input 
+                type="text" 
+                id="modal-ai-word-input" 
+                class="modal-input-field" 
+                placeholder="Laisser vide = tirage aléatoire 🎲" 
+                maxlength="35" 
+                autocomplete="off"
+                spellcheck="false"
+              >
+            </div>
+            <p class="modal-help-text">
+              Définissez le mot précis que l'IA devra démasquer (ex: <em>science</em>, <em>voyage</em>). Si laissé vide, un mot secret est tiré au sort dans le dictionnaire officiel.
+            </p>
+            <div id="modal-battle-error" class="modal-error-banner" style="display: none;" role="alert"></div>
+          </div>
+
+          <!-- 3. Rappels de jeu tactiques -->
+          <div class="modal-tactics-box">
+            <div class="tactic-item">
+              <span class="tactic-icon">🔄</span>
+              <span><strong>Duel tour par tour :</strong> L'IA réplique immédiatement à chacun de vos essais.</span>
+            </div>
+            <div class="tactic-item">
+              <span class="tactic-icon">💡</span>
+              <span><strong>3 Indices graduels :</strong> Vous pouvez demander jusqu'à 3 indices (1 indice = 1 tour).</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="battle-modal-cancel" class="btn btn-secondary">
+            Annuler
+          </button>
+          <button type="submit" id="battle-modal-submit" class="btn btn-primary btn-start-duel">
+            <span>⚔️</span> Démarrer le Duel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- Footer avec maillage interne -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-left">
+        <p><strong>Cémantix Solver</strong> — Propulsé par RAG vectoriel (frWac Word2Vec + ChromaDB).</p>
+        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>.</span>
+      </div>
+      <div class="footer-right">
+        <a href="../" class="btn btn-ghost btn-sm" title="Consulter le mot du jour">
+          <span>📊</span> Tableau de bord
+        </a>
+        <a href="../play/" class="btn btn-ghost btn-sm" title="Mode d'entraînement Solo">
+          <span>🎮</span> Mode Solo
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="../js/battle.js?v=20261025b"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://cemantix.cyril-randon.fr/sitemap.xml

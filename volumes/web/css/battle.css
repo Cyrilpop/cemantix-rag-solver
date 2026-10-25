@@ -1,0 +1,827 @@
+/**
+ * Cémantix Solver — Styles de l'Arène Mode Battle (Versus IA)
+ * ============================================================
+ * Design sombre, double jauge de thermomètre sémantique, HUD de confrontation,
+ * et adaptation mobile-first pour smartphone et tablette.
+ */
+
+/* -------------------------------------------------------------------------
+   1. Barre de Contrôles & Scoreboard de Match
+   ------------------------------------------------------------------------- */
+.battle-control-card {
+  margin-bottom: 1.25rem;
+}
+
+.battle-difficulty-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.battle-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.battle-status-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 0.85rem;
+  margin-top: 0.85rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.battle-scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 520px;
+  background: rgba(13, 17, 23, 0.65);
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.score-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-icon {
+  font-size: 1.35rem;
+}
+
+.score-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.score-value {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  min-width: 24px;
+  text-align: center;
+}
+
+.score-player .score-value {
+  color: var(--accent);
+}
+
+.score-ai .score-value {
+  color: #f0883e;
+}
+
+.score-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-match-badge,
+.score-turn-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.score-vs-label {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+/* -------------------------------------------------------------------------
+   2. HUD de Confrontation (Double Jauge en Temps Réel)
+   ------------------------------------------------------------------------- */
+.battle-hud-card {
+  margin-bottom: 1.25rem;
+  background: linear-gradient(180deg, rgba(22, 27, 34, 0.95) 0%, rgba(13, 17, 23, 0.98) 100%);
+  border: 1px solid rgba(88, 166, 255, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.battle-hud-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #58a6ff 0%, #a371f7 50%, #f0883e 100%);
+}
+
+.battle-hud-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.hud-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.hud-side-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.hud-entity {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.entity-avatar {
+  font-size: 1.45rem;
+  background: var(--bg-tertiary);
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.entity-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.entity-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.03em;
+}
+
+.hud-player .entity-name {
+  color: var(--accent);
+}
+
+.hud-ai .entity-name {
+  color: #f0883e;
+}
+
+.entity-target {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.target-secret {
+  color: #a371f7;
+  font-family: var(--font-mono);
+}
+
+.target-revealed {
+  color: #f0883e;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hud-score-badge {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.progress-pct {
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.best-metric {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.battle-gauge-wrapper {
+  width: 100%;
+  height: 12px;
+  background: rgba(13, 17, 23, 0.8);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  position: relative;
+}
+
+.battle-gauge-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.player-gauge {
+  background: linear-gradient(90deg, #1f6feb 0%, #58a6ff 60%, #3fb950 100%);
+  box-shadow: 0 0 10px rgba(88, 166, 255, 0.45);
+}
+
+.ai-gauge {
+  background: linear-gradient(90deg, #d29922 0%, #f0883e 60%, #f85149 100%);
+  box-shadow: 0 0 10px rgba(240, 136, 62, 0.45);
+}
+
+.hud-vs-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-vs-badge {
+  font-size: 1.15rem;
+  background: var(--bg-tertiary);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+}
+
+/* -------------------------------------------------------------------------
+   3. Bannière de Résultat de Manche
+   ------------------------------------------------------------------------- */
+.battle-banner {
+  margin-bottom: 1.25rem;
+  background: linear-gradient(135deg, rgba(35, 134, 54, 0.15) 0%, rgba(22, 27, 34, 0.95) 100%);
+  border: 1px solid rgba(46, 160, 67, 0.4);
+  padding: 1.25rem 1.5rem;
+}
+
+.battle-banner.banner-ai-win {
+  background: linear-gradient(135deg, rgba(248, 81, 73, 0.15) 0%, rgba(22, 27, 34, 0.95) 100%);
+  border-color: rgba(248, 81, 73, 0.4);
+}
+
+.battle-banner.banner-draw {
+  background: linear-gradient(135deg, rgba(163, 113, 247, 0.15) 0%, rgba(22, 27, 34, 0.95) 100%);
+  border-color: rgba(163, 113, 247, 0.4);
+}
+
+.battle-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.battle-banner-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+
+.battle-banner-text {
+  flex: 1;
+}
+
+.battle-banner-text h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-bottom: 0.35rem;
+}
+
+.battle-banner-text p {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: 0.45rem;
+}
+
+.battle-banner-words {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.word-reveal-tag {
+  font-size: 0.8rem;
+  background: var(--bg-tertiary);
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+}
+
+.word-reveal-tag strong {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+/* -------------------------------------------------------------------------
+   4. Spotlight Face-à-Face du Dernier Tour
+   ------------------------------------------------------------------------- */
+.battle-spotlight-card {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+}
+
+.battle-spotlight-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 0.65rem;
+}
+
+.spotlight-cell {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-color);
+}
+
+.spotlight-cell-player {
+  border-left: 3px solid var(--accent);
+}
+
+.spotlight-cell-ai {
+  border-left: 3px solid #f0883e;
+}
+
+.spotlight-cell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.cell-entity {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.spotlight-cell-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* -------------------------------------------------------------------------
+   5. Sélecteur Mobile (Segmented Control pour Smartphone)
+   ------------------------------------------------------------------------- */
+.mobile-duel-toggle {
+  display: none;
+  background: var(--bg-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.mobile-toggle-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.6rem 0.5rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: all var(--transition-fast);
+}
+
+.mobile-toggle-btn.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* -------------------------------------------------------------------------
+   6. Guide Sémantique & Tactique (SEO)
+   ------------------------------------------------------------------------- */
+.battle-guide-card {
+  margin-top: 2rem;
+  background: var(--bg-secondary);
+}
+
+.battle-guide-content {
+  padding-top: 0.5rem;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+
+.guide-item {
+  background: var(--bg-tertiary);
+  padding: 1.15rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.guide-icon {
+  font-size: 1.6rem;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.guide-item h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  color: var(--text-primary);
+}
+
+.guide-item p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ==========================================================================
+   8. Modale de Lancement & Configuration de Manche (Effet Glassmorphism & Blur)
+   ========================================================================== */
+.battle-modal-card {
+  max-width: 580px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(240, 136, 62, 0.15);
+  animation: modalScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--bg-card);
+}
+
+.battle-modal-body {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modal-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modal-field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-field-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.modal-tag-optional {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Grille de sélection de difficulté */
+.modal-diff-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+}
+
+.modal-diff-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.modal-diff-card:hover {
+  border-color: var(--border-focus);
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+}
+
+.modal-diff-card.active {
+  border-color: #f0883e;
+  background: rgba(240, 136, 62, 0.12);
+  box-shadow: 0 0 16px rgba(240, 136, 62, 0.22);
+}
+
+.modal-diff-card .diff-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.modal-diff-card .diff-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modal-diff-card .diff-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+/* Champ de saisie du mot secret */
+.modal-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.modal-input-icon {
+  position: absolute;
+  left: 0.85rem;
+  font-size: 1.15rem;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.modal-input-field {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 0.75rem 0.85rem 0.75rem 2.65rem;
+  font-size: 16px;
+  font-family: var(--font-mono);
+  transition: all var(--transition-fast);
+}
+
+.modal-input-field:focus {
+  outline: none;
+  border-color: #f0883e;
+  box-shadow: 0 0 0 3px rgba(240, 136, 62, 0.2);
+}
+
+.modal-help-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 0.35rem;
+}
+
+.modal-help-text em {
+  color: var(--text-primary);
+  font-style: normal;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+}
+
+/* Alerte d'erreur dans la modale */
+.modal-error-banner {
+  margin-top: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: rgba(248, 81, 73, 0.15);
+  border: 1px solid rgba(248, 81, 73, 0.45);
+  color: #f85149;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: modalFadeIn 0.2s ease;
+}
+
+/* Boîte de rappels tactiques */
+.modal-tactics-box {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.tactic-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  line-height: 1.4;
+}
+
+.tactic-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  line-height: 1.2;
+}
+
+.btn-start-duel {
+  background: linear-gradient(135deg, #f0883e 0%, #d2691e 100%);
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  padding: 0.65rem 1.4rem;
+  box-shadow: 0 4px 14px rgba(240, 136, 62, 0.35);
+  transition: all var(--transition-fast);
+}
+
+.btn-start-duel:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(240, 136, 62, 0.45);
+  filter: brightness(1.08);
+}
+
+/* -------------------------------------------------------------------------
+   7. Règles Responsive Mobile & Tablette (<= 768px)
+   ------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .battle-difficulty-wrapper {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+  }
+
+  .battle-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+    width: 100%;
+  }
+
+  .battle-actions #battle-giveup-btn {
+    grid-column: span 2;
+  }
+
+  .battle-actions .btn {
+    width: 100%;
+    min-height: 42px;
+    justify-content: center;
+    font-size: 0.82rem;
+  }
+
+  .battle-scoreboard {
+    gap: 0.85rem;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .score-value {
+    font-size: 1.35rem;
+  }
+
+  .battle-hud-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .hud-vs-divider {
+    display: none;
+  }
+
+  .battle-banner-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.85rem;
+  }
+
+  .battle-banner-words {
+    justify-content: center;
+  }
+
+  .battle-banner .btn {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .battle-spotlight-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  /* Affichage du sélecteur d'onglets pour la liste en duel */
+  .mobile-duel-toggle {
+    display: flex;
+  }
+
+  .battle-results-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Sur smartphone, une seule colonne affichée à la fois via le toggle */
+  .battle-results-grid.show-player #col-ai-guesses {
+    display: none;
+  }
+
+  .battle-results-grid.show-ai #col-player-guesses {
+    display: none;
+  }
+
+  .guide-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  /* Modale sur mobile */
+  .battle-modal-card {
+    max-height: 94vh;
+    border-radius: var(--radius-lg) var(--radius-lg) var(--radius-md) var(--radius-md);
+  }
+
+  .battle-modal-body {
+    padding: 0.85rem 1rem;
+    gap: 0.85rem;
+  }
+
+  .modal-diff-grid {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .modal-diff-card {
+    padding: 0.6rem 0.75rem;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .spotlight-cell-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .score-divider {
+    flex-direction: column;
+    gap: 2px;
+  }
+}
