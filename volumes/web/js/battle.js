@@ -4,7 +4,7 @@
  * Gère le tour par tour, les 3 indices graduels, la double jauge de progression,
  * la synchronisation avec l'API /api/battle/* et la réactivité mobile.
  */
-import { getTierClass, showToast, initErrorHandling } from "./utils.js";
+import { getTierClass, showToast, initErrorHandling, showConfirmDialog } from "./utils.js?v=20261025b";
 import { initTheme } from "./theme.js";
 
 const BATTLE_STORAGE_KEY = "cemantix_battle_state_v1";
@@ -445,9 +445,17 @@ async function requestBattleHint() {
 
 async function giveUpBattle() {
   if (battleState.isFinished) return;
-  if (!confirm("Voulez-vous vraiment déclarer forfait pour cette manche ? Le point sera accordé au bot IA.")) {
-    return;
-  }
+
+  const confirmed = await showConfirmDialog({
+    title: "Déclarer Forfait ?",
+    message: "Voulez-vous vraiment abandonner cette manche ? Le point sera immédiatement accordé au bot IA et les mots secrets seront révélés.",
+    icon: "🏳️",
+    confirmText: "Déclarer Forfait",
+    confirmType: "danger",
+    cancelText: "Continuer le duel",
+  });
+
+  if (!confirmed) return;
 
   const giveupBtn = document.getElementById("battle-giveup-btn");
   if (giveupBtn) giveupBtn.disabled = true;
