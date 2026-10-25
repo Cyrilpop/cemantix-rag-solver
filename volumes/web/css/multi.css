@@ -1,0 +1,705 @@
+/**
+ * Cémantix Solver — Styles du Mode Multijoueur 1v1
+ * ===================================================
+ * Design sombre moderne avec glassmorphism, néons subtils
+ * et layout responsive (mobile & desktop).
+ */
+
+/* --------------------------------------------------------------------------
+   1. Conteneur Global & Vues (Lobby / Salle d'attente / Arène)
+   -------------------------------------------------------------------------- */
+.multi-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg, 1.5rem);
+  width: 100%;
+}
+
+.multi-view-section {
+  display: none;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.multi-view-section.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --------------------------------------------------------------------------
+   2. Lobby : Sélecteur d'onglets (Créer / Rejoindre / Duels en cours)
+   -------------------------------------------------------------------------- */
+.lobby-nav {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(13, 17, 23, 0.7);
+  padding: 0.35rem;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid var(--border-color, #30363d);
+  backdrop-filter: blur(8px);
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+}
+
+.lobby-tab-btn {
+  flex: 1;
+  min-width: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary, #8b949e);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.lobby-tab-btn:hover {
+  color: var(--text-primary, #f0f6fc);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.lobby-tab-btn.active {
+  color: #fff;
+  background: linear-gradient(135deg, rgba(56, 139, 253, 0.25), rgba(137, 87, 229, 0.25));
+  border-color: rgba(56, 139, 253, 0.5);
+  box-shadow: 0 4px 12px rgba(56, 139, 253, 0.15);
+}
+
+.lobby-tab-btn .badge-count {
+  background: #8957e5;
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 10px;
+}
+
+/* --------------------------------------------------------------------------
+   3. Volet Création : Choix des Modes de Jeu
+   -------------------------------------------------------------------------- */
+.mode-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.mode-card {
+  position: relative;
+  background: rgba(22, 27, 34, 0.75);
+  border: 2px solid var(--border-color, #30363d);
+  border-radius: var(--radius-lg, 12px);
+  padding: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mode-card:hover {
+  border-color: rgba(56, 139, 253, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.mode-card.selected {
+  border-color: #388bfd;
+  background: linear-gradient(145deg, rgba(56, 139, 253, 0.12), rgba(13, 17, 23, 0.9));
+  box-shadow: 0 0 0 1px #388bfd, 0 8px 24px rgba(56, 139, 253, 0.2);
+}
+
+.mode-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mode-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary, #f0f6fc);
+}
+
+.mode-card-badge {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge-same-word {
+  background: rgba(46, 160, 67, 0.2);
+  color: #3fb950;
+  border: 1px solid rgba(46, 160, 67, 0.4);
+}
+
+.badge-custom-word {
+  background: rgba(137, 87, 229, 0.2);
+  color: #a371f7;
+  border: 1px solid rgba(137, 87, 229, 0.4);
+}
+
+.mode-card-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary, #8b949e);
+  line-height: 1.4;
+}
+
+.mode-card-rules {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.8rem;
+  color: #79c0ff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   4. Formulaires de création & saisie
+   -------------------------------------------------------------------------- */
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary, #8b949e);
+}
+
+.form-input-wrapper {
+  background: rgba(13, 17, 23, 0.85);
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: var(--radius-md, 8px);
+  padding: 0.45rem 0.75rem 0.45rem 0.95rem;
+  box-shadow: none;
+}
+
+.form-input-wrapper:focus-within {
+  border-color: var(--accent, #58a6ff);
+  box-shadow: 0 0 14px var(--accent-glow, rgba(88, 166, 255, 0.3));
+}
+
+.form-input-wrapper .game-input {
+  font-size: 1rem;
+}
+
+.form-input-wrapper .input-icon {
+  font-size: 1.15rem;
+  margin-right: 0.65rem;
+  opacity: 0.85;
+}
+
+.game-input.input-code {
+  font-family: var(--font-mono, monospace);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.form-help {
+  font-size: 0.8rem;
+  color: var(--text-muted, #6e7681);
+}
+
+/* Section de saisie Arène Multijoueur */
+.multi-input-section {
+  margin-bottom: 1.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   5. Salle d'Attente & Partage de Lien
+   -------------------------------------------------------------------------- */
+.waiting-card {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.waiting-pulse-icon {
+  font-size: 3.5rem;
+  animation: pulseRotate 2.5s infinite ease-in-out;
+}
+
+@keyframes pulseRotate {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1) rotate(5deg); }
+  100% { transform: scale(1); }
+}
+
+.waiting-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary, #f0f6fc);
+  margin-bottom: 0.25rem;
+}
+
+.waiting-subtitle {
+  color: var(--text-secondary, #8b949e);
+  max-width: 500px;
+  font-size: 0.95rem;
+}
+
+.room-code-badge-big {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(56, 139, 253, 0.15);
+  border: 2px dashed #388bfd;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-lg, 12px);
+  font-family: var(--font-mono, monospace);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #79c0ff;
+  letter-spacing: 3px;
+}
+
+.share-link-box {
+  width: 100%;
+  max-width: 550px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(13, 17, 23, 0.8);
+  border: 1px solid var(--border-color, #30363d);
+  padding: 0.5rem;
+  border-radius: var(--radius-md, 8px);
+}
+
+.share-link-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  font-size: 0.88rem;
+  font-family: var(--font-mono, monospace);
+  padding: 0.4rem 0.6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-link-input:focus {
+  outline: none;
+  color: #f0f6fc;
+}
+
+/* --------------------------------------------------------------------------
+   6. Bandeau du Tour de Jeu (Indicateur Temps Réel)
+   -------------------------------------------------------------------------- */
+.turn-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  border-radius: var(--radius-lg, 12px);
+  margin-bottom: 1rem;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.turn-banner-my-turn {
+  background: linear-gradient(135deg, rgba(46, 160, 67, 0.25), rgba(35, 134, 54, 0.15));
+  border: 1px solid rgba(46, 160, 67, 0.6);
+  color: #3fb950;
+  box-shadow: 0 4px 20px rgba(46, 160, 67, 0.15);
+}
+
+.turn-banner-opp-turn {
+  background: linear-gradient(135deg, rgba(210, 153, 34, 0.2), rgba(187, 128, 9, 0.1));
+  border: 1px solid rgba(210, 153, 34, 0.5);
+  color: #e3b341;
+}
+
+.turn-status-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.05rem;
+}
+
+.turn-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+  box-shadow: 0 0 8px currentColor;
+  animation: radarBlink 1.2s infinite;
+}
+
+@keyframes radarBlink {
+  0% { opacity: 0.3; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0.3; transform: scale(0.85); }
+}
+
+.turn-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary, #8b949e);
+}
+
+/* --------------------------------------------------------------------------
+   7. HUD Dual Duel (Camp Vous vs Camp Adversaire)
+   -------------------------------------------------------------------------- */
+.multi-hud-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(22, 27, 34, 0.7);
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: var(--radius-lg, 12px);
+  margin-bottom: 1.25rem;
+}
+
+.multi-hud-vs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1.1rem;
+  color: #8957e5;
+  background: rgba(137, 87, 229, 0.12);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(137, 87, 229, 0.3);
+}
+
+.hud-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hud-player-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hud-player-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--text-primary, #f0f6fc);
+}
+
+.hud-player-target {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #8b949e);
+}
+
+.target-badge {
+  color: #79c0ff;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+}
+
+.hud-thermo-gauge {
+  height: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 5px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.hud-gauge-bar {
+  height: 100%;
+  width: 0%;
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 5px;
+}
+
+.gauge-p1 {
+  background: linear-gradient(90deg, #388bfd, #2ea043);
+  box-shadow: 0 0 10px rgba(46, 160, 67, 0.4);
+}
+
+.gauge-p2 {
+  background: linear-gradient(90deg, #8957e5, #f0883e);
+  box-shadow: 0 0 10px rgba(240, 136, 62, 0.4);
+}
+
+.hud-stats-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #8b949e);
+  font-family: var(--font-mono, monospace);
+}
+
+/* --------------------------------------------------------------------------
+   8. Grille de Confrontation des Mots
+/* --------------------------------------------------------------------------
+   8. Grille de Confrontation des Mots (Tuiles de Mots Identiques à Battle / Solo)
+   -------------------------------------------------------------------------- */
+.multi-results-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.multi-list-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.multi-list-card .card-header {
+  padding-bottom: 0.85rem;
+  margin-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border-color, #30363d);
+}
+
+.multi-list-card .game-guesses-list {
+  max-height: 480px;
+  height: 480px;
+}
+
+.multi-list-card .guess-row {
+  animation: none;
+}
+
+.guess-temp.tier-ice { color: var(--tier-ice, #38bdf8); }
+.guess-temp.tier-cold { color: var(--tier-cold, #60a5fa); }
+.guess-temp.tier-cool { color: var(--tier-cool, #34d399); }
+.guess-temp.tier-warm { color: var(--tier-warm, #fbbf24); }
+.guess-temp.tier-fire { color: var(--tier-fire, #f87171); }
+
+.masked-word-pill {
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 2px;
+  color: #8b949e;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Sélecteur Mobile (Segmented Control pour Smartphone) */
+.mobile-duel-toggle {
+  display: none;
+  background: var(--bg-tertiary, #161b22);
+  padding: 4px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-color, #30363d);
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.mobile-toggle-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #8b949e);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.6rem 0.5rem;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+}
+
+.mobile-toggle-btn.active {
+  background: var(--bg-secondary, #21262d);
+  color: var(--text-primary, #f0f6fc);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 768px) {
+  .mobile-duel-toggle {
+    display: flex;
+  }
+
+  .multi-results-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .multi-results-grid.show-player #col-opp-guesses {
+    display: none;
+  }
+
+  .multi-results-grid.show-opponent #col-player-guesses {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   9. Bannière Fin de Partie (Victoire / Défaite)
+   -------------------------------------------------------------------------- */
+.gameover-banner {
+  padding: 1.5rem;
+  border-radius: var(--radius-lg, 12px);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  animation: popIn 0.35s ease-out;
+  margin-bottom: 1rem;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.gameover-win {
+  background: linear-gradient(135deg, rgba(46, 160, 67, 0.25), rgba(210, 153, 34, 0.25));
+  border: 2px solid #3fb950;
+  box-shadow: 0 8px 32px rgba(46, 160, 67, 0.25);
+}
+
+.gameover-lose {
+  background: linear-gradient(135deg, rgba(248, 81, 73, 0.25), rgba(137, 87, 229, 0.2));
+  border: 2px solid #f85149;
+  box-shadow: 0 8px 32px rgba(248, 81, 73, 0.2);
+}
+
+.gameover-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.gameover-secrets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  font-size: 0.95rem;
+  margin-top: 0.5rem;
+}
+
+.secret-reveal-badge {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --------------------------------------------------------------------------
+   10. Liste des Parties Actives (LocalStorage)
+   -------------------------------------------------------------------------- */
+.active-games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.active-game-card {
+  background: rgba(22, 27, 34, 0.8);
+  border: 1px solid var(--border-color, #30363d);
+  border-radius: var(--radius-md, 8px);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.active-game-card:hover {
+  border-color: #388bfd;
+  transform: translateY(-2px);
+}
+
+.active-game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.active-game-room {
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #79c0ff;
+}
+
+.active-game-date {
+  font-size: 0.75rem;
+  color: var(--text-muted, #6e7681);
+}
+
+.active-game-footer {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+/* --------------------------------------------------------------------------
+   11. Responsive Smartphone & Tablettes
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .multi-tables-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .multi-hud-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .multi-hud-vs {
+    margin: 0 auto;
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+  }
+
+  .room-code-badge-big {
+    font-size: 1.35rem;
+    padding: 0.5rem 1rem;
+  }
+
+  .turn-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .turn-meta-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
