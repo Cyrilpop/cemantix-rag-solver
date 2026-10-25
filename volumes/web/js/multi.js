@@ -360,6 +360,12 @@ async function connectToRoom(roomId, playerKey = "", playerName = "") {
     const data = await res.json();
     if (!res.ok || !data.valid) {
       showToast(data.error || "Impossible de rejoindre ce salon.");
+      if (res.status === 404 && roomId) {
+        removeGameFromStorage(roomId);
+        if (window.location.search.includes(roomId)) {
+          window.history.replaceState({}, "", "/multi/");
+        }
+      }
       return;
     }
 
