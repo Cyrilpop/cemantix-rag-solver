@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/layout.css">
-  <link rel="stylesheet" href="../css/game.css">
+  <link rel="stylesheet" href="../css/game.css?v=20261025b">
   <link rel="stylesheet" href="../css/modal.css?v=20261025b">
 
   <!-- Données Structurées JSON-LD (Schema.org / GameApplication & Fil d'Ariane) -->
@@ -131,6 +131,11 @@
         <span>Mode Battle</span>
         <span class="tab-badge">Versus IA</span>
       </a>
+      <a href="../multi/" id="tab-multi" class="nav-tab">
+        <span class="tab-icon">👥</span>
+        <span>Mode Multijoueur</span>
+        <span class="tab-badge">1v1 Ami</span>
+      </a>
     </nav>
 
     <!-- Zone de Jeu Interactive -->
@@ -160,14 +165,8 @@
           </div>
 
           <div class="game-actions">
-            <button type="button" id="game-hint-btn" class="btn btn-secondary btn-sm" title="Demander un indice sémantique (+1 coup au compteur)">
-              <span>💡</span> Indice (+1 coup)
-            </button>
             <button type="button" id="game-new-btn" class="btn btn-primary btn-sm">
               <span>🎮</span> Nouvelle Partie
-            </button>
-            <button type="button" id="game-giveup-btn" class="btn btn-secondary btn-sm" title="Abandonner et voir le mot secret">
-              <span>🏳️</span> Abandonner
             </button>
           </div>
         </div>
@@ -199,14 +198,24 @@
       </div>
 
       <!-- Zone de Saisie Interactive -->
-      <section class="game-input-section">
+      <section class="game-input-section" aria-label="Saisie de mot">
         <form id="game-guess-form" class="guess-form" autocomplete="off">
-          <div class="input-wrapper">
-            <span class="input-icon">🎯</span>
-            <input type="text" id="game-word-input" class="game-input" placeholder="Entrez un mot français (ex: maison, voyage, pensée)..." maxlength="35" required autofocus>
-            <button type="submit" id="game-submit-btn" class="btn btn-primary btn-guess">
-              <span>Tester</span> ↵
-            </button>
+          <div class="guess-form-row">
+            <div class="input-wrapper">
+              <span class="input-icon">🎯</span>
+              <input type="text" id="game-word-input" class="game-input" placeholder="Entrez un mot français (ex: maison, voyage, pensée)..." maxlength="35" required autofocus>
+              <button type="submit" id="game-submit-btn" class="btn btn-primary btn-guess">
+                <span>Tester</span> ↵
+              </button>
+            </div>
+            <div class="guess-side-actions">
+              <button type="button" id="game-hint-btn" class="btn btn-secondary btn-hint" title="Demander un indice sémantique (+1 coup au compteur)">
+                <span>💡</span> Indice
+              </button>
+              <button type="button" id="game-giveup-btn" class="btn btn-secondary btn-giveup" title="Abandonner et voir le mot secret">
+                <span>🏳️</span> Abandonner
+              </button>
+            </div>
           </div>
           <div id="game-feedback" class="game-feedback" style="display: none;"></div>
         </form>

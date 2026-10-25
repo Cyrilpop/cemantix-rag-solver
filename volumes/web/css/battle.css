@@ -426,6 +426,21 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
+.battle-results-grid .guess-row {
+  animation: none;
+}
+
+.guess-temp.tier-ice,
+.spotlight-temp.tier-ice { color: var(--tier-ice, #38bdf8); }
+.guess-temp.tier-cold,
+.spotlight-temp.tier-cold { color: var(--tier-cold, #60a5fa); }
+.guess-temp.tier-cool,
+.spotlight-temp.tier-cool { color: var(--tier-cool, #34d399); }
+.guess-temp.tier-warm,
+.spotlight-temp.tier-warm { color: var(--tier-warm, #fbbf24); }
+.guess-temp.tier-fire,
+.spotlight-temp.tier-fire { color: var(--tier-fire, #f87171); }
+
 /* -------------------------------------------------------------------------
    6. Guide Sémantique & Tactique (SEO)
    ------------------------------------------------------------------------- */

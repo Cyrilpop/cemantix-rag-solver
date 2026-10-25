@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- ======================================================================
+       SEO & Référencement Naturel Google
+       ====================================================================== -->
+  <title>Cémantix Multijoueur : Duel 1v1 en Direct &amp; Tour par Tour | Cémantix Solver</title>
+  <meta name="title" content="Cémantix Multijoueur : Duel 1v1 en Direct &amp; Tour par Tour | Cémantix Solver">
+  <meta name="description" content="Affrontez vos amis en duel Cémantix 1v1 au tour par tour ! Deux modes : Même Mot (progression visible avec anti-triche masqué) et Mots Choisis (mots secrets personnalisés). Rejoignez par code ou lien direct.">
+  <meta name="keywords" content="cemantix multijoueur, duel cemantix ami, cemantix 1v1, jouer a deux cemantix, semantix multi, defi cemantix en ligne, duel mot secret, cemantix tour par tour ami">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Cyril Randon">
+  <meta name="publisher" content="Cyril Randon">
+  <link rel="canonical" href="https://cemantix.cyril-randon.fr/multi/">
+  <meta name="theme-color" content="#0d1117">
+
+  <!-- Open Graph / Facebook / LinkedIn -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://cemantix.cyril-randon.fr/multi/">
+  <meta property="og:title" content="Cémantix Multijoueur : Duel 1v1 en Direct &amp; Tour par Tour">
+  <meta property="og:description" content="Défiez vos amis dans un duel sémantique tour par tour ! Mode Même Mot masqué ou Mots Choisis. Partagez votre lien de room en 1 clic.">
+  <meta property="og:image" content="https://cemantix.cyril-randon.fr/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Cémantix Multijoueur — Duel 1v1 entre amis">
+  <meta property="og:site_name" content="Cémantix Solver">
+  <meta property="og:locale" content="fr_FR">
+
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://cemantix.cyril-randon.fr/multi/">
+  <meta name="twitter:title" content="Cémantix Multijoueur : Duel 1v1 entre Amis">
+  <meta name="twitter:description" content="Qui devinera son mot secret en premier ? Relevez le défi Cémantix Multijoueur en 1v1 !">
+  <meta name="twitter:image" content="https://cemantix.cyril-randon.fr/og-image.jpg">
+
+  <!-- Favicon & Styles -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👥</text></svg>">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/game.css?v=20261025b">
+  <link rel="stylesheet" href="../css/modal.css?v=20261025b">
+  <link rel="stylesheet" href="../css/multi.css?v=20261025b">
+
+  <!-- Données Structurées JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["WebApplication", "Game"],
+        "@id": "https://cemantix.cyril-randon.fr/multi/#game",
+        "name": "Cémantix Multijoueur — Duel 1v1 Tour par Tour",
+        "url": "https://cemantix.cyril-randon.fr/multi/",
+        "description": "Mode multijoueur 1v1 pour défier un ami à Cémantix au tour par tour, avec lien d'invitation direct sans compte, anti-triche et double jauge thermique.",
+        "applicationCategory": "GameApplication",
+        "genre": "Jeu de réflexion multijoueur",
+        "operatingSystem": "All",
+        "inLanguage": "fr-FR",
+        "image": "https://cemantix.cyril-randon.fr/og-image.jpg",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Cyril Randon",
+          "url": "https://cyril-randon.fr"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://cemantix.cyril-randon.fr/multi/#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://cemantix.cyril-randon.fr/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Mode Multijoueur 1v1",
+            "item": "https://cemantix.cyril-randon.fr/multi/"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://cemantix.cyril-randon.fr/multi/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Comment inviter un ami à jouer en multijoueur ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Créez une partie en 1 clic puis partagez le lien d'invitation direct ou le code de salon avec votre ami par SMS, WhatsApp ou Discord. Aucune inscription ni mot de passe n'est requis."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Quelle est la différence entre le mode « Même Mot » et « Mots Choisis » ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "En mode Même Mot, vous cherchez la même cible : la progression adverse est visible mais ses mots sont masqués pour éviter le spoil. En mode Mots Choisis, chaque joueur choisit secrètement le mot de son adversaire, et tous les mots tentés sont visibles en clair."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Puis-je reprendre une partie plus tard ou changer d'appareil ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Oui ! Les parties sont conservées pendant 7 jours. Vous pouvez reprendre à tout moment en réouvrant votre lien ou en saisissant votre Code Salon et votre Clé Joueur."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <span class="brand-icon">🎯</span>
+        <div class="brand-text">
+          <h1>Cémantix Solver</h1>
+          <span class="brand-subtitle">Mot du Jour &amp; IA Sémantique</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div id="daemon-badge" class="status-badge status-sleeping" title="État du démon d'automatisation">
+          <span class="status-pulse"></span>
+          <span id="daemon-status-text">Veille active (00h00)</span>
+        </div>
+
+        <button id="theme-toggle" class="btn-icon" aria-label="Changer de thème" title="Basculer Mode Clair / Sombre">
+          <span class="theme-icon">☀️</span>
+        </button>
+
+        <button id="global-spoiler-toggle" class="btn-icon" aria-label="Mode anti-spoiler" title="Activer / Désactiver le flou anti-spoiler">
+          <span class="spoiler-icon">🛡️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Navigation des Vues Principales -->
+    <nav class="nav-tabs" aria-label="Navigation des vues">
+      <a href="../" id="tab-dashboard" class="nav-tab">
+        <span class="tab-icon">📊</span>
+        <span>Tableau de Bord</span>
+      </a>
+      <a href="../play/" id="tab-play" class="nav-tab">
+        <span class="tab-icon">🎮</span>
+        <span>Jouer Solo</span>
+      </a>
+      <a href="../battle/" id="tab-battle" class="nav-tab">
+        <span class="tab-icon">⚔️</span>
+        <span>Mode Battle</span>
+      </a>
+      <a href="./" id="tab-multi" class="nav-tab active">
+        <span class="tab-icon">👥</span>
+        <span>Mode Multijoueur</span>
+        <span class="tab-badge">1v1 Ami</span>
+      </a>
+    </nav>
+
+    <div class="multi-container">
+
+      <!-- ==================================================================
+           VUE 1 : LOBBY MULTIJOUEUR (Créer / Rejoindre / Parties Récentes)
+           ================================================================== -->
+      <section id="view-lobby" class="multi-view-section active">
+        <!-- Onglets du Lobby -->
+        <div class="lobby-nav" role="tablist">
+          <button type="button" class="lobby-tab-btn active" data-lobby-tab="create" role="tab" aria-selected="true">
+            <span>✨</span> Créer un Duel
+          </button>
+          <button type="button" class="lobby-tab-btn" data-lobby-tab="join" role="tab" aria-selected="false">
+            <span>🚀</span> Rejoindre avec un Code
+          </button>
+          <button type="button" class="lobby-tab-btn" data-lobby-tab="recent" role="tab" aria-selected="false">
+            <span>⏳</span> Vos Duels en cours <span id="active-games-count" class="badge-count" style="display: none;">0</span>
+          </button>
+        </div>
+
+        <!-- Onglet 1 : Créer un Duel -->
+        <div id="lobby-panel-create" class="card lobby-panel active">
+          <h2 class="card-title">✨ Créer une Nouvelle Partie</h2>
+          <p class="card-subtitle">Choisissez votre mode de jeu, paramétrez la difficulté et invitez un ami en 1 clic.</p>
+
+          <!-- Sélecteur de Mode Visuel -->
+          <div class="form-section">
+            <span class="form-label">Variante de Duel :</span>
+            <div class="mode-cards-grid">
+              <!-- Carte Même Mot -->
+              <div class="mode-card selected" data-mode-select="same_word">
+                <div class="mode-card-header">
+                  <span class="mode-card-title"><span>🎯</span> Même Mot</span>
+                  <span class="mode-card-badge badge-same-word">Anti-Triche</span>
+                </div>
+                <p class="mode-card-desc">Les 2 joueurs cherchent le même mot secret. Vous observez la température de votre adversaire, mais ses mots sont masqués.</p>
+                <div class="mode-card-rules">
+                  <span>🔒 Mot adverse : <code>••••••••</code> (révélé à la fin)</span>
+                  <span>🏆 Victoire : Premier à 1000 ‰</span>
+                </div>
+              </div>
+
+              <!-- Carte Mots Choisis -->
+              <div class="mode-card" data-mode-select="custom_words">
+                <div class="mode-card-header">
+                  <span class="mode-card-title"><span>✍️</span> Mots Choisis</span>
+                  <span class="mode-card-badge badge-custom-word">Personnalisé</span>
+                </div>
+                <p class="mode-card-desc">Chaque joueur choisit secrètement le mot que son adversaire doit trouver. Cibles différentes : tous les mots joués sont visibles en clair !</p>
+                <div class="mode-card-rules">
+                  <span>👀 Mots adverses : 100% visibles en clair</span>
+                  <span>🧠 Tactique : Piégez votre adversaire</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Niveau de Difficulté (pour tirage Même Mot ou par défaut) -->
+            <div id="multi-diff-section" class="form-group">
+              <label class="form-label">Difficulté du mot cible :</label>
+              <div class="pill-group" id="multi-diff-group">
+                <button type="button" class="pill-btn" data-diff="facile">🟢 Facile</button>
+                <button type="button" class="pill-btn active" data-diff="moyen">🟡 Moyen</button>
+                <button type="button" class="pill-btn" data-diff="expert">🔴 Expert</button>
+              </div>
+            </div>
+
+            <!-- Mot personnalisé (affiché seulement si mode == custom_words) -->
+            <div id="multi-custom-word-section" class="form-group" style="display: none;">
+              <label for="create-custom-word" class="form-label">Mot secret à faire deviner à votre adversaire :</label>
+              <div class="input-wrapper form-input-wrapper">
+                <span class="input-icon">🎯</span>
+                <input type="text" id="create-custom-word" class="game-input" placeholder="Ex: flamme, chocolat, volcan..." maxlength="35" autocomplete="off" autocapitalize="none" spellcheck="false">
+              </div>
+              <span class="form-help">Ce mot doit être présent dans le dictionnaire officiel français.</span>
+            </div>
+
+            <!-- Pseudo du Joueur 1 -->
+            <div class="form-group">
+              <label for="create-player-name" class="form-label">Votre pseudo :</label>
+              <div class="input-wrapper form-input-wrapper">
+                <span class="input-icon">🧑</span>
+                <input type="text" id="create-player-name" class="game-input" placeholder="Joueur 1" value="Joueur 1" maxlength="20" autocomplete="off">
+              </div>
+            </div>
+
+            <button type="button" id="btn-create-game" class="btn btn-primary" style="margin-top: 0.5rem;">
+              <span>✨</span> Créer le Salon &amp; Obtenir le Lien
+            </button>
+          </div>
+        </div>
+
+        <!-- Onglet 2 : Rejoindre avec un Code (Formulaire Manuel) -->
+        <div id="lobby-panel-join" class="card lobby-panel" style="display: none;">
+          <h2 class="card-title">🚀 Rejoindre ou Reprendre un Duel</h2>
+          <p class="card-subtitle">Saisissez le code de salon reçu de votre ami, ou vos identifiants pour continuer votre partie sur cet appareil.</p>
+
+          <form id="form-join-game" class="form-section" onsubmit="return false;">
+            <div class="form-group">
+              <label for="join-room-code" class="form-label">Code Salon (ex: DUEL-XXXX) :</label>
+              <div class="input-wrapper form-input-wrapper">
+                <span class="input-icon">🏷️</span>
+                <input type="text" id="join-room-code" class="game-input input-code" placeholder="DUEL-XXXX" maxlength="15" required autocomplete="off" autocapitalize="characters">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="join-player-key" class="form-label">Clé Joueur (optionnelle) :</label>
+              <div class="input-wrapper form-input-wrapper">
+                <span class="input-icon">🔑</span>
+                <input type="text" id="join-player-key" class="game-input input-code" placeholder="J1-XXXX ou J2-XXXX" maxlength="15" autocomplete="off" autocapitalize="characters">
+              </div>
+              <span class="form-help">Laissez vide si vous rejoignez un salon pour la première fois. Renseignez-la pour reprendre une partie existante.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="join-player-name" class="form-label">Votre pseudo :</label>
+              <div class="input-wrapper form-input-wrapper">
+                <span class="input-icon">🧑</span>
+                <input type="text" id="join-player-name" class="game-input" placeholder="Joueur 2" value="Joueur 2" maxlength="20" autocomplete="off">
+              </div>
+            </div>
+
+            <button type="submit" id="btn-join-game" class="btn btn-primary" style="margin-top: 0.5rem;">
+              <span>🚀</span> Entrer dans l'Arène
+            </button>
+          </form>
+        </div>
+
+        <!-- Onglet 3 : Duels Récents sur cet Appareil -->
+        <div id="lobby-panel-recent" class="card lobby-panel" style="display: none;">
+          <h2 class="card-title">⏳ Vos Duels Récents</h2>
+          <p class="card-subtitle">Retrouvez toutes les parties actives créées ou rejointes sur ce navigateur.</p>
+
+          <div id="recent-games-container" class="active-games-grid">
+            <!-- Injecté dynamiquement par multi.js -->
+            <p class="text-muted" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">Aucun duel actif enregistré sur cet appareil.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           VUE 2 : SALLE D'ATTENTE & INVITATION DIRECTE
+           ================================================================== -->
+      <section id="view-waiting" class="multi-view-section">
+        <div class="card waiting-card">
+          <div class="waiting-pulse-icon">⏳</div>
+          <div>
+            <h2 class="waiting-title">En attente de votre adversaire</h2>
+            <p class="waiting-subtitle">Transmettez le lien direct d'invitation ou le code de salon à votre ami pour débuter le duel.</p>
+          </div>
+
+          <!-- Code Salon Grand Format -->
+          <div class="room-code-badge-big" id="waiting-room-code-badge">
+            <span id="waiting-room-code">DUEL-????</span>
+            <button type="button" id="btn-copy-room-code" class="btn-icon" title="Copier le code salon">📋</button>
+          </div>
+
+          <!-- Boîte Lien Direct -->
+          <div class="share-link-box">
+            <input type="text" id="waiting-share-url-input" class="share-link-input" readonly>
+            <button type="button" id="btn-copy-share-url" class="btn btn-primary btn-sm">
+              <span>🔗</span> Copier le lien
+            </button>
+          </div>
+
+          <!-- Saisie mot adversaire si mode Mots Choisis et pas encore défini -->
+          <div id="waiting-custom-word-prompt" class="card" style="display: none; width: 100%; max-width: 550px; text-align: left;">
+            <h3 style="font-size: 1rem; margin-bottom: 0.65rem; color: #a371f7;">✍️ Définissez le mot secret de votre adversaire :</h3>
+            <div class="input-wrapper form-input-wrapper">
+              <span class="input-icon">🎯</span>
+              <input type="text" id="waiting-custom-word-input" class="game-input" placeholder="Mot secret pour l'adversaire..." maxlength="35" autocomplete="off" autocapitalize="none" spellcheck="false">
+              <button type="button" id="btn-submit-waiting-word" class="btn btn-primary btn-sm btn-guess">Valider</button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <button type="button" id="btn-waiting-enter-arena" class="btn btn-primary">
+              <span>🎮</span> Accéder à l'Arène
+            </button>
+            <button type="button" id="btn-waiting-back-lobby" class="btn btn-secondary">
+              <span>↩️</span> Retour à l'accueil
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================
+           VUE 3 : ARÈNE DE DUEL 1v1
+           ================================================================== -->
+      <section id="view-arena" class="multi-view-section">
+
+        <!-- Barre Supérieure d'Informations & Actions -->
+        <section class="card game-control-card" style="padding: 0.75rem 1.25rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+              <span id="arena-room-badge" class="room-code-badge-big" style="font-size: 1rem; padding: 0.3rem 0.75rem;">DUEL-XXXX</span>
+              <span id="arena-mode-badge" class="mode-card-badge badge-same-word">Même Mot</span>
+              <span id="arena-diff-badge" class="tab-badge" style="text-transform: capitalize;">Moyen</span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <button type="button" id="arena-share-btn" class="btn btn-secondary btn-sm" title="Copier le lien d'invitation">
+                <span>🔗</span> Inviter / Partager
+              </button>
+              <button type="button" id="arena-leave-btn" class="btn btn-secondary btn-sm" title="Quitter l'arène vers le lobby">
+                <span>🚪</span> Quitter
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bandeau de Statut du Tour (Temps Réel) -->
+        <div id="arena-turn-banner" class="turn-banner turn-banner-my-turn">
+          <div class="turn-status-left">
+            <span class="turn-pulse-dot"></span>
+            <span id="turn-banner-text">À vous de jouer !</span>
+          </div>
+          <div class="turn-meta-right">
+            <span id="arena-turn-count">Tour #1</span>
+            <span id="arena-sync-status">🟢 Connecté</span>
+          </div>
+        </div>
+
+        <!-- Bannière Fin de Partie (Affichée en cas de Victoire / Défaite) -->
+        <div id="arena-gameover-banner" class="gameover-banner" style="display: none;">
+          <span id="gameover-icon" style="font-size: 3rem;">🏆</span>
+          <h2 id="gameover-title" class="gameover-title">Victoire !</h2>
+          <p id="gameover-desc" class="text-secondary">Félicitations, vous avez démasqué le mot secret en premier !</p>
+          <div id="gameover-secrets-box" class="gameover-secrets"></div>
+          <button type="button" id="btn-gameover-new" class="btn btn-primary" style="margin-top: 0.5rem;">
+            <span>✨</span> Lancer un nouveau duel
+          </button>
+        </div>
+
+        <!-- HUD Dual : Comparatif Direct des Joueurs -->
+        <div class="multi-hud-grid">
+          <!-- Côté Vous -->
+          <div class="hud-col">
+            <div class="hud-player-info">
+              <span class="hud-player-name">🧑 <span id="hud-my-name">Vous</span></span>
+              <span class="hud-player-target">Cible : <strong id="hud-my-target" class="target-badge">🔒 Secret</strong></span>
+            </div>
+            <div class="hud-thermo-gauge" title="Progression vers le mot cible">
+              <div id="hud-my-gauge" class="hud-gauge-bar gauge-p1" style="width: 0%;"></div>
+            </div>
+            <div class="hud-stats-row">
+              <span>Progression : <strong id="hud-my-pct">0%</strong></span>
+              <span>Meilleur : <strong id="hud-my-metric">-- ‰</strong></span>
+            </div>
+          </div>
+
+          <!-- VS Badge -->
+          <div class="multi-hud-vs">VS</div>
+
+          <!-- Côté Adversaire -->
+          <div class="hud-col">
+            <div class="hud-player-info">
+              <span class="hud-player-name">👤 <span id="hud-opp-name">Adversaire</span></span>
+              <span class="hud-player-target">Cible : <strong id="hud-opp-target" class="target-badge">🔒 Secret</strong></span>
+            </div>
+            <div class="hud-thermo-gauge" title="Progression de l'adversaire">
+              <div id="hud-opp-gauge" class="hud-gauge-bar gauge-p2" style="width: 0%;"></div>
+            </div>
+            <div class="hud-stats-row">
+              <span>Progression : <strong id="hud-opp-pct">0%</strong></span>
+              <span>Meilleur : <strong id="hud-opp-metric">-- ‰</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zone de Saisie Interactive -->
+        <section class="game-input-section multi-input-section" aria-label="Saisie de mot">
+          <form id="arena-guess-form" class="guess-form" autocomplete="off">
+            <div class="guess-form-row">
+              <div class="input-wrapper">
+                <span class="input-icon">🎯</span>
+                <input type="text" id="arena-word-input" class="game-input" placeholder="Entrez un mot français pour attaquer ce tour..." maxlength="35" required autofocus autocapitalize="none" autocorrect="off" spellcheck="false">
+                <button type="submit" id="arena-submit-btn" class="btn btn-primary btn-guess">
+                  <span>Jouer</span> ↵
+                </button>
+              </div>
+              <div class="guess-side-actions">
+                <button type="button" id="arena-hint-btn" class="btn btn-secondary btn-hint" title="Demander un indice (consomme 1 tour)">
+                  <span>💡</span> Indice (<span id="arena-hint-count">3/3</span>)
+                </button>
+                <button type="button" id="arena-giveup-btn" class="btn btn-secondary btn-giveup" title="Déclarer forfait et dévoiler les mots secrets">
+                  <span>🏳️</span> Forfait
+                </button>
+              </div>
+            </div>
+            <div id="arena-feedback" class="game-feedback" style="display: none;"></div>
+          </form>
+        </section>
+
+        <!-- Sélecteur d'Affichage Mobile (Segmented Control pour Smartphone) -->
+        <div class="mobile-duel-toggle" id="mobile-duel-toggle">
+          <button type="button" class="mobile-toggle-btn active" data-target="player">
+            <span>🧑</span> Mes Essais (<span id="mobile-player-count">0</span>)
+          </button>
+          <button type="button" class="mobile-toggle-btn" data-target="opponent">
+            <span>👤</span> Coups Adverses (<span id="mobile-opp-count">0</span>)
+          </button>
+        </div>
+
+        <!-- Grille 2 Colonnes Synchronisées : Vos Essais vs Coups Adverses -->
+        <section class="grid-2col multi-results-grid show-player">
+          <!-- Colonne 1 : Essais du Joueur -->
+          <div class="card battle-list-card multi-list-card" id="col-player-guesses">
+            <div class="card-header">
+              <div class="card-title-group">
+                <h3>🧑 Vos Propositions (<span id="my-guesses-count">0</span>)</h3>
+                <span class="card-subtitle">Classées par ordre de proximité avec la cible</span>
+              </div>
+            </div>
+            <div id="my-guesses-list" class="clues-list game-guesses-list">
+              <div class="clues-empty">
+                <span>Aucun mot proposé pour le moment.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Colonne 2 : Coups Adverses -->
+          <div class="card battle-list-card multi-list-card" id="col-opp-guesses">
+            <div class="card-header">
+              <div class="card-title-group">
+                <h3>👤 Coups Adverses (<span id="opp-guesses-count">0</span>)</h3>
+                <span class="card-subtitle" id="opp-mask-indicator">Mots masqués 🔒</span>
+              </div>
+            </div>
+            <div id="opp-guesses-list" class="clues-list game-guesses-list">
+              <div class="clues-empty">
+                <span>En attente des premiers coups de votre adversaire.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Toast Notification Globale -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- Pied de page -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-links">
+        <a href="../">Tableau de Bord</a>
+        <a href="../play/">Jouer Solo</a>
+        <a href="../battle/">Mode Battle</a>
+        <a href="./">Mode Multijoueur</a>
+      </div>
+      <p class="footer-copy">
+        Cémantix Solver — Conçu et développé avec passion par <a href="https://cyril-randon.fr" target="_blank" rel="noopener">Cyril Randon</a>.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Scripts ES Modules -->
+  <script type="module" src="../js/theme.js"></script>
+  <script type="module" src="../js/multi.js?v=20261025b"></script>
+</body>
+</html>

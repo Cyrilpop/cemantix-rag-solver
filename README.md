@@ -300,13 +300,19 @@ volumes/web/
 ├── index.html        # Tableau de bord du mot du jour (URL : /)
 ├── play/             # Interface dédiée au jeu interactif (URL propre : /play/)
 │   └── index.html    # Page de jeu (mode défi du jour, mode illimité)
+├── battle/           # Mode Battle Joueur vs Bot IA RAG (URL propre : /battle/)
+│   └── index.html    # Page de duel contre l'IA, double jauge et indices
+├── multi/            # Mode Multijoueur 1v1 Tour par Tour (URL propre : /multi/)
+│   └── index.html    # Page de duel entre amis (Même Mot, Mots Choisis, lien direct)
 ├── css/              # Feuilles de style atomiques
 │   ├── variables.css # Thèmes clair/sombre, tokens de couleurs et dégradés thermiques
 │   ├── base.css      # Reset, boutons, badges, cartes et notifications toast
 │   ├── layout.css    # En-tête, navigation par onglets et pied de page fixe
 │   ├── dashboard.css # Styles du tableau de bord, thermomètre et guide SEO
 │   ├── game.css      # Styles de l'interface de jeu, saisie et spotlight
-│   └── modal.css     # Modale de débriefing de trajectoire IA
+│   ├── battle.css    # Styles dédiés au duel contre l'IA
+│   ├── multi.css     # Styles dédiés au multijoueur 1v1 et arène de duel
+│   └── modal.css     # Modales de configuration, débriefing et confirmation
 ├── js/               # Modules JavaScript atomiques (ES Modules)
 │   ├── app.js        # Point d'entrée léger et initialisation ciblée
 │   ├── utils.js      # Formatage, dates, presse-papier, helpers
@@ -314,7 +320,9 @@ volumes/web/
 │   ├── countdown.js  # Horloge décomptant en temps réel le saut de minuit
 │   ├── dashboard.js  # Rendu du mot du jour, des indices et polling temps réel
 │   ├── trajectory.js # Visualisation et filtres de la trajectoire IA
-│   └── game.js       # Moteur complet du jeu interactif (API locale)
+│   ├── game.js       # Moteur complet du jeu interactif (API locale)
+│   ├── battle.js     # Moteur du duel contre le bot IA RAG
+│   └── multi.js      # Moteur du mode multijoueur 1v1 temps réel
 ```
 
 #### Fonctionnalités clés de la page web :
@@ -402,8 +410,10 @@ cemantix-rag-solver/
 │       │   └── index.html   # Page de jeu (défi du jour, illimité)
 │       ├── battle/          # Arène de duel tour par tour contre l'IA (URL : /battle/)
 │       │   └── index.html   # Page Mode Battle (versus IA, double jauge, indices)
-│       ├── css/             # Styles atomiques (variables, base, layout, dashboard, game, battle, modal)
-│       ├── js/              # Modules JavaScript atomiques (app, utils, theme, game, battle, dashboard...)
+│       ├── multi/           # Mode Multijoueur 1v1 entre amis (URL : /multi/)
+│       │   └── index.html   # Page Multijoueur (Même Mot, Mots Choisis, lien direct)
+│       ├── css/             # Styles atomiques (variables, base, layout, dashboard, game, battle, multi, modal)
+│       ├── js/              # Modules JavaScript atomiques (app, utils, theme, game, battle, multi, dashboard...)
 │       ├── robots.txt       # Directives d'exploration pour les moteurs de recherche
 │       └── sitemap.xml      # Plan de site XML officiel pour l'indexation Google
 ├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)

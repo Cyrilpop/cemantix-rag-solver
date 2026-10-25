@@ -4,7 +4,7 @@
  * Gère le tour par tour, les 3 indices graduels, la double jauge de progression,
  * la synchronisation avec l'API /api/battle/* et la réactivité mobile.
  */
-import { getTierClass, showToast, initErrorHandling, showConfirmDialog } from "./utils.js?v=20261025b";
+import { getTierClass, getTierWeatherIcon, showToast, initErrorHandling, showConfirmDialog } from "./utils.js?v=20261025b";
 import { initTheme } from "./theme.js";
 
 const BATTLE_STORAGE_KEY = "cemantix_battle_state_v1";
@@ -610,14 +610,21 @@ function renderBattleSpotlight() {
   const pPermille = document.getElementById("spotlight-player-permille");
 
   if (lastP) {
+    const tierP = getTierClass(lastP.score);
     if (pWord) pWord.textContent = lastP.word.toUpperCase();
     if (pWeather) pWeather.textContent = lastP.weather;
-    if (pTemp) pTemp.textContent = `${lastP.score.toFixed(2)}°C`;
+    if (pTemp) {
+      pTemp.className = `spotlight-temp ${tierP}`;
+      pTemp.textContent = `${lastP.score >= 0 ? "+" : ""}${lastP.score.toFixed(2)}°C`;
+    }
     if (pPermille) pPermille.textContent = lastP.permille ? `${lastP.permille} ‰` : "-- ‰";
   } else {
     if (pWord) pWord.textContent = "-------";
     if (pWeather) pWeather.textContent = "🧊 Glacé";
-    if (pTemp) pTemp.textContent = "0.00°C";
+    if (pTemp) {
+      pTemp.className = "spotlight-temp";
+      pTemp.textContent = "0.00°C";
+    }
     if (pPermille) pPermille.textContent = "-- ‰";
   }
 
@@ -628,14 +635,21 @@ function renderBattleSpotlight() {
   const aPermille = document.getElementById("spotlight-ai-permille");
 
   if (lastA) {
+    const tierA = getTierClass(lastA.score);
     if (aWord) aWord.textContent = lastA.word.toUpperCase();
     if (aWeather) aWeather.textContent = lastA.weather;
-    if (aTemp) aTemp.textContent = `${lastA.score.toFixed(2)}°C`;
+    if (aTemp) {
+      aTemp.className = `spotlight-temp ${tierA}`;
+      aTemp.textContent = `${lastA.score >= 0 ? "+" : ""}${lastA.score.toFixed(2)}°C`;
+    }
     if (aPermille) aPermille.textContent = lastA.permille ? `${lastA.permille} ‰` : "-- ‰";
   } else {
     if (aWord) aWord.textContent = "-------";
     if (aWeather) aWeather.textContent = "🧊 Glacé";
-    if (aTemp) aTemp.textContent = "0.00°C";
+    if (aTemp) {
+      aTemp.className = "spotlight-temp";
+      aTemp.textContent = "0.00°C";
+    }
     if (aPermille) aPermille.textContent = "-- ‰";
   }
 }
@@ -643,6 +657,12 @@ function renderBattleSpotlight() {
 function renderGuessesList(containerId, guesses, isPlayer) {
   const container = document.getElementById(containerId);
   if (!container) return;
+
+  const cacheKey = JSON.stringify((guesses || []).map((g) => [g.word, g.score, g.permille, g.is_hint]));
+  if (container._lastRenderCache === cacheKey) {
+    return;
+  }
+  container._lastRenderCache = cacheKey;
 
   if (!guesses || guesses.length === 0) {
     container.innerHTML = `
@@ -654,23 +674,25 @@ function renderGuessesList(containerId, guesses, isPlayer) {
   }
 
   const html = guesses.map((g, idx) => {
-    const tierCls = getTierClass(g.score, g.permille);
+    const tierCls = getTierClass(g.score);
+    const isWinner = g.permille === 1000 || g.score >= 100.0;
     const scoreStr = `${Number(g.score).toFixed(2)}°C`;
-    const permilleStr = g.permille ? `${g.permille} ‰` : "-- ‰";
+    const permilleStr = g.permille ? `${g.permille} ‰` : "";
     const hintBadge = g.is_hint
       ? `<span class="badge-hint" title="Indice sémantique">💡 Indice</span>`
       : "";
+    const weatherIcon = g.weather ? g.weather.split(" ")[0] : getTierWeatherIcon(g.score, g.permille);
 
     return `
-      <div class="guess-row ${tierCls}" style="animation-delay: ${idx * 0.02}s">
+      <div class="guess-row ${isWinner ? "is-winner" : ""}">
         <div class="guess-left">
-          <span class="guess-order">#${g.order}</span>
-          <span class="guess-word">${g.word.toUpperCase()}</span>
+          <span class="guess-order">#${idx + 1}</span>
+          <span class="guess-word" onclick="copyToClipboard('${g.word}')" title="Cliquer pour copier">${g.word.toUpperCase()}</span>
           ${hintBadge}
         </div>
         <div class="guess-right">
-          <span class="guess-weather">${g.weather || ""}</span>
-          <span class="guess-temp">${scoreStr}</span>
+          <span class="guess-weather">${weatherIcon}</span>
+          <span class="guess-temp ${tierCls}">${g.score >= 0 ? "+" : ""}${scoreStr}</span>
           <span class="guess-permille">${permilleStr}</span>
         </div>
       </div>
