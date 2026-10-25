@@ -17,7 +17,7 @@ import {
   getTierClass,
   getTierWeatherIcon,
   showConfirmDialog,
-} from "./utils.js";
+} from "./utils.js?v=20261025d";
 
 // Clé de stockage local des duels
 const STORAGE_KEY = "cemantix_multi_sessions";
