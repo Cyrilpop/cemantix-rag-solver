@@ -1,0 +1,22 @@
+"""
+Cémantix Solver — Contrôleurs de Routes HTTP REST (src.api.routes)
+=================================================================
+Exporte l'ensemble des contrôleurs modulaires d'API :
+- system : /api/health, /api/daily, /api/dashboard
+- solo   : /api/game/* (Défi du Jour & Mode Illimité)
+- battle : /api/battle/* (Duel Joueur vs Bot IA RAG)
+- multi  : /api/multi/* (Mode Multijoueur 1v1 joueurs réels)
+"""
+from .battle import handle_battle_post
+from .multi import handle_multi_get, handle_multi_post
+from .solo import handle_solo_get, handle_solo_post
+from .system import handle_system_get
+
+__all__ = [
+    "handle_system_get",
+    "handle_solo_get",
+    "handle_solo_post",
+    "handle_battle_post",
+    "handle_multi_get",
+    "handle_multi_post",
+]

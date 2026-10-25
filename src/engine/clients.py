@@ -1,6 +1,6 @@
 """
-Cémantix Solver — Clients API & Simulation Locale
-==================================================
+Cémantix Solver — Clients API & Simulation Locale (src.engine.clients)
+======================================================================
 Fournit les interfaces de jeu :
 - CemantixClient : client HTTP communiquant avec l'API officielle de Cémantix.
 - MockClient : simulateur local haute performance pour l'entraînement,
@@ -15,7 +15,7 @@ from urllib3.util import Retry
 import urllib3.util.connection as urllib3_conn
 import numpy as np
 
-from .config import SITE, HEADERS, STOPWORDS, log
+from ..config import SITE, HEADERS, STOPWORDS, log
 
 # Force la résolution IPv4 pour éviter l'erreur [Errno 101] Network is unreachable
 # fréquente sous Docker / WSL2 due à l'absence de routage IPv6 dans le bridge.

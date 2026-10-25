@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from .config import BASE_DIR, DATA_DIR, log
+from ..config import BASE_DIR, DATA_DIR, log
 from .daemon import (
     DAILY_HISTORY_FILE,
     HEARTBEAT_FILE,

@@ -26,12 +26,9 @@ import argparse
 import sys
 
 from src.config import LLM_MODEL, log
-from src.ui import clear_screen
-from src.solvers import Solver
-from src.modes import run_benchmark, run_battle, run_game
-from src.menu import run_main_menu
-from src.daemon import run_daemon_loop, check_health
-from src.web import export_web_data
+from src.cli import clear_screen, run_benchmark, run_battle, run_game, run_main_menu
+from src.engine import Solver
+from src.services import run_daemon_loop, check_health, export_web_data
 
 
 def main():
@@ -108,13 +105,13 @@ def main():
         return
 
     if getattr(args, "force_solve", False):
-        from src.daemon import run_daily_solver
+        from src.services import run_daily_solver
         args.rag_only = True
         run_daily_solver(args)
         return
 
     if getattr(args, "api", False):
-        from src.vocab import VocabStore
+        from src.engine import VocabStore
         from src.api import start_api_server
         store = VocabStore()
         server = start_api_server(store, host=args.api_host, port=args.api_port)
@@ -158,6 +155,6 @@ def main():
 
 if __name__ == "__main__":
     if "--healthcheck" in sys.argv:
-        from src.daemon import check_health
+        from src.services import check_health
         sys.exit(check_health())
     sys.exit(main())

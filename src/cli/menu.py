@@ -1,6 +1,6 @@
 """
-Cémantix Solver — Menu Interactif Principal
-============================================
+Cémantix Solver — Menu Interactif Principal (src.cli.menu)
+===========================================================
 Menu textuel ergonomique et complet permettant d'exécuter l'ensemble des
 fonctionnalités du solveur Cémantix en mode interactif :
 - Résolution du puzzle du jour (en ligne) en mode Hybride ou RAG pur
@@ -16,12 +16,10 @@ import sys
 
 import numpy as np
 
-from .config import BOLD, CYAN, GREEN, YELLOW, DIM, RESET, LLM_MODEL, LM_API, log
-from .vocab import VocabStore
-from .clients import MockClient, CemantixClient
-from .solvers import Solver
-from .modes import run_benchmark, run_battle, run_solo_loop, run_duel_loop
-from .ui import render_main_menu, render_settings_menu, clear_screen
+from ..config import BOLD, CYAN, GREEN, YELLOW, DIM, RESET, LLM_MODEL, LM_API, log
+from ..engine import CemantixClient, MockClient, Solver, VocabStore
+from .modes import run_battle, run_benchmark, run_duel_loop, run_solo_loop
+from .ui import clear_screen, render_main_menu, render_settings_menu
 
 
 class ReturnToMenu(Exception):

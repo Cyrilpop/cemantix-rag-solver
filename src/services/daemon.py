@@ -24,8 +24,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from .config import DATA_DIR, log
-from .solvers import Solver
+from ..config import DATA_DIR, log
+from ..engine import Solver
 
 PARIS_TZ = ZoneInfo("Europe/Paris")
 DAILY_HISTORY_FILE = DATA_DIR / "daily_history.json"
@@ -215,8 +215,8 @@ def run_daemon_loop(args) -> None:
     # Démarrage de l'API locale du jeu interactif (partage en mémoire du VocabStore)
     if not getattr(args, "no_api", False):
         try:
-            from .vocab import VocabStore
-            from .api import start_api_thread
+            from ..engine import VocabStore
+            from ..api import start_api_thread
             store = getattr(args, "store", None) or VocabStore()
             args.store = store
             api_port = getattr(args, "api_port", 8000)

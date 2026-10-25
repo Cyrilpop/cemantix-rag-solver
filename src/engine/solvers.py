@@ -1,12 +1,13 @@
 """
-Cémantix Solver — Algorithmes de Résolution & Moteurs IA
-=========================================================
+Cémantix Solver — Algorithmes de Résolution & Moteurs IA (src.engine.solvers)
+=============================================================================
 Composants mathématiques et logiques pour la résolution autonome et assistée :
 - Régression Ridge (estimation de la direction cible dans l'espace sémantique)
 - Reranking multicritère par cohérence quadratique pondérée
 - Génération et filtrage par LLM local (formatage strict JSON)
 - Solveur autonome Cémantix (Solver / CemantixSolver)
 - Joueur IA pour le mode duel (RagDuelPlayer)
+- Conversion météo sémantique officielle (weather_for_score)
 """
 import json
 import re
@@ -16,13 +17,32 @@ from pathlib import Path
 import numpy as np
 import requests
 
-from .config import (
+from ..config import (
     LM_API, LLM_MODEL, PROMPT, DISCIPLINES, STOPWORDS, ENGLISH_WORDS,
     SEED_WORDS, SEEDS_FACILE, SEEDS_MOYEN, SEEDS_EXPERT, log
 )
 from .vocab import VocabStore
 from .clients import CemantixClient, MockClient
-from .ui import weather_for_score
+
+
+def weather_for_score(s: float, p: int | None) -> tuple[str, str]:
+    """Retourne l'icône et le libellé météo officiel selon le score et le permille."""
+    if p == 1000:
+        return "🥳", "GAGNÉ"
+    elif p and p >= 999:
+        return "😱", "BRÛL."
+    elif p and p >= 990:
+        return "🔥", "CHAUD"
+    elif p and p >= 900:
+        return "🥵", "CHAUD"
+    elif p and p >= 1:
+        return "😎", "TIÈDE"
+    elif s >= 0.15:
+        return "🥶", "FRAIS"
+    elif s >= 0:
+        return "🥶", "FROID"
+    else:
+        return "🧊", "GLAC."
 
 
 # --------------------------------------------------------------------------- #
