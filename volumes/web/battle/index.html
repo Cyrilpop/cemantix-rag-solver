@@ -44,9 +44,9 @@
   <link rel="stylesheet" href="../css/variables.css">
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/layout.css">
-  <link rel="stylesheet" href="../css/game.css">
+  <link rel="stylesheet" href="../css/game.css?v=20261025b">
   <link rel="stylesheet" href="../css/modal.css?v=20261025b">
-  <link rel="stylesheet" href="../css/battle.css?v=20261025b">
+  <link rel="stylesheet" href="../css/battle.css?v=20261025c">
 
   <!-- Données Structurées JSON-LD (Schema.org / GameApplication, Fil d'Ariane & FAQ) -->
   <script type="application/ld+json">
@@ -172,6 +172,11 @@
         <span>Mode Battle</span>
         <span class="tab-badge">Versus IA</span>
       </a>
+      <a href="../multi/" id="tab-multi" class="nav-tab">
+        <span class="tab-icon">👥</span>
+        <span>Mode Multijoueur</span>
+        <span class="tab-badge">1v1 Ami</span>
+      </a>
     </nav>
 
     <!-- Zone de Jeu Interactive : Mode Battle -->
@@ -191,14 +196,8 @@
 
           <!-- Actions de Jeu -->
           <div class="game-actions battle-actions">
-            <button type="button" id="battle-hint-btn" class="btn btn-secondary btn-sm" title="Demander 1 indice sémantique (consomme 1 tour)">
-              <span>💡</span> Indice (<span id="battle-hint-count">3/3</span>)
-            </button>
             <button type="button" id="battle-new-btn" class="btn btn-primary btn-sm" title="Lancer une nouvelle manche">
               <span>⚔️</span> Nouvelle Manche
-            </button>
-            <button type="button" id="battle-giveup-btn" class="btn btn-secondary btn-sm" title="Abandonner la manche et dévoiler les mots secrets">
-              <span>🏳️</span> Forfait
             </button>
           </div>
         </div>
@@ -296,12 +295,22 @@
       <!-- Zone de Saisie Interactive -->
       <section class="game-input-section battle-input-section" aria-label="Saisie de mot">
         <form id="battle-guess-form" class="guess-form" autocomplete="off">
-          <div class="input-wrapper">
-            <span class="input-icon">🎯</span>
-            <input type="text" id="battle-word-input" class="game-input" placeholder="Entrez un mot français pour attaquer ce tour..." maxlength="35" required autofocus>
-            <button type="submit" id="battle-submit-btn" class="btn btn-primary btn-guess">
-              <span>Jouer</span> ↵
-            </button>
+          <div class="guess-form-row">
+            <div class="input-wrapper">
+              <span class="input-icon">🎯</span>
+              <input type="text" id="battle-word-input" class="game-input" placeholder="Entrez un mot français pour attaquer ce tour..." maxlength="35" required autofocus>
+              <button type="submit" id="battle-submit-btn" class="btn btn-primary btn-guess">
+                <span>Jouer</span> ↵
+              </button>
+            </div>
+            <div class="guess-side-actions">
+              <button type="button" id="battle-hint-btn" class="btn btn-secondary btn-hint" title="Demander 1 indice sémantique (consomme 1 tour)">
+                <span>💡</span> Indice (<span id="battle-hint-count">3/3</span>)
+              </button>
+              <button type="button" id="battle-giveup-btn" class="btn btn-secondary btn-giveup" title="Abandonner la manche et dévoiler les mots secrets">
+                <span>🏳️</span> Forfait
+              </button>
+            </div>
           </div>
           <div id="battle-feedback" class="game-feedback" style="display: none;"></div>
         </form>
@@ -357,7 +366,7 @@
       </div>
 
       <!-- Grille 2 Colonnes Synchronisées : Vos Essais vs Essais de l'IA -->
-      <section class="grid-2col battle-results-grid">
+      <section class="grid-2col battle-results-grid show-player">
         <!-- Colonne 1 : Essais du Joueur -->
         <div class="card battle-list-card" id="col-player-guesses">
           <div class="card-header">
@@ -534,6 +543,6 @@
     </div>
   </footer>
 
-  <script type="module" src="../js/battle.js?v=20261025b"></script>
+  <script type="module" src="../js/battle.js?v=20261025c"></script>
 </body>
 </html>
