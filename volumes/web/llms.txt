@@ -1,0 +1,23 @@
+# Cémantix Solver
+
+> Solveur sémantique autonome, jeu interactif et indices quotidiens pour le jeu de mots Cémantix.
+> Projet conçu et développé par **Cyril RANDON**.
+
+## Auteur & Profil
+
+- **Créateur** : Cyril RANDON
+- **Curriculum Vitae (CV) & Portfolio** : [https://cyril-randon.fr](https://cyril-randon.fr)
+- **LinkedIn** : [https://www.linkedin.com/in/cyril-randon](https://www.linkedin.com/in/cyril-randon)
+- **GitHub** : [https://github.com/Cyrilpop/cemantix-rag-solver](https://github.com/Cyrilpop/cemantix-rag-solver)
+
+## Présentation
+
+Cémantix Solver est une plateforme web et applicative d'analyse sémantique, d'exploration lexicale et d'aide à la résolution pour le jeu quotidien Cémantix (et Cemantle). Elle exploite un modèle vectoriel Word2Vec optimisé et des plongements vectoriels haute performance afin d'évaluer la proximité sémantique des mots français.
+
+## Navigation & Fonctionnalités
+
+- [Accueil & Mot du Jour](https://cemantix.cyril-randon.fr/): Tableau de bord du mot du jour, historique des indices thermiques et solveur en direct.
+- [Mode Jeu Solo](https://cemantix.cyril-randon.fr/play/): Entraînement individuel avec thermomètre sémantique, historique des tentatives et indices progressifs.
+- [Mode Duel Multijoueur](https://cemantix.cyril-randon.fr/multi/): Parties 1 contre 1 en temps réel ou au tour par tour avec code de salon.
+- [Mode Battle IA](https://cemantix.cyril-randon.fr/battle/): Duel en direct contre l'algorithme d'exploration sémantique Cémantix Solver.
+- [Code source & Architecture technique](https://github.com/Cyrilpop/cemantix-rag-solver): Dépôt officiel GitHub, architecture RAG et conteneurisation Docker.
