@@ -2,7 +2,10 @@
 <html lang="fr" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
   <!-- ======================================================================
        SEO & Indexation Moteurs de Recherche
@@ -32,6 +35,55 @@
   <link rel="stylesheet" href="../css/base.css">
   <link rel="stylesheet" href="../css/layout.css">
   <link rel="stylesheet" href="../css/game.css">
+
+  <!-- Données Structurées JSON-LD (Schema.org / GameApplication & Fil d'Ariane) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["WebApplication", "Game"],
+        "@id": "https://cemantix.cyril-randon.fr/play/#game",
+        "name": "Jouer à Cémantix en Ligne — Mode Illimité & Défi du Jour",
+        "url": "https://cemantix.cyril-randon.fr/play/",
+        "description": "Plateforme de jeu interactif Cémantix en ligne gratuite. Entraînez-vous en mode illimité avec 3 niveaux de difficulté ou tentez le mot du jour avec thermomètre et indices en temps réel.",
+        "applicationCategory": "GameApplication",
+        "genre": "Jeu de réflexion et sémantique",
+        "operatingSystem": "All",
+        "inLanguage": "fr-FR",
+        "image": "https://cemantix.cyril-randon.fr/og-image.jpg",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Cyril Randon",
+          "url": "https://cyril-randon.fr"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://cemantix.cyril-randon.fr/play/#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://cemantix.cyril-randon.fr/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Jouer à Cémantix",
+            "item": "https://cemantix.cyril-randon.fr/play/"
+          }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <!-- Header / Navigation -->

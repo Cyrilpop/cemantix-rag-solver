@@ -28,8 +28,13 @@
 
 @media (max-width: 768px) {
   .toast {
-    bottom: 8rem;
+    bottom: 1.5rem;
     right: 1rem;
+    left: 1rem;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 }
 
@@ -381,8 +386,120 @@
 }
 
 @media (max-width: 768px) {
+  .modal-backdrop {
+    padding: 0.5rem;
+    align-items: flex-end;
+  }
+
+  .trajectory-modal-card {
+    max-height: 94vh;
+    border-radius: var(--radius-lg) var(--radius-lg) var(--radius-md) var(--radius-md);
+  }
+
+  .modal-header {
+    padding: 0.85rem 1rem;
+  }
+
+  .modal-title-group h2 {
+    font-size: 1.05rem;
+  }
+
+  .modal-target-word {
+    font-size: 0.82rem;
+  }
+
   .trajectory-summary-bar {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .summary-metric {
+    padding: 0.35rem 0.25rem;
+    gap: 0.35rem;
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .summary-metric .metric-icon {
+    font-size: 1rem;
+  }
+
+  .summary-metric .metric-label {
+    font-size: 0.62rem;
+  }
+
+  .summary-metric .metric-num {
+    font-size: 0.82rem;
+  }
+
+  .trajectory-filter-bar {
+    padding: 0.5rem 0.75rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+
+  .filter-group-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+    width: 100%;
+  }
+
+  .pill-group {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .pill-btn {
+    flex: 1;
+    padding: 0.3rem 0.45rem;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  #copy-trajectory-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.4rem;
+  }
+
+  .trajectory-scroll-body {
+    padding: 0.65rem 0.75rem;
+    max-height: calc(94vh - 290px);
+  }
+
+  .trajectory-step-card {
+    padding: 0.5rem 0.65rem;
+    gap: 0.4rem;
+  }
+
+  .step-left {
+    gap: 0.4rem;
+    min-width: 0;
+  }
+
+  .step-num {
+    font-size: 0.72rem;
+    width: 1.6rem;
+  }
+
+  .step-source-badge {
+    font-size: 0.58rem;
+    padding: 1px 4px;
+  }
+
+  .step-word {
+    font-size: 0.82rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 110px;
   }
 
   .step-mini-gauge {
@@ -390,6 +507,38 @@
   }
 
   .step-right {
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  .step-weather {
+    font-size: 1rem;
+  }
+
+  .step-temp {
+    font-size: 0.78rem;
+    min-width: 3.8rem;
+  }
+
+  .step-permille-badge {
+    font-size: 0.68rem;
+    padding: 1px 4px;
+    min-width: 2.8rem;
+  }
+
+  .modal-footer {
+    padding: 0.65rem 1rem;
+    flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .modal-footer-note {
+    font-size: 0.72rem;
+    text-align: center;
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    min-height: 40px;
   }
 }

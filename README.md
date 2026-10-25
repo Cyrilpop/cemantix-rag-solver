@@ -315,7 +315,6 @@ volumes/web/
 │   ├── dashboard.js  # Rendu du mot du jour, des indices et polling temps réel
 │   ├── trajectory.js # Visualisation et filtres de la trajectoire IA
 │   └── game.js       # Moteur complet du jeu interactif (API locale)
-└── data.json         # Données dynamiques générées automatiquement par le solveur
 ```
 
 #### Fonctionnalités clés de la page web :
@@ -325,22 +324,25 @@ volumes/web/
 - **Compte à Rebours Minuit en Direct** : Ticker numérique en temps réel décomptant le temps restant avant la parution du prochain mot secret (00h00 heure de Paris).
 - **Tableau de Bord des Performances (KPIs)** : Nombre total de puzzles résolus, moyenne de coups, durée moyenne de calcul et taux de victoire (100%).
 - **Historique & Recherche Instantanée** : Filtre en temps réel pour explorer les archives des puzzles par date ou mot-clé.
-- **Actualisation Automatique** : La page interroge automatiquement data.json toutes les 30 secondes pour afficher le nouveau mot dès que le démon le trouve à minuit.
+- **Actualisation Automatique** : La page interroge automatiquement l'API locale `/api/daily` toutes les 30 secondes pour afficher le nouveau mot dès que le démon le trouve à minuit.
 
 #### Configuration Caddy (Exemple) :
-Dans votre conteneur Caddy ou votre machine hôte, pointez simplement la racine du serveur web sur ./volumes/web :
+Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volumes/web` et redirigez l'API vers le conteneur du solveur :
 
-`caddy
+```caddy
 :80 {
     root * /volumes/web
+    handle /api/* {
+        reverse_proxy cemantix_solver:8000
+    }
     file_server
 }
-`
+```
 
 #### Synchronisation manuelle des données web :
-Pour actualiser ou régénérer manuellement olumes/web/data.json à tout moment :
+Pour actualiser ou exporter manuellement les données du mot du jour à tout moment :
 `ash
-docker compose run --rm -v ./volumes/web:/app/volumes/web cemantix --export-web
+docker compose run --rm cemantix --export-web
 `
 
 ---
@@ -400,7 +402,6 @@ cemantix-rag-solver/
 │       │   └── index.html   # Page de jeu (défi du jour, illimité)
 │       ├── css/             # Styles atomiques (variables, base, layout, dashboard, game, modal)
 │       ├── js/              # Modules JavaScript atomiques (app, utils, theme, game, dashboard...)
-│       └── data.json        # Données temps réel du mot du jour
 ├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)
 │   ├── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
 │   └── daily_history.json   # Historique persistant des résolutions quotidiennes
