@@ -1,17 +1,18 @@
 """
-Cémantix Solver — Interface Utilisateur & Rendu Console
-========================================================
+Cémantix Solver — Interface Utilisateur & Rendu Console (src.cli.ui)
+===================================================================
 Composants d'affichage dans le terminal :
 - Nettoyage d'écran et gestion ANSI
 - Jauges et thermomètres ASCII dynamiques
 - Attribution des météos selon l'échelle officielle Cémantix
 - Dashboards synchronisés solo et duel croisé
 - Débriefing comparatif d'après-match
+- Menus d'accueil et de réglages interactifs
 """
 import os
 import sys
 
-from .config import (
+from ..config import (
     BOLD, CYAN, GREEN, YELLOW, DIM, RESET, ANSI_RE,
     BOARD_WIDTH, COL_WIDTH, DUEL_TOP_WORDS, LLM_MODEL, LM_API, log
 )
@@ -359,4 +360,3 @@ def render_settings_menu(args, notice: str = None) -> None:
     log("=" * 76)
     if notice:
         log(f"\n{notice}\n")
-

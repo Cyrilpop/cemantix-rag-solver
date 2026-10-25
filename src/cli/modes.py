@@ -13,16 +13,14 @@ import time
 
 import numpy as np
 
-from .config import (
+from ..config import (
     BOLD, RESET, LLM_MODEL, STOPWORDS, ENGLISH_WORDS, DISCIPLINES, log
 )
-from .vocab import VocabStore
-from .clients import CemantixClient, MockClient
+from ..engine import CemantixClient, MockClient, RagDuelPlayer, Solver, VocabStore, estimate_secret
 from .ui import (
     clear_screen, weather_for_score, render_game_board,
     render_duel_board, render_duel_debrief
 )
-from .solvers import Solver, RagDuelPlayer, estimate_secret
 
 
 # --------------------------------------------------------------------------- #

@@ -1,6 +1,6 @@
 """
-Cémantix Solver — Gestion du Vocabulaire & Espace Vectoriel
-============================================================
+Cémantix Solver — Gestion du Vocabulaire & Espace Vectoriel (src.engine.vocab)
+==============================================================================
 Gère le téléchargement et l'indexation de l'espace vectoriel frWac,
 le dictionnaire officiel Lexique 3.83, la normalisation des accents
 et la classe centrale VocabStore (recherche k-NN via ChromaDB).
@@ -17,7 +17,7 @@ import chromadb
 import numpy as np
 import requests
 
-from .config import (
+from ..config import (
     DATA_DIR, LEXIQUE_FILE, LEXIQUE_URL, W2V_FILE, W2V_URL,
     MAX_VOCAB, CHROMA_DIR, COLLECTION, WORD_RE, STOPWORDS, ENGLISH_WORDS,
     HEADERS, log
@@ -216,8 +216,6 @@ class VocabStore:
     def has_word(self, word: str) -> bool:
         """Vérifie si un mot est indexé dans le store vectoriel."""
         return word.strip().lower() in self.index
-
-
 
     def _ingest(self, words, vecs, batch: int = 5000) -> None:
         log(f"⏳  Indexation ChromaDB de {len(words)} lemmes (une seule fois)...")

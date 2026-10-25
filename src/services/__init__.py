@@ -1,0 +1,46 @@
+"""
+Cémantix Solver — Services d'Arrière-Plan & Synchronisation (src.services)
+==========================================================================
+Sous-paquet assurant l'exécution permanente et la publication des données :
+- daemon : Démon planificateur 24h/24, veille automatique et réveil de minuit
+- web    : Agrégation et écriture atomique de data.json pour le serveur Caddy
+"""
+from .daemon import (
+    DAILY_HISTORY_FILE,
+    HEARTBEAT_FILE,
+    PARIS_TZ,
+    check_health,
+    format_duration,
+    get_next_run,
+    has_solved_today,
+    load_history,
+    save_history,
+    run_daemon_loop,
+    run_daily_solver,
+    update_heartbeat,
+)
+from .web import (
+    DASHBOARD_DATA_FILE,
+    WEB_DATA_FILE,
+    build_web_data,
+    export_web_data,
+)
+
+__all__ = [
+    "PARIS_TZ",
+    "DAILY_HISTORY_FILE",
+    "HEARTBEAT_FILE",
+    "DASHBOARD_DATA_FILE",
+    "WEB_DATA_FILE",
+    "load_history",
+    "save_history",
+    "has_solved_today",
+    "get_next_run",
+    "format_duration",
+    "update_heartbeat",
+    "check_health",
+    "run_daily_solver",
+    "run_daemon_loop",
+    "build_web_data",
+    "export_web_data",
+]

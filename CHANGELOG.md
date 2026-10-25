@@ -6,6 +6,44 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié] - 2026-10-25
 
+### Refactorisé
+- **Refonte Architecturale Complète de `src/` en 5 Sous-Packages Découplés** :
+  - Disparition totale des fichiers "en vrac" à la racine de `src/` au profit d'une organisation modulaire stricte par responsabilité, avec rétrocompatibilité totale à 100% via `src/__init__.py`.
+  - **1. Cœur Algorithmique & RAG (`src/engine/`)** :
+    - `vocab.py` : Gestion du lexique français (Lexique 3.83), normalisation des lemmes et vector store ChromaDB (modèle frWac 500d).
+    - `clients.py` : Client officiel Cémantix avec contournement d'IPv6 / retry automatique et simulateur local `MockClient`.
+    - `solvers.py` : Solveur géométrique RAG pur (régression Ridge vectorielle, reranking cosinus), solveur LLM assisté et bot de duel `RagDuelPlayer`.
+    - `__init__.py` : Point d'entrée centralisant et ré-exportant les composants moteurs.
+  - **2. Moteurs Métier & Gestion des Sessions (`src/game/`)** :
+    - `solo.py` : Moteur de session Solo & Défi du Jour (`GameSession`).
+    - `battle.py` : Moteur de duel tour par tour contre l'IA (`BattleSession`).
+    - `multi.py` : Moteur de salon et tours Multijoueur 1v1 (`MultiplayerSession`).
+    - `manager.py` : Gestionnaire centralisé d'état, persistance atomique sur disque et pools de difficulté (`GameManager`).
+    - `common.py` : Utilitaires partagés (météo sémantique, chemins de persistance).
+    - `__init__.py` : Ré-export unifié des sessions et du manager.
+  - **3. Couche Exposition HTTP & Passerelle REST (`src/api/`)** :
+    - `server.py` : Serveur HTTP multi-threadé (`ThreadingHTTPServer`), parsing JSON, gestion CORS et cycle de vie.
+    - `routes/` : Contrôleurs REST hautement découplés par domaine d'activité :
+      - `system.py` : Santé, métriques et données web (`/api/health`, `/api/daily`, `/api/dashboard`).
+      - `solo.py` : Défi du Jour & Mode Illimité (`/api/game/*`).
+      - `battle.py` : Duel contre l'IA RAG (`/api/battle/*`).
+      - `multi.py` : Mode Multijoueur 1v1 en direct (`/api/multi/*`).
+      - `__init__.py` : Point d'accès unifié des routes.
+    - `__init__.py` : Point d'entrée du paquet avec rétrocompatibilité des imports.
+  - **4. Interface Console & Menu Interactif (`src/cli/`)** :
+    - `ui.py` : Rendu console ANSI Rich, jauges thermiques ASCII et tableaux de débriefing.
+    - `menu.py` : Menu interactif textuel avec configuration dynamique des modes.
+    - `modes.py` : Boucles d'exécution interactives en mode terminal (solo, duel, battle, benchmark).
+    - `__init__.py` : Point d'entrée et exports des boucles CLI.
+  - **5. Services d'Arrière-Plan & Synchronisation (`src/services/`)** :
+    - `daemon.py` : Démon planificateur 24h/24 (veille et résolution automatique à 00h00 Paris, healthcheck, heartbeat).
+    - `web.py` : Générateur et exportateur atomique du fichier `data.json` pour le serveur web Caddy/Nginx.
+    - `__init__.py` : Point d'entrée et exports des services de synchronisation.
+  - **Isolation et Robustesse des Tests Unitaires** :
+    - Suite complète de 36 tests unitaires s'exécutant en 1.7s sous Docker (`OK`).
+    - Ajout du drapeau `persist=False` garantissant que l'exécution des tests n'écrase jamais les sessions réelles sur disque.
+    - Nettoyage automatique des salons expirés (404) dans le frontend web (`multi.js`).
+
 ### Ajouté
 - **Mode Multijoueur 1v1 Tour par Tour (`/multi/`)** :
   - **Moteur de duel multijoueur asynchrone et en direct (`src/api.py`, `MultiplayerSession`)** :
