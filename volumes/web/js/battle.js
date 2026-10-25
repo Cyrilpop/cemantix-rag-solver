@@ -4,7 +4,7 @@
  * Gère le tour par tour, les 3 indices graduels, la double jauge de progression,
  * la synchronisation avec l'API /api/battle/* et la réactivité mobile.
  */
-import { getTierClass, getTierWeatherIcon, showToast, initErrorHandling, showConfirmDialog } from "./utils.js?v=20261025b";
+import { getTierClass, getTierWeatherIcon, showToast, initErrorHandling, showConfirmDialog } from "./utils.js";
 import { initTheme } from "./theme.js";
 
 const BATTLE_STORAGE_KEY = "cemantix_battle_state_v1";

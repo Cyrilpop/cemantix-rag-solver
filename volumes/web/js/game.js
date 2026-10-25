@@ -1,7 +1,7 @@
 /**
  * Cémantix Solver — Moteur de Jeu Interactif (Défi du Jour & Mode Illimité)
  */
-import { getTierClass, showToast, showConfirmDialog } from "./utils.js?v=20261025b";
+import { getTierClass, showToast, showConfirmDialog } from "./utils.js";
 
 const GAME_STORAGE_KEY = "cemantix_game_state_v2";
 
