@@ -16,9 +16,11 @@
 
   --text-main: #f0f6fc;
   --text-muted: #8b949e;
-  --text-dim: #6e7681;
+  --text-dim: #9198a1;
 
   --accent: #58a6ff;
+  --accent-btn: #1668dc;
+  --accent-btn-hover: #1f6feb;
   --accent-glow: rgba(88, 166, 255, 0.25);
   --success: #3fb950;
   --success-glow: rgba(63, 185, 80, 0.25);
@@ -76,6 +78,8 @@
   --text-dim: #8c959f;
 
   --accent: #0969da;
+  --accent-btn: #0969da;
+  --accent-btn-hover: #0860c5;
   --accent-glow: rgba(9, 105, 218, 0.15);
   --success: #1a7f37;
   --success-glow: rgba(26, 127, 55, 0.15);

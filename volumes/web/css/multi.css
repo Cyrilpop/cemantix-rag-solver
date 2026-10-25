@@ -142,15 +142,15 @@
 }
 
 .badge-same-word {
-  background: rgba(46, 160, 67, 0.2);
-  color: #3fb950;
-  border: 1px solid rgba(46, 160, 67, 0.4);
+  background: rgba(46, 160, 67, 0.15);
+  color: #56d364;
+  border: 1px solid rgba(46, 160, 67, 0.35);
 }
 
 .badge-custom-word {
-  background: rgba(137, 87, 229, 0.2);
-  color: #a371f7;
-  border: 1px solid rgba(137, 87, 229, 0.4);
+  background: rgba(137, 87, 229, 0.15);
+  color: #bc8cff;
+  border: 1px solid rgba(137, 87, 229, 0.35);
 }
 
 .mode-card-desc {

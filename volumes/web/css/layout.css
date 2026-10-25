@@ -184,9 +184,9 @@
 }
 
 .nav-tab.active {
-  background: var(--accent);
+  background: var(--accent-btn, #1668dc);
   color: #ffffff;
-  border-color: var(--accent);
+  border-color: rgba(88, 166, 255, 0.4);
   box-shadow: 0 0 20px var(--accent-glow);
 }
 
@@ -239,9 +239,9 @@
   }
 
   .nav-tab.active {
-    background: var(--accent);
+    background: var(--accent-btn, #1668dc);
     color: #ffffff;
-    border-color: var(--accent);
+    border-color: rgba(88, 166, 255, 0.4);
     box-shadow: 0 2px 10px var(--accent-glow);
   }
 
