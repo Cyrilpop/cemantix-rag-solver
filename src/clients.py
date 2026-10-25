@@ -108,7 +108,8 @@ class MockClient:
         self.v_secret = store.vec(self.secret)
         # Précalcul du seuil top 1000 pour les rangs permille exacts
         all_cos = self.store.vecs @ self.v_secret
-        self.p1000_threshold = float(np.partition(all_cos, -1000)[-1000])
+        k = min(1000, len(all_cos))
+        self.p1000_threshold = float(np.partition(all_cos, -k)[-k])
         self.top_scores = np.sort(all_cos[all_cos >= self.p1000_threshold])
         log(f"🎲  [MOCK] Nouveau mot secret tiré au sort (dissimulé) | Seuil top 1000 : {self.p1000_threshold * 100:.2f}°C")
 
