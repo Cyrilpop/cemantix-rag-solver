@@ -33,6 +33,7 @@ from .seo import (
     build_sitemap,
     format_date_fr,
     format_duration_fr,
+    prerender_dashboard,
     publish_seo_pages,
 )
 
@@ -59,5 +60,6 @@ __all__ = [
     "build_sitemap",
     "format_date_fr",
     "format_duration_fr",
+    "prerender_dashboard",
     "publish_seo_pages",
 ]

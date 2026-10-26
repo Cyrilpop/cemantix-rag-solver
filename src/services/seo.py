@@ -617,6 +617,135 @@ def _write_file(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8", newline="\n")
 
 
+# --------------------------------------------------------------------------- #
+# Pré-rendu du tableau de bord (contenu indexable sans JavaScript)
+# --------------------------------------------------------------------------- #
+_PRERENDER_START = "<!-- SEO-PRERENDER:DEBUT"
+_PRERENDER_END = "<!-- SEO-PRERENDER:FIN -->"
+_PRERENDER_ANCHOR_ID = 'id="resume-du-jour-title"'
+_DATA_SEO_RE = re.compile(r'data-seo="([^"]+)"')
+
+
+def _daily_summary(entry: dict) -> str:
+    """Paragraphe de résumé du jour, sans révéler le mot secret."""
+    date_fr = format_date_fr(entry.get("date"))
+    puzzle = entry.get("puzzle")
+    tries = entry.get("tries")
+    duration = format_duration_fr(entry.get("duration_seconds"))
+    guesses = [g for g in (entry.get("top_guesses") or []) if str(g.get("word", "")) != "••••••••"]
+    source_label = "hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
+    puzzle_label = f"le puzzle #{puzzle}" if puzzle else "le puzzle du jour"
+
+    clue_names = ", ".join(
+        str(g.get("word", "")).capitalize() for g in guesses[:5] if g.get("word")
+    )
+    clue_part = (
+        f" Les mots les plus proches observés étaient {clue_names}." if clue_names else ""
+    )
+    status = "résolu" if entry.get("win") is True else "non résolu"
+    return (
+        f"<strong>Cémantix du {escape(date_fr)}</strong> : {puzzle_label} a été "
+        f"{status} en <strong>{escape(str(tries or '--'))} coups</strong> "
+        f"({escape(duration)}) par le solveur {escape(source_label)}."
+        f"{clue_part} La solution reste masquée tant que vous ne la demandez pas ; "
+        f"elle est consultable sur la "
+        f"<a href=\"puzzles/{escape(str(entry.get('date')), quote=True)}/\">"
+        f"page d'archive du jour</a>."
+    )
+
+
+def prerender_dashboard(entry: Optional[dict], web_root: Path = None) -> bool:
+    """Injecte le résumé du jour dans `index.html` (contenu lisible sans JS).
+
+    Le remplacement est délimité par les commentaires `SEO-PRERENDER` et ciblé par
+    l'attribut `data-seo`, ce qui rend l'opération idempotente : relancer la
+    génération ne duplique jamais le contenu.
+    """
+    root = web_root if web_root is not None else WEB_ROOT
+    index_file = root / "index.html"
+    try:
+        source = index_file.read_text(encoding="utf-8")
+    except OSError as exc:
+        log(f"⚠️  Pré-rendu SEO ignoré ({exc})")
+        return False
+
+    if _PRERENDER_START not in source or _PRERENDER_END not in source:
+        log("⚠️  Pré-rendu SEO ignoré : balises SEO-PRERENDER absentes de index.html")
+        return False
+
+    if entry:
+        date_fr = format_date_fr(entry.get("date"))
+        replacements = {
+            "resume-title": f"Cémantix du {date_fr} : résumé de la résolution",
+            "resume-subtitle": "Indices, thermomètre et performance du solveur IA du jour",
+            "resume-body": _daily_summary(entry),
+            "resume-link": (
+                "Consultez l'<a href=\"puzzles/\">archive complète des puzzles</a> "
+                "pour retrouver les indices jour par jour."
+            ),
+        }
+    else:
+        replacements = {
+            "resume-title": "Cémantix du jour : résumé de la résolution",
+            "resume-subtitle": "Indices, thermomètre et performance du solveur IA",
+            "resume-body": (
+                "Le résumé du puzzle du jour sera publié automatiquement après la "
+                "résolution de minuit."
+            ),
+            "resume-link": (
+                "Consultez l'<a href=\"puzzles/\">archive complète des puzzles</a> "
+                "pour retrouver les indices jour par jour."
+            ),
+        }
+
+    # Le bloc utile va du titre du résumé au marqueur de fermeture : les éléments
+    # ciblés par data-seo sont cherchés uniquement dans cette zone.
+    start = source.index(_PRERENDER_START)
+    end = source.index(_PRERENDER_END, start)
+    anchor = source.rfind(_PRERENDER_ANCHOR_ID, 0, start)
+    block_start = source.rfind("<", 0, anchor) if anchor != -1 else start
+    block = source[block_start:end]
+
+    # Remplacement de l'intérieur vers l'extérieur pour conserver les index valides.
+    targets = []
+    for match in _DATA_SEO_RE.finditer(block):
+        key = match.group(1)
+        if key not in replacements:
+            continue
+        absolute = block_start + match.end()
+        try:
+            tag_close = source.index(">", absolute) + 1
+            content_end = source.index("</", tag_close)
+        except ValueError:
+            continue
+        targets.append((tag_close, content_end, replacements[key]))
+
+    for tag_close, content_end, payload in sorted(targets, reverse=True):
+        source = source[:tag_close] + payload + source[content_end:]
+
+    # Badges "Puzzle #N" et date du jour, lus tels quels par les crawlers.
+    if entry:
+        puzzle = entry.get("puzzle")
+        if puzzle:
+            source = re.sub(
+                r'(<span id="puzzle-badge"[^>]*>).*?(</span>)',
+                rf"\g<1>Puzzle #{puzzle}\g<2>",
+                source,
+                count=1,
+                flags=re.DOTALL,
+            )
+        source = re.sub(
+            r'(<span id="puzzle-date"[^>]*>).*?(</span>)',
+            rf"\g<1>{escape(format_date_fr(entry.get('date')))}\g<2>",
+            source,
+            count=1,
+            flags=re.DOTALL,
+        )
+
+    index_file.write_text(source, encoding="utf-8", newline="\n")
+    return True
+
+
 def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = None) -> dict:
     """Génère les pages d'archives, l'index paginé et le sitemap dans le webroot.
 
@@ -657,9 +786,12 @@ def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = No
 
     _write_file(root / "sitemap.xml", build_sitemap(entries, generated_at))
     written["sitemap"] = True
+
+    written["prerender"] = prerender_dashboard(entries[0] if entries else None, web_root=root)
     log(
         f"🔎  SEO publié : {written['archives']} archive(s), "
         f"{written['index_pages']} page(s) d'index, sitemap.xml régénéré"
+        + (", accueil pré-rendu" if written["prerender"] else "")
     )
     return written
 

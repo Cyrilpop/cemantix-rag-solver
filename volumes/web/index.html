@@ -213,8 +213,8 @@
         <div class="hero-card card">
           <div class="hero-header">
             <div class="puzzle-meta">
-              <span id="puzzle-badge" class="badge badge-accent">Puzzle #----</span>
-              <span id="puzzle-date" class="meta-date">Chargement de la date...</span>
+              <span id="puzzle-badge" class="badge badge-accent" data-seo="puzzle">Puzzle #----</span>
+              <span id="puzzle-date" class="meta-date" data-seo="date">Chargement de la date...</span>
             </div>
             <span id="win-badge" class="badge badge-success">🏆 Résolu avec succès</span>
           </div>
@@ -406,6 +406,22 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <!-- Résumé du jour pré-rendu côté serveur : contenu indexable sans JavaScript.
+           Le bloc est régénéré par `--publish-seo` (src/services/seo.py). -->
+      <section class="section seo-section" id="resume-du-jour" aria-labelledby="resume-du-jour-title">
+        <div class="card seo-card">
+          <div class="seo-header">
+            <h2 id="resume-du-jour-title" data-seo="resume-title">Cémantix du jour : résumé de la résolution</h2>
+            <span class="card-subtitle" data-seo="resume-subtitle">Indices, thermomètre et performance du solveur IA</span>
+          </div>
+          <!-- SEO-PRERENDER:DEBUT : contenu régénéré par `--publish-seo`
+               (src/services/seo.py) pour rester lisible sans JavaScript. -->
+          <p id="seo-daily-summary" data-seo="resume-body">Le résumé du puzzle du jour sera publié automatiquement après la résolution de minuit.</p>
+          <p class="seo-list" data-seo="resume-link">Consultez l'<a href="puzzles/">archive complète des puzzles</a> pour retrouver les indices jour par jour.</p>
+          <!-- SEO-PRERENDER:FIN -->
         </div>
       </section>
 
