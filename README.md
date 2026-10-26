@@ -355,11 +355,28 @@ Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volu
 cemantix.cyril-randon.fr {
     root * /volumes/web
 
-    # En-têtes de sécurité
+    # En-têtes de sécurité (toutes les réponses)
     header {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "SAMEORIGIN"
         Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        Cross-Origin-Opener-Policy "same-origin"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+        # Politique de sécurité du contenu. Le site n'utilise AUCUNE ressource externe
+        # (ni CDN, ni police, ni script tiers) : la politique peut donc être
+        # restrictive. 'unsafe-inline' pour les styles est nécessaire car les feuilles
+        # de style sont locales et les style="…" posés par le JS sont des valeurs codées
+        # en dur, jamais des données utilisateur.
+        # script-src 'self' suffit : seul js/app.js (module ES local) est chargé, donc
+        # tout <script> injecté par une faille XSS est bloqué par le navigateur.
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'"
+    }
+
+    # Pages d'archives : contenu statique, aucun script ni connexion sortante.
+    header /puzzles/* {
+        Content-Security-Policy "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
     }
 
     # 1. Polices web immuables (cache 1 an)
@@ -469,6 +486,68 @@ dépendance externe (stdlib Python uniquement) :
 python tools/generate_icons.py
 ```
 
+## 🔐 Sécurité
+
+### Le mot secret ne transite jamais sans action volontaire
+Le point le plus sensible du projet : la solution du jour. Elle est désormais
+**absente de toute réponse `GET`**.
+
+```
+GET  /api/daily            → current.word = null, mot masqué dans trajectory,
+                             top_guesses et l'entrée du jour de l'historique
+POST /api/daily/reveal     → { "word": "…" }   seul chemin vers la solution
+```
+
+Le POST est choisi exprès : un crawler, un prefetch de lien ou un `curl` ne peuvent
+pas récupérer la solution par accident. Le bouclier anti-spoiler n'est plus du CSS,
+il est côté serveur.
+
+`export_web_data()` refuse par ailleurs d'écrire `data.json` dans le webroot : le
+fichier contient l'historique complet des solutions et se serait récupéré d'un
+`curl https://…/data.json`.
+
+### En-têtes et restrictions réseau de l'API
+| Protection | Mise en œuvre | Variable d'environnement |
+|---|---|---|
+| Corps de requête | Refus au-delà de 32 ko (`413`), **avant** lecture du corps | `API_MAX_BODY_BYTES` |
+| CORS | Liste blanche d'origine, plus de `*`, `Vary: Origin` | `API_ALLOWED_ORIGIN` |
+| Débit | Seau à jetons par IP, `429` + `retry_after` ; `/api/health` exempté | — |
+| Threads | Plafond de workers, `503` propre au lieu d'une création sans limite | `API_MAX_WORKERS` |
+| Blocage | `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` | — |
+| Cache | `Cache-Control: no-store` sur toutes les réponses d'API | — |
+| Silences | Version Python retirée de l'en-tête `Server`, timeout socket 10 s | `API_SOCKET_TIMEOUT` |
+
+### XSS : échappement côté rendu
+Aucune donnée extérieure n'est injectée brute dans `innerHTML`. Le helper
+`escapeHtml()` de `js/utils.js` est appliqué aux mots, dates, numéros de puzzle,
+identifiants de salon et pseudonymes d'adversaire.
+
+Les gestionnaires construits par concaténation (`onclick="copyToClipboard('${mot}')"`)
+ont été supprimés au profit d'attributs `data-*` et d'une délégation d'événements :
+une apostrophe dans un mot ou un pseudonyme ne peut plus fermer la chaîne et exécuter
+de code.
+
+### Codes du multijoueur
+Les `room_id` et clés `J1-` / `J2-` sont générés sur **8 chiffres hexadécimaux**
+(`uuid.uuid4`, aléatoire cryptographique), soit 4,3 milliards de valeurs. À 4
+caractères, les 65 536 combinaisons se parcouraient par balayage, et les salons
+restaient ouverts 7 jours.
+
+### À vérifier après le déploiement
+```bash
+# Le mot du jour ne doit apparaître nulle part :
+curl -s https://cemantix.cyril-randon.fr/api/daily | grep -i '"word"' | head
+
+# Les fichiers de données doivent renvoyer 404 :
+for f in data.json daily_history.json web_sessions.json; do
+  printf '%s -> ' "$f"
+  curl -s -o /dev/null -w '%{http_code}\n' "https://cemantix.cyril-randon.fr/$f"
+done
+
+# Les en-têtes doivent être présents :
+curl -sI https://cemantix.cyril-randon.fr/ | grep -iE 'content-security|strict-transport|x-frame'
+```
+
 ### Après la mise en production
 1. Soumettre `https://cemantix.cyril-randon.fr/sitemap.xml` dans Google Search Console
    et Bing Webmaster Tools ;
@@ -515,6 +594,11 @@ Ces variables peuvent être définies dans votre shell ou dans un fichier `.env`
 | `LM_API` | `http://host.docker.internal:1234/v1` (ou `http://localhost:1234/v1`) | URL de l'API OpenAI compatible de LM Studio. |
 | `LLM_MODEL` | `qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2` | Identifiant du modèle chargé dans LM Studio. |
 | `W2V_FILE` | `frWac_no_postag_phrase_500_cbow_cut10.bin` | Nom du fichier word2vec hébergé sur embeddings.net. |
+| `API_ALLOWED_ORIGIN` | `https://cemantix.cyril-randon.fr` | Origine(s) autorisée(s) par le CORS, séparées par des virgules. À changer si vous changez de domaine. |
+| `API_MAX_BODY_BYTES` | `32768` | Taille maximale acceptée pour le corps d'une requête `POST` (au-delà : `413`). |
+| `API_MAX_WORKERS` | `64` | Nombre maximal de requêtes traitées en parallèle par le serveur d'API. |
+| `API_SOCKET_TIMEOUT` | `10` | Timeout de socket en secondes, libère les connexions dormantes. |
+| `DASHBOARD_DATA_FILE` | `cemantix_data/data.json` | Emplacement de `data.json`. **Ne doit pas** pointer dans `volumes/web` (refusé par `export_web_data`). |
 
 ---
 
