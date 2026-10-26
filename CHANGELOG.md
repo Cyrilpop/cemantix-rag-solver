@@ -31,6 +31,17 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 ### Refactorisé
 - **Journalisation des requêtes** : `log_message()` était réduit à `pass`, ce qui rendait tout abus invisible ; les requêtes sont désormais tracées de façon minimale avec l'IP cliente, sans le débit du flux d'origine.
 
+### Ajouté
+- **`Caddyfile` versionné à la racine du dépôt** : la configuration du serveur web (CSP, en-têtes de sécurité, politique de cache, bloc `@intercepted`) n'existait que en prose dans le README, où elle avait déjà divergé du code. Le fichier fait désormais foi ; le README y renvoie avec la commande de rechargement à chaud.
+- **Outils de contrôle sans dépendance** : `tools/check_og_image.py` compare le poids et les dimensions réels de `og-image.jpg` aux balises `og:image` (code de sortie `1` si hors norme, exploitable en CI) et `tools/check_js_balance.py` vérifie l'équilibre des délimiteurs JavaScript en l'absence de `node`.
+
+### Corrigé
+- **Politique de cache incohérente avec la règle « no-cache, pas de `?v=` »** : le `max-age=3600` posé sur `@html` et les `max-age` suggérés pour les archives contredisaient la revalidation par ETag ; tout ce qui change repasse en `no-cache, must-revalidate`, seules les polices gardent un `max-age` d'un an.
+- **Pages d'archives sans `Cache-Control`** : le sélecteur `@html path *.html` ne matche pas une URL comme `/puzzles/2026-10-26/` (servie par `try_files`, sans extension) ; un bloc `@pages` couvre désormais ces URLs, ainsi que `sitemap.xml`, `robots.txt`, `llms.md` et `.well-known/*`.
+- **`X-Frame-Options` contradictoire** : le README documentait `SAMEORIGIN` alors que le serveur envoie `DENY` ; aligné sur `DENY`, avec `frame-ancestors 'none'` dans les deux CSP qui autorisaient pourtant l'encadrement par le site lui-même.
+- **Polling de la salle d'attente multijoueur** : un `setInterval` fixe de 2 s ignorait l'onglet masqué (~1 800 requêtes/heure d'onglet ouvert). Le rythme devient adaptatif (2 s → 10 s, réinitialisé à chaque changement d'état), aucune requête n'est émise quand l'onglet est caché, et un `visibilitychange` resonde immédiatement au retour. Le `setInterval` a été remplacé par une chaîne de `setTimeout` : `stopPolling()` appelait `clearTimeout`, qui ne stoppe pas un `setInterval` — le polling continuait donc de tourner après le retour au lobby.
+- **Métadonnées d'image de partage incomplètes** : `play/` déclarait `og:image` sans dimensions ni texte alternatif, et aucune page n'avait de `twitter:image:alt` ; les quatre pages portent désormais `og:image:width/height/alt` et `twitter:image:alt`.
+
 ## [Non publié] - 2026-10-26 · SEO
 
 ### Ajouté
