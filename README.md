@@ -358,7 +358,7 @@ cemantix.cyril-randon.fr {
     # En-têtes de sécurité (toutes les réponses)
     header {
         X-Content-Type-Options "nosniff"
-        X-Frame-Options "SAMEORIGIN"
+        X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
         Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
         Cross-Origin-Opener-Policy "same-origin"
@@ -371,29 +371,40 @@ cemantix.cyril-randon.fr {
         # en dur, jamais des données utilisateur.
         # script-src 'self' suffit : seul js/app.js (module ES local) est chargé, donc
         # tout <script> injecté par une faille XSS est bloqué par le navigateur.
-        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
     }
 
     # Pages d'archives : contenu statique, aucun script ni connexion sortante.
     header /puzzles/* {
-        Content-Security-Policy "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
+        Content-Security-Policy "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     }
 
     # 1. Polices web immuables (cache 1 an)
     @fonts path *.woff *.woff2
     header @fonts Cache-Control "public, max-age=31536000, immutable"
 
-    # 2. Images revalidées automatiquement (cache 24h avec ETag)
+    # 2. Images : revalidation par ETag. Pas de max-age long ici, car le projet a
+    #    supprimé les suffixes ?v= : sans revalidation, un og-image.jpg remplacé
+    #    resterait invisible jusqu'à l'expiration du cache (et les partages sociaux
+    #    sont justement sensibles aux anciennes vignettes).
     @images path *.ico *.png *.jpg *.jpeg *.webp *.svg
-    header @images Cache-Control "public, max-age=86400, must-revalidate"
+    header @images Cache-Control "no-cache, must-revalidate"
 
     # 3. Code applicatif JS & CSS : rechargement immédiat sans mise en cache bloquante
     @code path *.css *.js *.mjs
     header @code Cache-Control "no-cache, must-revalidate"
 
-    # 4. Pages HTML : revalidation rapide
+    # 4. Pages HTML : revalidation systématique par ETag (aucun paramètre ?v= nécessaire).
+    #    Le bloc @pages ci-dessous couvre les URLs SANS extension (/puzzles/2026-10-26/),
+    #    que le motif *.html ne matcherait pas.
     @html path *.html
-    header @html Cache-Control "public, max-age=3600, must-revalidate"
+    header @html Cache-Control "no-cache, must-revalidate"
+
+    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/*
+    header @pages Cache-Control "no-cache, must-revalidate"
+
+    @sitemap path /sitemap.xml /robots.txt /llms.md /.well-known/*
+    header @sitemap Cache-Control "no-cache, must-revalidate"
 
     # API du Solveur (prioritaire et exclusive)
     handle /api/* {
@@ -464,20 +475,40 @@ La publication est aussi déclenchée automatiquement par `--export-web` et par 
 après chaque résolution de minuit. En cas d'échec, le log signale l'erreur sans bloquer
 l'export de `data.json`.
 
-### Cache HTTP des pages d'archives
-Une page `/puzzles/<date>/` ne change plus jamais une fois publiée : elle peut être
-cachée longtemps, alors que l'accueil et `sitemap.xml` doivent être revalidés. Ajoutez
-ces deux règles **avant** le bloc `@code` existant de votre `Caddyfile` :
+### Cache HTTP : cohérence avec la politique « no-cache »
+Le projet applique `Cache-Control: "no-cache, must-revalidate"` sur le code applicatif
+(voir l'encadré « Pourquoi aucun paramètre de version (`?v=...`) » plus haut) : la
+revalidation se fait par ETag, ce qui rend les suffixes `?v=` inutiles. **Cette règle
+doit rester la source de vérité** — il ne faut pas introduire de `max-age` sur les
+fichiers qui changent, sous peine de devoir ressusciter les `?v=` pour forcer le
+renouvellement.
+
+Deux points de vigilance propres aux pages d'archives :
+
+1. **Le sélecteur `@html path *.html` ne suffit pas.** Une URL comme
+   `/puzzles/2026-10-26/` ne contient pas `.html` : Caddy la sert grâce à
+   `try_files {path} {path}/index.html`, mais le motif `*.html` ne la **matche pas**.
+   Sans règle explicite, ces pages partent donc sans `Cache-Control`. Ajoute ce bloc
+   **avant** `@code` :
 
 ```caddy
-    # 5. Archives quotidiennes : immuables une fois publiées
-    @archives path /puzzles/*
-    header @archives Cache-Control "public, max-age=86400, must-revalidate"
-
-    # 6. Sitemap : revalidation systématique
-    @sitemap path /sitemap.xml
-    header @sitemap Cache-Control "public, max-age=600, must-revalidate"
+    # Pages du site (URL sans extension servies via try_files) : même traitement que le HTML
+    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/*
+    header @pages Cache-Control "no-cache, must-revalidate"
 ```
+
+2. **`sitemap.xml` doit être revalidé**, sinon Google peut continuer à pointer des URLs
+   supprimées après une régénération :
+
+```caddy
+    @sitemap path /sitemap.xml /robots.txt /llms.md /.well-known/*
+    header @sitemap Cache-Control "no-cache, must-revalidate"
+```
+
+> Le `max-age=86400` précédemment suggéré pour `/puzzles/*` est **abandonné** : une page
+> d'archive est bien immuable en théorie, mais le générateur réécrit l'index paginé et
+> les liens `prev`/`next` à chaque publication. Un `max-age` rendrait ces mises à jour
+> invisibles pendant des heures sans benefit mesurable (les pages pèsent 13 ko).
 
 ### Icônes du site
 Les icônes PNG (`apple-touch-icon.png`, `icon-512.png`) sont générées par un script sans
