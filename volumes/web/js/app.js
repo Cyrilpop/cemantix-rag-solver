@@ -4,7 +4,7 @@
  * Les modules d'écran sont chargés en `import()` dynamique : un `import` statique
  * fait télécharger ET évaluer le module même si la branche `if` ne s'exécute jamais.
  * Depuis /play/, `dashboard.js` + `trajectory.js` + `countdown.js` représentaient
- * ~28 ko transférés et analysés pour rien sur les 67 ko du point d'entrée.
+ * ~27 ko transférés et analysés pour rien sur les ~93 ko du graphe statique.
  */
 import { initErrorHandling } from "./utils.js";
 import { initTheme } from "./theme.js";
