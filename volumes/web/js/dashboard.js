@@ -78,9 +78,14 @@ export function initDashboard() {
 
   // Historique - recherche & clics de lignes
   if (historySearch) {
+    // La recherche reconstruisait tout le tableau à chaque frappe : avec ~130 lignes
+    // de 8 colonnes, taper « 2026 » déclenchait 5 reconstructions complètes du DOM.
+    // 150 ms suffisent à ne rendre qu'une fois la frappe terminée.
+    let searchTimer = null;
     historySearch.addEventListener("input", (e) => {
       dashboardState.searchQuery = e.target.value;
-      renderHistoryTable();
+      if (searchTimer) clearTimeout(searchTimer);
+      searchTimer = setTimeout(renderHistoryTable, 150);
     });
   }
 
@@ -373,5 +378,11 @@ export function renderHistoryTable() {
       </tr>`;
   }).join("");
 
+  // Le tableau de bord se resynchronise toutes les 30 s et reconstruisait alors
+  // l'intégralité des ~130 lignes, alors que l'historique ne change qu'une fois
+  // par jour. Comparer le gabarit évite de jeter et recréer un DOM identique
+  // (et de perdre au passage le focus ou le défilement de l'utilisateur).
+  if (historyTbody.dataset.rendered === html) return;
+  historyTbody.dataset.rendered = html;
   historyTbody.innerHTML = html;
 }
