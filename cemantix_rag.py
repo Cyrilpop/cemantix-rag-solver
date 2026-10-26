@@ -46,6 +46,8 @@ def main():
                     help="vérifie la santé du démon pour le HEALTHCHECK Docker")
     ap.add_argument("--export-web", action="store_true",
                     help="génère et exporte les données du mot du jour dans ./volumes/web/data.json pour le serveur web Caddy")
+    ap.add_argument("--publish-seo", action="store_true",
+                    help="régénère uniquement les pages d'archives /puzzles/<date>/, l'index paginé et sitemap.xml depuis l'historique")
     ap.add_argument("--force-solve", action="store_true",
                     help="force la résolution immédiate du mot du jour et régénère l'historique complet avec trajectoire dans data.json")
     ap.add_argument("--api", action="store_true",
@@ -102,6 +104,12 @@ def main():
 
     if getattr(args, "export_web", False):
         export_web_data()
+        return
+
+    if getattr(args, "publish_seo", False):
+        from datetime import datetime
+        from src.services import load_history, publish_seo_pages, PARIS_TZ
+        publish_seo_pages(history=load_history(), generated_at=datetime.now(PARIS_TZ))
         return
 
     if getattr(args, "force_solve", False):

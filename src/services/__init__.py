@@ -4,6 +4,7 @@ Cémantix Solver — Services d'Arrière-Plan & Synchronisation (src.services)
 Sous-paquet assurant l'exécution permanente et la publication des données :
 - daemon : Démon planificateur 24h/24, veille automatique et réveil de minuit
 - web    : Agrégation et écriture atomique de data.json pour le serveur Caddy
+- seo    : Génération des pages d'archives indexables, de l'index paginé et du sitemap
 """
 from .daemon import (
     DAILY_HISTORY_FILE,
@@ -25,6 +26,15 @@ from .web import (
     build_web_data,
     export_web_data,
 )
+from .seo import (
+    SITE_ORIGIN,
+    build_archive_page,
+    build_archives_index_page,
+    build_sitemap,
+    format_date_fr,
+    format_duration_fr,
+    publish_seo_pages,
+)
 
 __all__ = [
     "PARIS_TZ",
@@ -43,4 +53,11 @@ __all__ = [
     "run_daemon_loop",
     "build_web_data",
     "export_web_data",
+    "SITE_ORIGIN",
+    "build_archive_page",
+    "build_archives_index_page",
+    "build_sitemap",
+    "format_date_fr",
+    "format_duration_fr",
+    "publish_seo_pages",
 ]

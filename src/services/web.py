@@ -120,8 +120,13 @@ def export_web_data(
     target_dir: Path = None,
     history: list = None,
     heartbeat_path: Path = HEARTBEAT_FILE,
+    publish_seo: bool = True,
 ) -> Path:
-    """Génère et écrit de manière atomique data.json dans le répertoire cible (défaut : DATA_DIR)."""
+    """Génère et écrit de manière atomique data.json dans le répertoire cible (défaut : DATA_DIR).
+
+    Si `publish_seo` est vrai, les pages d'archives `/puzzles/<date>/`, l'index
+    paginé et `sitemap.xml` sont également (re)générés dans le webroot Caddy.
+    """
     out_dir = target_dir if target_dir is not None else DATA_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     target_file = out_dir / "data.json"
@@ -143,5 +148,15 @@ def export_web_data(
             except OSError:
                 pass
         raise
+
+    if publish_seo:
+        try:
+            from .seo import publish_seo_pages
+            publish_seo_pages(
+                history=data.get("history") or [],
+                generated_at=datetime.now(PARIS_TZ),
+            )
+        except Exception as e:
+            log(f"⚠️  Publication SEO non bloquante en échec : {e}")
 
     return target_file
