@@ -295,9 +295,19 @@ python cemantix_rag.py --duel -d expert
 
 Le projet intègre une interface web complète et réactive déposée dans le volume obligatoire ./volumes/web, conçue pour être servie ultra-efficacement par **Caddy** (ou tout autre serveur HTTP) :
 
+> [!WARNING]
+> **Le webroot ne doit contenir que des fichiers publics.** Les données du solveur
+> (`data.json`, `daily_history.json`, `web_sessions.json`) sont écrites dans
+> `./cemantix_data`, **jamais** dans `./volumes/web` : `data.json` renferme l'historique
+> complet des solutions, et un fichier de ce type dans le webroot se récupère d'un simple
+> `curl https://…/data.json`. `export_web_data()` refuse désormais toute cible située dans
+> le webroot. Le front-end ne lit que `/api/*`.
+
 ```
 volumes/web/
 ├── index.html        # Tableau de bord du mot du jour (URL : /)
+├── puzzles/          # Archives quotidiennes indexables (générées par --publish-seo)
+│   └── 2026-10-26/index.html
 ├── play/             # Interface dédiée au jeu interactif (URL propre : /play/)
 │   └── index.html    # Page de jeu (mode défi du jour, mode illimité)
 ├── battle/           # Mode Battle Joueur vs Bot IA RAG (URL propre : /battle/)
@@ -372,6 +382,11 @@ cemantix.cyril-randon.fr {
     handle /api/* {
         reverse_proxy cemantix_solver:8000
     }
+
+    # Blocage des fichiers de données et de configuration, même s'ils venaient
+    # à atterrir dans le webroot par erreur (défense en profondeur).
+    @intercepted path /data.json /daily_history.json /web_sessions.json /multi_sessions.json /.env /.env.* /.git /*.py /*.pyc /*.log /*.bin
+    respond @intercepted 404
 
     # Fichiers statiques et routes propres (/play, /battle, /multi)
     handle {

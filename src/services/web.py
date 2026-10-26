@@ -31,7 +31,6 @@ VOLUMES_DIR = BASE_DIR / "volumes"
 DASHBOARD_DATA_FILE = Path(os.getenv("DASHBOARD_DATA_FILE", str(DATA_DIR / "data.json")))
 WEB_DATA_FILE = DASHBOARD_DATA_FILE  # Rétrocompatibilité
 
-
 def build_web_data(
     history: list = None,
     heartbeat_path: Path = HEARTBEAT_FILE,
@@ -126,8 +125,23 @@ def export_web_data(
 
     Si `publish_seo` est vrai, les pages d'archives `/puzzles/<date>/`, l'index
     paginé et `sitemap.xml` sont également (re)générés dans le webroot Caddy.
+
+    `data.json` contient l'historique complet des solutions : il n'a donc rien à
+    faire dans le webroot servi par Caddy, où un simple curl le rendrait public.
     """
     out_dir = target_dir if target_dir is not None else DATA_DIR
+
+    from .seo import WEB_ROOT
+    try:
+        resolved = out_dir.resolve()
+        if resolved == WEB_ROOT.resolve() or WEB_ROOT.resolve() in resolved.parents:
+            raise ValueError(
+                f"Répertoire cible refusé pour data.json : {out_dir} est servi "
+                "publiquement par Caddy et exposerait toutes les solutions."
+            )
+    except OSError:
+        pass
+
     out_dir.mkdir(parents=True, exist_ok=True)
     target_file = out_dir / "data.json"
 
