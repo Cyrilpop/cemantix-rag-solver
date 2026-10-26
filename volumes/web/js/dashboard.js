@@ -193,7 +193,13 @@ export function renderDashboard(data) {
   if (puzzleBadge) puzzleBadge.textContent = current.puzzle ? `Puzzle #${current.puzzle}` : "Puzzle du jour";
   if (puzzleDate) puzzleDate.textContent = formatDateFr(current.date);
   if (secretWord) {
-    secretWord.textContent = wordToDisplay ? wordToDisplay.toUpperCase() : "••••••••";
+    if (wordToDisplay) {
+      // Mot révélé par l'utilisateur pendant cette session : un poll ne doit pas
+      // le faire disparaître, l'API ne le renvoie plus.
+      secretWord.textContent = wordToDisplay.toUpperCase();
+    } else if (secretWord.textContent !== "RÉVÉLATION...") {
+      secretWord.textContent = "••••••••";
+    }
   }
   if (metricTries) metricTries.textContent = current.tries ? `${current.tries} coups` : "--";
   if (metricTime) metricTime.textContent = current.duration_seconds ? `${current.duration_seconds}s` : "--";
