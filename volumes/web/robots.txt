@@ -1,4 +1,13 @@
 User-agent: *
 Allow: /
 
+# Ressources non indexables : API JSON, données brutes et paramètres spoilants
+Disallow: /api/
+Disallow: /*?reveal=
+Disallow: /*?r=
+Disallow: /*?k=
+Disallow: /data.json
+Disallow: /.well-known/
+
 Sitemap: https://cemantix.cyril-randon.fr/sitemap.xml
+

@@ -1,19 +1,31 @@
 {
   "specVersion": "1.0",
   "host": {
-    "displayName": "Cémantix Solver"
+    "displayName": "Cémantix Solver",
+    "documentation": "https://cemantix.cyril-randon.fr/llms.md"
   },
   "entries": [
     {
       "identifier": "urn:air:cemantix.cyril-randon.fr:tool:cemantix-solver",
       "displayName": "Cémantix Solver API & Indices",
       "type": "application/openapi+json",
-      "url": "https://cemantix.cyril-randon.fr/api/daily",
-      "description": "Résolution sémantique, indices de proximité et mot du jour pour le jeu Cémantix.",
+      "url": "https://cemantix.cyril-randon.fr/api/health",
+      "description": "État du service et données agrégées de résolution sémantique du jeu Cémantix. Le mot secret est masqué par conception (protection anti-spoiler) : consultez la page d'archive de la date pour obtenir indices et solution.",
+      "representativeQueries": [
+        "Quels sont les indices sémantiques du Cémantix du jour ?",
+        "Similarité sémantique et solveur Cémantix",
+        "Combien de coups ont été nécessaires pour trouver le Cémantix du jour ?"
+      ]
+    },
+    {
+      "identifier": "urn:air:cemantix.cyril-randon.fr:page:cemantix-archive",
+      "displayName": "Archives des puzzles Cémantix par date",
+      "type": "text/html",
+      "url": "https://cemantix.cyril-randon.fr/puzzles/",
+      "description": "Pages statiques indexables, une par jour, au format /puzzles/AAAA-MM-JJ/ : numéro de puzzle, date, nombre de coups, durée, top 10 des mots les plus proches et solution dans un bloc dépliable.",
       "representativeQueries": [
         "Quel est le mot Cémantix du jour ?",
-        "Indices et solution pour Cémantix",
-        "Similarité sémantique et solveur Cémantix"
+        "Solution et indices du Cémantix du 26 octobre 2026"
       ]
     }
   ]
