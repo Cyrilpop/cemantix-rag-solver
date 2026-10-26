@@ -47,20 +47,18 @@ export function initDashboard() {
           showToast("Erreur lors de la copie.");
         });
       } else {
-        fetch(`/api/daily?reveal=true&t=${Date.now()}`)
+        fetch("/api/daily/reveal", { method: "POST" })
           .then((res) => res.json())
           .then((json) => {
-            if (json.current && json.current.word) {
-              dashboardState.secretWord = json.current.word;
-              dashboardState.data = json;
-              const secretWord = document.getElementById("secret-word");
-              if (secretWord) secretWord.textContent = json.current.word.toUpperCase();
-              secretWordCard?.classList.remove("is-spoiled");
-              themeState.isSpoiled = false;
-              navigator.clipboard.writeText(json.current.word.toUpperCase()).then(() => {
-                showToast(`📋 Mot secret « ${json.current.word.toUpperCase()} » copié !`);
-              });
-            }
+            if (!json.word) throw new Error("Mot indisponible");
+            dashboardState.secretWord = json.word;
+            const secretWord = document.getElementById("secret-word");
+            if (secretWord) secretWord.textContent = json.word.toUpperCase();
+            secretWordCard?.classList.remove("is-spoiled");
+            themeState.isSpoiled = false;
+            navigator.clipboard.writeText(json.word.toUpperCase()).then(() => {
+              showToast(`📋 Mot secret « ${json.word.toUpperCase()} » copié !`);
+            });
           })
           .catch(() => showToast("Erreur lors de la copie."));
       }
@@ -128,17 +126,17 @@ export function revealSecretWord() {
   }
 
   if (secretWord) secretWord.textContent = "RÉVÉLATION...";
-  fetch(`/api/daily?reveal=true&t=${Date.now()}`)
+  fetch("/api/daily/reveal", { method: "POST" })
     .then((res) => {
       if (!res.ok) throw new Error("API indisponible");
       return res.json();
     })
     .then((json) => {
-      if (json.current && json.current.word) {
-        dashboardState.secretWord = json.current.word;
-        dashboardState.data = json;
-        if (secretWord) secretWord.textContent = json.current.word.toUpperCase();
-        renderClues(json.current.top_guesses);
+      if (json.word) {
+        dashboardState.secretWord = json.word;
+        if (secretWord) secretWord.textContent = json.word.toUpperCase();
+      } else {
+        throw new Error("Mot indisponible");
       }
     })
     .catch((err) => {
@@ -154,17 +152,13 @@ export function fetchDashboardData(isManual = false) {
     lastUpdated.textContent = "Actualisation...";
   }
 
-  const revealParam = dashboardState.secretWord ? "&reveal=true" : "";
-  fetch(`/api/daily?t=${Date.now()}${revealParam}`)
+  fetch(`/api/daily?t=${Date.now()}`)
     .then((res) => {
       if (!res.ok) throw new Error("API /api/daily indisponible");
       return res.json();
     })
     .then((json) => {
       dashboardState.data = json;
-      if (json.current && json.current.word) {
-        dashboardState.secretWord = json.current.word;
-      }
       renderDashboard(json);
       if (isManual) showToast("Données synchronisées avec succès");
     })
@@ -193,7 +187,9 @@ export function renderDashboard(data) {
   const statWinRate = document.getElementById("stat-win-rate");
   const lastUpdated = document.getElementById("last-updated");
 
-  const wordToDisplay = dashboardState.secretWord || current.word;
+  // Le mot n'est plus jamais transmis par l'API : il n'existe que si l'utilisateur
+  // l'a volontairement révélé via POST /api/daily/reveal pendant cette session.
+  const wordToDisplay = dashboardState.secretWord;
   if (puzzleBadge) puzzleBadge.textContent = current.puzzle ? `Puzzle #${current.puzzle}` : "Puzzle du jour";
   if (puzzleDate) puzzleDate.textContent = formatDateFr(current.date);
   if (secretWord) {

@@ -24,6 +24,7 @@ from .routes import (
     handle_solo_get,
     handle_solo_post,
     handle_system_get,
+    handle_system_post,
 )
 from ..engine import VocabStore
 
@@ -92,6 +93,8 @@ class GameAPIHandler(BaseHTTPRequestHandler):
             res, status = handle_battle_post(_manager, path, data)
         elif path.startswith("/api/multi/"):
             res, status = handle_multi_post(_manager, path, data)
+        elif path == "/api/daily/reveal":
+            res, status = handle_system_post(_manager, path, data)
         else:
             res, status = {"error": "Route introuvable"}, 404
 
