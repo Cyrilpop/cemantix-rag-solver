@@ -4,7 +4,7 @@
  * Gère le tour par tour, les 3 indices graduels, la double jauge de progression,
  * la synchronisation avec l'API /api/battle/* et la réactivité mobile.
  */
-import { getTierClass, getTierWeatherIcon, showToast, initErrorHandling, showConfirmDialog } from "./utils.js";
+import { escapeHtml, getTierClass, getTierWeatherIcon, showToast, initErrorHandling, showConfirmDialog } from "./utils.js";
 import { initTheme } from "./theme.js";
 
 const BATTLE_STORAGE_KEY = "cemantix_battle_state_v1";
@@ -687,7 +687,7 @@ function renderGuessesList(containerId, guesses, isPlayer) {
       <div class="guess-row ${isWinner ? "is-winner" : ""}">
         <div class="guess-left">
           <span class="guess-order">#${idx + 1}</span>
-          <span class="guess-word" onclick="copyToClipboard('${g.word}')" title="Cliquer pour copier">${g.word.toUpperCase()}</span>
+          <span class="guess-word copyable-word" data-copy="${escapeHtml(g.word)}" title="Cliquer pour copier">${escapeHtml(g.word.toUpperCase())}</span>
           ${hintBadge}
         </div>
         <div class="guess-right">

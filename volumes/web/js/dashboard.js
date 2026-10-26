@@ -1,7 +1,7 @@
 /**
  * Cémantix Solver — Dashboard, Mot du Jour & Historique
  */
-import { formatDateFr, getTierClass, getTierWeatherIcon, showToast } from "./utils.js";
+import { escapeHtml, formatDateFr, getTierClass, getTierWeatherIcon, showToast } from "./utils.js";
 import { themeState } from "./theme.js";
 import { initMidnightCountdown } from "./countdown.js";
 import { initTrajectoryModal, openTrajectoryModal } from "./trajectory.js";
@@ -275,7 +275,7 @@ export function renderClues(guesses) {
       <div class="clue-item">
         <div class="clue-left">
           <span class="clue-rank">#${idx + 1}</span>
-          <span class="clue-word">${g.word}</span>
+          <span class="clue-word">${escapeHtml(g.word)}</span>
         </div>
         <div class="clue-meta">
           <span class="clue-weather">${weather}</span>
@@ -341,18 +341,18 @@ export function renderHistoryTable() {
     const trajCount = (entry.trajectory && entry.trajectory.length) || entry.tries || 0;
 
     return `
-      <tr class="history-row-clickable" data-puzzle="${entry.puzzle || ""}" title="Cliquez pour inspecter la progression du bot">
-        <td><strong>${entry.date || "--"}</strong></td>
-        <td><span class="badge badge-accent">#${entry.puzzle || "--"}</span></td>
+      <tr class="history-row-clickable" data-puzzle="${escapeHtml(entry.puzzle || "")}" title="Cliquez pour inspecter la progression du bot">
+        <td><strong>${escapeHtml(entry.date || "--")}</strong></td>
+        <td><span class="badge badge-accent">#${escapeHtml(entry.puzzle || "--")}</span></td>
         <td>
           <span class="word-spoiler ${hideWord ? "is-hidden" : ""}" 
                 data-action="spoiler"
                 title="Cliquer pour afficher / masquer">
-            ${wordText}
+            ${escapeHtml(wordText)}
           </span>
         </td>
-        <td>${entry.tries || "--"} coups</td>
-        <td>${entry.duration_seconds ? `${entry.duration_seconds}s` : "--"}</td>
+        <td>${escapeHtml(entry.tries || "--")} coups</td>
+        <td>${entry.duration_seconds ? `${escapeHtml(entry.duration_seconds)}s` : "--"}</td>
         <td>${entry.source === "llm" ? "Hybride LLM" : "100% RAG"}</td>
         <td>
           <span class="badge ${isWinner ? "badge-success" : ""}">
@@ -360,8 +360,8 @@ export function renderHistoryTable() {
           </span>
         </td>
         <td>
-          <button type="button" class="btn-trajectory" data-puzzle="${entry.puzzle || ""}" title="Voir les étapes détaillées de résolution">
-            <span>🚀</span> Trajectoire (${trajCount})
+          <button type="button" class="btn-trajectory" data-puzzle="${escapeHtml(entry.puzzle || "")}" title="Voir les étapes détaillées de résolution">
+            <span>🚀</span> Trajectoire (${escapeHtml(trajCount)})
           </button>
         </td>
       </tr>`;

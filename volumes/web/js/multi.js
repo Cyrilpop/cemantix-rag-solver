@@ -12,6 +12,7 @@
  */
 
 import {
+  escapeHtml,
   initErrorHandling,
   showToast,
   getTierClass,
@@ -41,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initErrorHandling();
   initLobbyEvents();
   initArenaEvents();
+  initRoomActions();
   renderRecentGames();
 
   // Détection des paramètres d'URL (?r=DUEL-XXXX&k=J2-YYYY)
@@ -52,6 +54,32 @@ document.addEventListener("DOMContentLoaded", () => {
     autoJoinFromUrl(urlRoom.trim().toUpperCase(), urlKey ? urlKey.trim().toUpperCase() : null);
   }
 });
+
+/**
+ * Actions des cartes de duel enregistrées localement (reprendre / oublier).
+ *
+ * La délégation remplace les gestionnaires `onclick="…"` construits par
+ * concaténation de chaînes : ces derniers permettaient d'exécuter du code en
+ * injectant une apostrophe dans un identifiant de salon. Le copier-coller des
+ * mots, lui, est géré globalement par `initDelegatedActions` de utils.js.
+ */
+function initRoomActions() {
+  document.addEventListener("click", (event) => {
+    const deleteEl = event.target.closest("[data-delete-room]");
+    if (deleteEl) {
+      window.multiDeleteGame(deleteEl.getAttribute("data-delete-room"));
+      return;
+    }
+
+    const resumeEl = event.target.closest("[data-resume-room]");
+    if (resumeEl) {
+      window.multiResumeGame(
+        resumeEl.getAttribute("data-resume-room"),
+        resumeEl.getAttribute("data-player-key")
+      );
+    }
+  });
+}
 
 // --------------------------------------------------------------------------
 // 2. Gestion du LocalStorage (Historique des Duels)
@@ -118,17 +146,17 @@ function renderRecentGames() {
     return `
       <div class="active-game-card">
         <div class="active-game-header">
-          <span class="active-game-room">${g.room_id}</span>
-          <span class="active-game-date">${dateStr}</span>
+          <span class="active-game-room">${escapeHtml(g.room_id)}</span>
+          <span class="active-game-date">${escapeHtml(dateStr)}</span>
         </div>
         <div style="font-size: 0.88rem; color: var(--text-secondary, #8b949e);">
           <div>Variante : <strong>${modeLabel}</strong></div>
-          <div>Adversaire : <strong>${g.opponent_name || "En attente"}</strong></div>
+          <div>Adversaire : <strong>${escapeHtml(g.opponent_name || "En attente")}</strong></div>
           <div>Votre rôle : <strong style="color: #79c0ff;">${g.role === "p1" ? "Joueur 1 (Hôte)" : "Joueur 2 (Invité)"}</strong></div>
         </div>
         <div class="active-game-footer">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.multiDeleteGame('${g.room_id}')">Supprimer</button>
-          <button type="button" class="btn btn-primary btn-sm" onclick="window.multiResumeGame('${g.room_id}', '${g.player_key}')">Reprendre</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-delete-room="${escapeHtml(g.room_id)}">Supprimer</button>
+          <button type="button" class="btn btn-primary btn-sm" data-resume-room="${escapeHtml(g.room_id)}" data-player-key="${escapeHtml(g.player_key)}">Reprendre</button>
         </div>
       </div>
     `;
@@ -934,7 +962,7 @@ function renderGuessesList(containerId, countId, mobileCountId, guesses, isMaske
 
     const wordDisplay = isMasked
       ? `<span class="masked-word-pill">••••••••</span>`
-      : `<span style="cursor: pointer;" onclick="copyToClipboard('${g.word}')" title="Cliquer pour copier">${g.word.toUpperCase()}</span>`;
+      : `<span class="copyable-word" data-copy="${escapeHtml(g.word)}" style="cursor: pointer;" title="Cliquer pour copier">${escapeHtml(String(g.word || "").toUpperCase())}</span>`;
 
     return `
       <div class="guess-row ${isWinner ? "is-winner" : ""}">
@@ -985,16 +1013,16 @@ function renderGameOverBanner(data) {
     if (data.mode === "same_word") {
       secretsBox.innerHTML = `
         <div class="secret-reveal-badge">
-          <span>Mot secret commun :</span> <strong style="color: #3fb950; font-size: 1.1rem;">${(data.me?.target || data.opponent?.target || "INCONNU").toUpperCase()}</strong>
+          <span>Mot secret commun :</span> <strong style="color: #3fb950; font-size: 1.1rem;">${escapeHtml((data.me?.target || data.opponent?.target || "INCONNU").toUpperCase())}</strong>
         </div>
       `;
     } else {
       secretsBox.innerHTML = `
         <div class="secret-reveal-badge">
-          <span>Votre cible :</span> <strong style="color: #79c0ff; font-size: 1.1rem;">${(data.me?.target || "INCONNU").toUpperCase()}</strong>
+          <span>Votre cible :</span> <strong style="color: #79c0ff; font-size: 1.1rem;">${escapeHtml((data.me?.target || "INCONNU").toUpperCase())}</strong>
         </div>
         <div class="secret-reveal-badge">
-          <span>Cible adverse :</span> <strong style="color: #a371f7; font-size: 1.1rem;">${(data.opponent?.target || "INCONNU").toUpperCase()}</strong>
+          <span>Cible adverse :</span> <strong style="color: #a371f7; font-size: 1.1rem;">${escapeHtml((data.opponent?.target || "INCONNU").toUpperCase())}</strong>
         </div>
       `;
     }

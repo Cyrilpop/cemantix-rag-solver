@@ -1,7 +1,7 @@
 /**
  * Cémantix Solver — Modal de Trajectoire et Débriefing IA
  */
-import { getTierClass, getTierWeatherIcon, showToast } from "./utils.js";
+import { escapeHtml, getTierClass, getTierWeatherIcon, showToast } from "./utils.js";
 
 let activeTrajectoryEntry = null;
 let activeTrajectoryFilter = "all";
@@ -195,8 +195,8 @@ function renderTrajectoryList() {
         <div class="step-left">
           <span class="step-num">#${item.step}</span>
           <span class="step-source-badge ${sourceClass}">${sourceLabel}</span>
-          <strong class="step-word" onclick="copyToClipboard('${item.word}')" title="Cliquer pour copier le mot">
-            ${item.word}
+          <strong class="step-word copyable-word" data-copy="${escapeHtml(item.word)}" title="Cliquer pour copier le mot">
+            ${escapeHtml(item.word)}
           </strong>
           ${isRecord ? '<span class="step-record-star" title="Nouveau record thermique du bot !">⭐ Record</span>' : ""}
           ${isWin ? '<span class="badge badge-success" style="font-size: 0.65rem; padding: 1px 6px;">🏆 Cible</span>' : ""}
