@@ -836,9 +836,9 @@
 }
 
 .btn-trajectory:hover {
-  background: var(--accent);
+  background: var(--accent-btn, #1668dc);
   color: #fff;
-  border-color: var(--accent);
+  border-color: rgba(88, 166, 255, 0.4);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px var(--accent-glow);
 }

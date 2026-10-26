@@ -56,7 +56,7 @@
 }
 
 .pill-btn.active {
-  background: var(--accent);
+  background: var(--accent-btn, #1668dc);
   color: #ffffff;
   box-shadow: 0 0 10px var(--accent-glow);
 }

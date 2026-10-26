@@ -6,6 +6,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié] - 2026-10-25
 
+### Corrigé
+- **Accessibilité & Contraste des Couleurs (PageSpeed Insights WCAG AA)** :
+  - Introduction du token de couleur `--accent-btn: #1668dc` offrant un ratio de contraste supérieur à 5,2:1 avec le texte blanc sur `.btn-primary`, `.nav-tab.active` et `.pill-btn.active`.
+  - Optimisation des badges d'accent (`.badge-accent`) et de succès (`.badge-success` : « ✓ TROUVÉ ») avec opacités révisées et teintes vives (`#79b8ff`, `#56d364`), garantissant un ratio de contraste supérieur à 7,2:1 (WCAG AAA).
+  - Éclaircissement du texte estompé `--text-dim` de `#6e7681` à `#9198a1` garantissant la conformité du timestamp du footer (`.footer-time`, ratio 6,4:1).
+- **Support des Agents IA & Navigation Agentique (Lighthouse ARD)** :
+  - Création du fichier standardisé `llms.txt` documentant l'architecture et les routes d'accès de la plateforme pour les LLM.
+  - Ajout des manifestes de découverte `ai-catalog.json` et `.well-known/ai-catalog.json` conformes à la spécification Agentic Resource Discovery (ARD).
+
 ### Refactorisé
 - **Gestion du Cache HTTP & Suppression des Paramètres de Version (`?v=...`)** :
   - Suppression complète de tous les suffixes de version manuels (`?v=XXXXXXXXX`) dans l'ensemble des pages HTML (`index.html`, `play/`, `battle/`, `multi/`) et des imports ES Modules JavaScript (`app.js`, `game.js`, `battle.js`, `multi.js`).
