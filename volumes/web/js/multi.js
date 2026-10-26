@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initRoomActions();
   renderRecentGames();
 
-  // Détection des paramètres d'URL (?r=DUEL-XXXX&k=J2-YYYY)
+  // Détection des paramètres d'URL (?r=DUEL-XXXXXXXX&k=J2-XXXXXXXX)
   const params = new URLSearchParams(window.location.search);
   const urlRoom = params.get("r") || params.get("room_id");
   const urlKey = params.get("k") || params.get("player_key");

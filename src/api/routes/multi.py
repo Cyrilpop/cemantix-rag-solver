@@ -3,7 +3,7 @@ Cémantix Solver — Contrôleur des Routes Multijoueur 1v1 (/api/multi/*)
 =====================================================================
 Endpoints :
 - GET  /api/multi/status     : État du salon en temps réel (polling)
-- POST /api/multi/create     : Création d'un nouveau salon (code DUEL-XXXX)
+- POST /api/multi/create     : Création d'un nouveau salon (code DUEL-XXXXXXXX)
 - POST /api/multi/join       : Rejoindre un salon ou s'y reconnecter
 - POST /api/multi/setup-word : Définition du mot secret (mode Mots Choisis)
 - POST /api/multi/status     : Consultation de l'état (POST)

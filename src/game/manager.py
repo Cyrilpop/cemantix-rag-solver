@@ -300,10 +300,12 @@ class GameManager:
         difficulty = difficulty.lower() if difficulty in ("facile", "moyen", "expert") else "moyen"
         mode = "custom_words" if mode == "custom_words" else "same_word"
 
-        # Génération d'un code de salon unique (ex: DUEL-4B1C)
-        room_id = f"DUEL-{uuid.uuid4().hex[:4].upper()}"
+        # Génération d'un code de salon unique (ex: DUEL-4B1CA9F2). Huit chiffres
+        # hexadécimaux : à 4 caractères, un attaquant pouvait tester les 65 536
+        # codes pour retomber sur une partie encore ouverte.
+        room_id = f"DUEL-{uuid.uuid4().hex[:8].upper()}"
         while room_id in self.multi_sessions:
-            room_id = f"DUEL-{uuid.uuid4().hex[:4].upper()}"
+            room_id = f"DUEL-{uuid.uuid4().hex[:8].upper()}"
 
         target_p1 = None
         target_p2 = None

@@ -53,8 +53,11 @@ class MultiplayerSession:
         self.difficulty = difficulty.lower() if difficulty in ("facile", "moyen", "expert") else "moyen"
         self.store = store
 
-        self.key_p1 = key_p1.strip().upper() if key_p1 else f"J1-{uuid.uuid4().hex[:4].upper()}"
-        self.key_p2 = key_p2.strip().upper() if key_p2 else f"J2-{uuid.uuid4().hex[:4].upper()}"
+        # Clés à 8 chiffres hexadécimaux (32 bits) : à 4 caractères, l'espace des
+        # codes se limitait à 65 536 valeurs, ce qui autorisait une énumération
+        # systématique des salons actifs depuis un navigateur.
+        self.key_p1 = key_p1.strip().upper() if key_p1 else f"J1-{uuid.uuid4().hex[:8].upper()}"
+        self.key_p2 = key_p2.strip().upper() if key_p2 else f"J2-{uuid.uuid4().hex[:8].upper()}"
 
         self.p1_name = p1_name.strip() or "Joueur 1"
         self.p2_name = p2_name.strip() or "Joueur 2"
