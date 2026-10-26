@@ -351,6 +351,13 @@ Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volu
 > **Pourquoi aucun paramètre de version (`?v=...`) dans le code HTML/JS ?**
 > Les paramètres de requête manuels (`?v=202610...`) sont proscrits : ils compliquent les imports ES modules imbriqués et sont redondants avec les capacités natives de Caddy / Nginx. En configurant `Cache-Control: "no-cache, must-revalidate"` sur les fichiers `.js` et `.css`, le navigateur valide automatiquement l'empreinte ETag du fichier auprès du serveur. Dès qu'un `git pull` met à jour un fichier sur disque, le navigateur reçoit instantanément la nouvelle version sans nécessiter de purge manuelle de cache (`Ctrl+F5`).
 
+> [!IMPORTANT]
+> **Le `Caddyfile` est versionné à la racine du dépôt** ([`Caddyfile`](Caddyfile)).
+> Le bloc ci-dessous en est la copie pour la lecture du README, mais **le fichier
+> `Caddyfile` fait foi** : modifie-le directement, puis recharge Caddy
+> (`docker exec <caddy> caddy reload --config /etc/caddy/Caddyfile`). Le monter en
+> lecture seule dans le conteneur Caddy : `./Caddyfile:/etc/caddy/Caddyfile:ro`.
+
 ```caddy
 cemantix.cyril-randon.fr {
     root * /volumes/web

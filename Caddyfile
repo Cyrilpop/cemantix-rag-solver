@@ -1,0 +1,105 @@
+# =============================================================================
+# Cémantix Solver — Configuration Caddy (production)
+# =============================================================================
+# Ce fichier est la source de vérité de la configuration du serveur web.
+# Il est versionné volontairement : la politique de sécurité (CSP, en-têtes) et
+# la politique de cache sont déjà trop subtiles pour vivre uniquement en prose
+# dans le README, où elles avaient tendance à diverger du code.
+#
+# Montage attendu côté conteneur Caddy :
+#   volumes:
+#     - ./Caddyfile:/etc/caddy/Caddyfile:ro
+#     - ./volumes/web:/volumes/web:ro
+#
+# La politique de cache suit la règle du projet : « no-cache + ETag », jamais de
+# suffixe ?v= dans les HTML/JS. Tout ce qui change est revalidé à chaque requête ;
+# seules les polices, immuables par nature, gardent un max-age long.
+# =============================================================================
+
+cemantix.cyril-randon.fr {
+    root * /volumes/web
+
+    # ---------------------------------------------------------------------
+    # En-têtes de sécurité (toutes les réponses)
+    # ---------------------------------------------------------------------
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        Cross-Origin-Opener-Policy "same-origin"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+        # Politique de sécurité du contenu. Le site n'utilise AUCUNE ressource externe
+        # (ni CDN, ni police, ni script tiers) : la politique peut donc être
+        # restrictive. 'unsafe-inline' pour les styles est nécessaire car les feuilles
+        # de style sont locales et les style="…" posés par le JS sont des valeurs codées
+        # en dur, jamais des données utilisateur.
+        # script-src 'self' suffit : seul js/app.js (module ES local) est chargé, donc
+        # tout <script> injecté par une faille XSS est bloqué par le navigateur.
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+    }
+
+    # Pages d'archives : contenu statique, aucun script ni connexion sortante.
+    header /puzzles/* {
+        Content-Security-Policy "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    }
+
+    # ---------------------------------------------------------------------
+    # Cache HTTP — revalidation par ETag, aucun paramètre ?v=
+    # ---------------------------------------------------------------------
+
+    # 1. Polices web immuables (seul contenu réellement figé du site)
+    @fonts path *.woff *.woff2
+    header @fonts Cache-Control "public, max-age=31536000, immutable"
+
+    # 2. Images : revalidation par ETag. Pas de max-age long ici, car le projet a
+    #    supprimé les suffixes ?v= : sans revalidation, un og-image.jpg remplacé
+    #    resterait invisible, y compris pour les aperçus sociaux.
+    @images path *.ico *.png *.jpg *.jpeg *.webp *.svg
+    header @images Cache-Control "no-cache, must-revalidate"
+
+    # 3. Code applicatif JS & CSS : rechargement immédiat sans cache bloquant
+    @code path *.css *.js *.mjs
+    header @code Cache-Control "no-cache, must-revalidate"
+
+    # 4. Pages HTML : revalidation systématique par ETag.
+    #    @pages couvre les URLs SANS extension (/puzzles/2026-10-26/), servies par
+    #    try_files et que le motif *.html ne matcherait pas.
+    @html path *.html
+    header @html Cache-Control "no-cache, must-revalidate"
+
+    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/*
+    header @pages Cache-Control "no-cache, must-revalidate"
+
+    # 5. Fichiers de découverte : un sitemap périmé ferait pointer Google sur des
+    #    URLs supprimées après régénération.
+    @sitemap path /sitemap.xml /robots.txt /llms.md /.well-known/*
+    header @sitemap Cache-Control "no-cache, must-revalidate"
+
+    # ---------------------------------------------------------------------
+    # API du solveur (prioritaire et exclusive)
+    # ---------------------------------------------------------------------
+    handle /api/* {
+        reverse_proxy cemantix_solver:8000
+    }
+
+    # ---------------------------------------------------------------------
+    # Blocage des fichiers de données et de configuration, même s'ils venaient
+    # à atterrir dans le webroot par erreur (défense en profondeur).
+    # data.json contient l'historique complet des mots solutions : il ne doit
+    # jamais être servi.
+    # ---------------------------------------------------------------------
+    @intercepted path /data.json /daily_history.json /web_sessions.json /multi_sessions.json /.env /.env.* /.git /*.py /*.pyc /*.log /*.bin
+    respond @intercepted 404
+
+    # ---------------------------------------------------------------------
+    # Fichiers statiques et routes propres (/play, /battle, /multi, /puzzles)
+    # ---------------------------------------------------------------------
+    handle {
+        try_files {path} {path}/index.html {path}/ /index.html
+        file_server
+    }
+
+    encode zstd gzip
+}
