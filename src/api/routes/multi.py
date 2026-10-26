@@ -2,14 +2,16 @@
 Cémantix Solver — Contrôleur des Routes Multijoueur 1v1 (/api/multi/*)
 =====================================================================
 Endpoints :
-- GET  /api/multi/status     : État du salon en temps réel (polling)
 - POST /api/multi/create     : Création d'un nouveau salon (code DUEL-XXXXXXXX)
 - POST /api/multi/join       : Rejoindre un salon ou s'y reconnecter
 - POST /api/multi/setup-word : Définition du mot secret (mode Mots Choisis)
-- POST /api/multi/status     : Consultation de l'état (POST)
+- POST /api/multi/status     : État du salon en temps réel (polling)
 - POST /api/multi/guess      : Coup joué au tour par tour
 - POST /api/multi/hint       : Demande d'indice (tour passé à l'adversaire)
 - POST /api/multi/giveup     : Déclaration de forfait (victoire adverse)
+
+Aucune route GET : la clé du joueur ne doit jamais transiter dans une chaîne de
+requête (logs du proxy, historique du navigateur, en-tête Référent).
 """
 import re
 from typing import Optional
@@ -18,25 +20,15 @@ from ...game import GameManager
 
 
 def handle_multi_get(manager: Optional[GameManager], path: str, query: str) -> tuple[dict, int]:
-    """Traite les requêtes GET du Mode Multijoueur (statut/polling)."""
-    if not manager:
-        return {"error": "Gestionnaire non initialisé"}, 503
+    """Traite les requêtes GET du Mode Multijoueur.
 
-    if path == "/api/multi/status":
-        params = dict(p.split("=", 1) for p in query.split("&") if "=" in p) if query else {}
-        room_id = params.get("r", params.get("room_id", "")).strip().upper()
-        player_key = params.get("k", params.get("player_key", "")).strip().upper()
-
-        session = manager.get_multiplayer(room_id)
-        if not session:
-            return {"error": "Salon de jeu introuvable ou expiré.", "valid": False}, 404
-
-        res = session.to_dict(player_key)
-        if not res.get("valid"):
-            return res, 403
-        return res, 200
-
-    return {"error": "Route introuvable"}, 404
+    Aucune route n'est exposée en GET : la consultation d'état se fait par
+    `POST /api/multi/status`. Un GET imposerait de passer la clé du joueur dans
+    la chaîne de requête, donc dans la ligne de requête du proxy, dans
+    l'historique du navigateur et dans toute référence depuis la page. Le POST
+    transporte exactement la même charge utile dans son corps.
+    """
+    return {"error": "Route introuvable — utilisez POST /api/multi/status."}, 404
 
 
 def handle_multi_post(manager: GameManager, path: str, data: dict) -> tuple[dict, int]:

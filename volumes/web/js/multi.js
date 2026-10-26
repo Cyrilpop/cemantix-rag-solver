@@ -69,9 +69,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const urlKey = params.get("k") || params.get("player_key");
 
   if (urlRoom) {
-    autoJoinFromUrl(urlRoom.trim().toUpperCase(), urlKey ? urlKey.trim().toUpperCase() : null);
+    const room = urlRoom.trim().toUpperCase();
+    // On efface la clé de l'URL **avant** la requête : si la connexion échoue
+    // ou traîne, le secret ne reste pas affiché dans la barre d'adresse.
+    if (urlKey) stripKeyFromUrl(room);
+    autoJoinFromUrl(room, urlKey ? urlKey.trim().toUpperCase() : null);
   }
 });
+
+/**
+ * Efface la clé de salon de l'URL une fois qu'elle est en mémoire.
+ *
+ * Le lien d'invitation doit contenir la clé — c'est ce qui permet au second
+ * joueur d'entrer. Mais rien ne justifie qu'elle **reste** dans la barre
+ * d'adresse : la page est déjà chargée, la clé est en mémoire et dans
+ * `sessionStorage`. Sans ce nettoyage, la clé survivrait dans l'historique du
+ * navigateur, dans le champ d'adresse et dans toute capture d'écran, et
+ * resterait cliquable des heures plus tard — notamment sur un ordinateur
+ * partagé.
+ *
+ * Le `room_id` seul est conservé : il n'autorise aucune action (toute requête
+ * exige une clé valide) et il permet de recharger la page sur le bon salon.
+ */
+function stripKeyFromUrl(roomId) {
+  if (!window.history?.replaceState) return;
+  const clean = roomId ? `/multi/?r=${encodeURIComponent(roomId)}` : "/multi/";
+  if (window.location.pathname + window.location.search === clean) return;
+  window.history.replaceState({}, "", clean);
+}
 
 /**
  * Actions des cartes de duel enregistrées localement (reprendre / oublier).
@@ -361,8 +386,9 @@ async function handleCreateGame() {
       difficulty: state.selectedDiff,
     });
 
-    // Mise à jour de l'URL sans recharger
-    window.history.replaceState({}, "", `/multi/?r=${data.room_id}&k=${data.player_key}`);
+    // L'URL ne garde que le code de salon : la clé reste en mémoire (voir
+    // stripKeyFromUrl) et ne s'installe pas dans l'historique du navigateur.
+    stripKeyFromUrl(data.room_id);
 
     openWaitingRoom(data);
   } catch (err) {
@@ -426,8 +452,8 @@ async function connectToRoom(roomId, playerKey = "", playerName = "") {
       difficulty: data.session?.difficulty || "moyen",
     });
 
-    // Met à jour l'URL propre du joueur
-    window.history.replaceState({}, "", `/multi/?r=${data.room_id}&k=${data.player_key}`);
+    // Idem : le code de salon seul reste visible, la clé disparaît de l'URL.
+    stripKeyFromUrl(data.room_id);
 
     // Si on a besoin de choisir un mot en mode Mots Choisis
     if (data.session.state === "waiting_words" && data.session.i_need_to_set_word) {
@@ -755,7 +781,17 @@ function startPolling() {
     }
 
     try {
-      const res = await fetch(`/api/multi/status?r=${state.currentRoomId}&k=${state.currentPlayerKey}`);
+      // La cle du joueur voyage dans le corps de la requete, pas dans l'URL :
+      // un GET mettrait le secret dans la ligne de requete, donc dans les logs
+      // du proxy et dans l'historique. Le POST /api/multi/status est equivalent.
+      const res = await fetch("/api/multi/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_id: state.currentRoomId,
+          player_key: state.currentPlayerKey,
+        }),
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.valid) {
@@ -809,7 +845,17 @@ function startWaitingPoll() {
     if (!state.currentRoomId || !state.currentPlayerKey) return;
     if (document.hidden) return;
     try {
-      const res = await fetch(`/api/multi/status?r=${state.currentRoomId}&k=${state.currentPlayerKey}`);
+      // La cle du joueur voyage dans le corps de la requete, pas dans l'URL :
+      // un GET mettrait le secret dans la ligne de requete, donc dans les logs
+      // du proxy et dans l'historique. Le POST /api/multi/status est equivalent.
+      const res = await fetch("/api/multi/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_id: state.currentRoomId,
+          player_key: state.currentPlayerKey,
+        }),
+      });
       if (!res.ok) return;
       const data = await res.json();
       if (!data.valid) return;
