@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copie du code source
 COPY cemantix_rag.py .
 COPY src/ ./src/
+COPY scripts/ ./scripts/
 COPY cemantix_data/lexique_fr.txt ./cemantix_data/lexique_fr.txt
 
 # Variables d'environnement configurables
