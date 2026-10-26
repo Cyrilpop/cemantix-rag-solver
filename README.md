@@ -600,6 +600,26 @@ Les `room_id` et clés `J1-` / `J2-` sont générés sur **8 chiffres hexadécim
 caractères, les 65 536 combinaisons se parcouraient par balayage, et les salons
 restaient ouverts 7 jours.
 
+### La clé de salon ne reste pas dans l'URL
+
+Le lien d'invitation `/multi/?r=DUEL-XXXXXXXX&k=J2-YYYYYYYY` doit contenir la clé —
+c'est ce qui permet au second joueur d'entrer. Mais rien ne justifie qu'il **y reste** :
+une clé laissée dans la barre d'adresse survit dans l'historique du navigateur, dans le
+champ d'URL, dans les captures d'écran, et reste cliquable des heures plus tard — sur un
+ordinateur partagé, c'est une prise de contrôle du duel.
+
+```
+chargement de /multi/?r=…&k=…   → la clé est lue en mémoire, puis retirée de l'URL
+                                  l'URL devient /multi/?r=…  (le code de salon seul
+                                  n'autorise aucune action)
+polling de l'état               → POST /api/multi/status  (corps de requête)
+GET  /api/multi/*               → 404, la voie est fermée côté serveur
+```
+
+Le `GET /api/multi/status?r=…&k=…` est supprimé : une query string se retrouve dans la
+ligne de requête transmise au proxy. Le `POST` équivalent existait déjà et transporte la
+même charge utile.
+
 ### À vérifier après le déploiement
 ```bash
 # Le mot du jour ne doit apparaître nulle part :
