@@ -167,7 +167,7 @@ def load_w2v():
 
 
 class VocabStore:
-    def __init__(self):
+    def __init__(self, with_chroma: bool = True):
         words, vecs = load_w2v()
         self.words = words
         self.index = {w: i for i, w in enumerate(words)}
@@ -176,25 +176,36 @@ class VocabStore:
         self.clean_french_words = [w for w in self.words if w in self.valid_lemmas]
         if self.valid_lemmas:
             log(f"📖  Dictionnaire officiel français : {len(self.valid_lemmas)} lemmes ({len(self.clean_french_words)} dans frWac)")
-        log("⚡  Connexion à la base vectorielle ChromaDB...")
-        client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-        self.col = client.get_or_create_collection(
-            COLLECTION, metadata={"hnsw:space": "cosine"})
-        if self.col.count() < len(words):
-            self._ingest(words, vecs)
-        else:
-            # Synchronisation rapide des lemmes fondamentaux réintégrés
-            key_words = [w for w in ["car", "faire", "être", "avoir", "bien", "rien", "autre"] if w in self.index]
-            try:
-                existing = set(self.col.get(ids=key_words)["ids"])
-                missing = [w for w in key_words if w not in existing]
-                if missing:
-                    missing_vecs = [self.vec(w) for w in missing]
-                    self.col.upsert(ids=missing, embeddings=[v.tolist() for v in missing_vecs])
-                    log(f"✓  Synchronisation ChromaDB : {len(missing)} lemmes essentiels réintégrés ({', '.join(missing)})")
-            except Exception as e:
-                log(f"⚠️  Vérification ChromaDB : {e}")
-        log(f"📚  Vector store prêt : {self.col.count()} lemmes ({W2V_FILE})")
+
+        self.col = None
+        if not with_chroma:
+            log("⚡  [API WEB] Mode sans ChromaDB actif (calcul cosinus NumPy memmap instantané).")
+            return
+
+        try:
+            log("⚡  Connexion à la base vectorielle ChromaDB...")
+            client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+            self.col = client.get_or_create_collection(
+                COLLECTION, metadata={"hnsw:space": "cosine"})
+            if self.col.count() < len(words):
+                self._ingest(words, vecs)
+            else:
+                # Synchronisation rapide des lemmes fondamentaux réintégrés
+                key_words = [w for w in ["car", "faire", "être", "avoir", "bien", "rien", "autre"] if w in self.index]
+                try:
+                    existing = set(self.col.get(ids=key_words)["ids"])
+                    missing = [w for w in key_words if w not in existing]
+                    if missing:
+                        missing_vecs = [self.vec(w) for w in missing]
+                        self.col.upsert(ids=missing, embeddings=[v.tolist() for v in missing_vecs])
+                        log(f"✓  Synchronisation ChromaDB : {len(missing)} lemmes essentiels réintégrés ({', '.join(missing)})")
+                except Exception as e:
+                    log(f"⚠️  Vérification ChromaDB : {e}")
+            log(f"📚  Vector store prêt : {self.col.count()} lemmes ({W2V_FILE})")
+        except Exception as e:
+            log(f"ℹ️  ChromaDB non chargé ({e}). Poursuite en mode NumPy memmap.")
+            self.col = None
+
 
     def normalize(self, word: str) -> str:
         """Restaure la casse canonique et les accents manquants d'après le dictionnaire officiel."""

@@ -113,14 +113,13 @@ def main():
     if getattr(args, "api", False):
         from src.engine import VocabStore
         from src.api import start_api_server
-        store = VocabStore()
+        store = VocabStore(with_chroma=False)
         server = start_api_server(store, host=args.api_host, port=args.api_port)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
             log("\n🛑  Arrêt du serveur d'API Cémantix.")
         return
-
 
     # Lancement automatique du menu interactif si aucun argument CLI n'est passé ou si --menu est spécifié
     if not has_cli_options or args.menu:
