@@ -6,6 +6,33 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié] - 2026-10-26
 
+### Corrigé
+- **Fuite du mot secret du jour (anti-spoiler contournable)** :
+  - `GET /api/daily` acceptait le paramètre public `?reveal=true` et renvoyait la solution à n'importe quel `curl`, `prefetch` ou crawler : le bouclier anti-spoiler n'était que visuel. La solution est désormais **absente de toute réponse `GET`** ; sa consultation passe par la nouvelle route `POST /api/daily/reveal`, qui exige une action volontaire.
+  - `_scrub_secret()` masque aussi le mot cible dans `trajectory`, `top_guesses` et l'entrée du jour de `history` : jusqu'ici la solution restait intégralement lisible dans ces tableaux annexes alors que le champ `word` était vidé.
+  - `dashboard.js` n'exploite plus `current.word` (source de la fuite côté client) et appelle la route POST pour révéler ou copier le mot.
+  - Le mot révélé n'est plus effacé par le polling de 30 s, l'API ne le renvoyant plus.
+- **Exposition de `data.json` dans le webroot** : le fichier, qui contient l'historique complet des solutions, était documenté comme devant être publié dans `./volumes/web` et se récupérait par un simple `curl https://…/data.json`. `export_web_data()` refuse désormais toute cible située dans le webroot ou l'un de ses sous-répertoires, et la documentation corrige l'emplacement réel (`./cemantix_data`).
+- **Serviteur HTTP non durci** :
+  - Corps de requête illimité : un `Content-Length` mensonge forçait l'allocation mémoire. Le corps est plafonné à `API_MAX_BODY_BYTES` (32 ko) et **validé avant tout traitement** (le test du gestionnaire était passé avant la lecture) ; au-delà : `413`.
+  - CORS ouvert par `Access-Control-Allow-Origin: *` (et `Authorization` déclaré) : remplacé par une liste blanche d'origine (`API_ALLOWED_ORIGIN`) avec `Vary: Origin`.
+  - Absence de limitation de débit : nouveau module `src/api/ratelimit.py` (seau à jetons par IP via `X-Forwarded-For`, thread-safe, mémoire bornée, `429` + `retry_after`), `/api/health` en étant exempté pour ne pas casser le `healthcheck` Docker.
+  - Un thread créé par connexion sans plafond : `BoundedHTTPServer` limite les workers (`API_MAX_WORKERS`, 64) et renvoie un `503` propre.
+  - En-têtes de sécurité ajoutés à chaque réponse : `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `Cache-Control: no-store` ; version Python retirée de l'en-tête `Server` ; timeout socket de 10 s ; écriture tolérante aux déconnexions navigateur.
+- **XSS dans tous les rendus dynamiques** : aucune fonction d'échappement n'existait ; mots, dates, numéros de puzzle, identifiants de salon et pseudonymes d'adversaire étaient injectés bruts dans `innerHTML`.
+  - Introduction de `escapeHtml()` (et `safeNumber()`) dans `js/utils.js`, appliqués aux indices, à l'historique, aux listes de coups, à la trajectoire, aux cartes de duel et aux cibles révélées en multijoueur.
+  - Suppression des gestionnaires construits par concaténation — `onclick="copyToClipboard('${mot}')"`, `onclick="window.multiResumeGame('${room}', '${clé}')"` — qui permettaient de fermer la chaîne JS avec une simple apostrophe ; remplacés par des attributs `data-copy` / `data-resume-room` / `data-delete-room` et une délégation d'événements enregistrée une seule fois.
+- **Codes du multijoueur énumérables** : `room_id` et clés `J1-` / `J2-` n'avaient que 4 chiffres hexadécimaux (65 536 valeurs) avec des salons actifs 7 jours, ce qui permettait un balayage systématique pour retomber sur une partie ouverte. Portés à 8 chiffres hexadécimaux (`uuid.uuid4`, 4,3 milliards de valeurs, facteur ×65 536) ; comparaison toujours par égalité de chaîne, les parties en cours restent utilisables.
+
+### Ajouté
+- **Documentation de sécurité** : nouvelle section « 🔐 Sécurité » (chemin d'accès à la solution, tableau des protections du serveur avec leurs variables, échappement XSS, entropie des codes de salon, trois commandes `curl` de vérification après déploiement) ; le `Caddyfile` documenté gagne une `Content-Security-Policy` (`script-src 'self'`, le site n'emploie aucune ressource externe), une CSP durcie sur `/puzzles/*`, HSTS, `Permissions-Policy` et `Cross-Origin-Opener-Policy`, plus un bloc `@intercepted` renvoyant `404` sur `data.json`, les historiques, les sessions, `.env`, `.git`, `*.py`, `*.pyc`, `*.log` et `*.bin`.
+- Variables d'environnement documentées : `API_ALLOWED_ORIGIN`, `API_MAX_BODY_BYTES`, `API_MAX_WORKERS`, `API_SOCKET_TIMEOUT`, `DASHBOARD_DATA_FILE`.
+
+### Refactorisé
+- **Journalisation des requêtes** : `log_message()` était réduit à `pass`, ce qui rendait tout abus invisible ; les requêtes sont désormais tracées de façon minimale avec l'IP cliente, sans le débit du flux d'origine.
+
+## [Non publié] - 2026-10-26 · SEO
+
 ### Ajouté
 - **Archives Quotidiennes Indexables & Sitemap Dynamique (Référencement de la longue traîne)** :
   - Nouveau sous-package `src/services/seo.py` qui convertit l'historique des résolutions en **contenu indexable rendu côté serveur**, là où le tableau de bord ne publiait son contenu qu'après exécution de JavaScript.
