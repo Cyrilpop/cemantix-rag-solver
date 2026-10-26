@@ -432,6 +432,21 @@ La publication est aussi déclenchée automatiquement par `--export-web` et par 
 après chaque résolution de minuit. En cas d'échec, le log signale l'erreur sans bloquer
 l'export de `data.json`.
 
+### Cache HTTP des pages d'archives
+Une page `/puzzles/<date>/` ne change plus jamais une fois publiée : elle peut être
+cachée longtemps, alors que l'accueil et `sitemap.xml` doivent être revalidés. Ajoutez
+ces deux règles **avant** le bloc `@code` existant de votre `Caddyfile` :
+
+```caddy
+    # 5. Archives quotidiennes : immuables une fois publiées
+    @archives path /puzzles/*
+    header @archives Cache-Control "public, max-age=86400, must-revalidate"
+
+    # 6. Sitemap : revalidation systématique
+    @sitemap path /sitemap.xml
+    header @sitemap Cache-Control "public, max-age=600, must-revalidate"
+```
+
 ### Icônes du site
 Les icônes PNG (`apple-touch-icon.png`, `icon-512.png`) sont générées par un script sans
 dépendance externe (stdlib Python uniquement) :
