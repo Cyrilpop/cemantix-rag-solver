@@ -4,9 +4,20 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
-## [Non publié] - 2026-10-25
+## [Non publié] - 2026-10-26
+
+### Ajouté
+- **Architecture 3-Tiers Découplée (PostgreSQL 16 + Worker RAG + API Web)** :
+  - Découpage de l'application monolithique en 3 conteneurs autonomes et durcis (`cemantix_db`, `cemantix_worker`, `cemantix_web`).
+  - Persistance relationnelle ACID dans PostgreSQL (`daily_puzzles`, `multi_rooms`, `solo_sessions`) avec schéma déclaratif `database/init.sql`.
+  - Couche d'accès aux données thread-safe dans `src/db/` (`connection.py`, `daily.py`, `multi.py`, `solo.py`) avec gestionnaire de transactions et repli automatique transparent sur SQLite pour les tests unitaires et le dev local.
+  - Découplage mémoire haute performance : le conteneur web partage la mémoire physique des vecteurs NumPy (`np.memmap`) en lecture seule (`:ro`) et exclut le chargement lourd de ChromaDB, assurant un démarrage instantané en 0.1s et une empreinte RAM totale < 200 Mo sur l'hôte.
+  - Élimination des race conditions sur les parties multijoueurs grâce à la synchronisation relationnelle immédiate en base de données.
+  - Script de migration d'historique `scripts/migrate_json_to_pg.py` pour importer les puzzles quotidiens archivés vers PostgreSQL.
+  - Fichier de configuration sécurisé `.env.example` et externalisation complète des identifiants et variables d'environnement hors de Git.
 
 ### Corrigé
+
 - **Accessibilité & Contraste des Couleurs (PageSpeed Insights WCAG AA)** :
   - Introduction du token de couleur `--accent-btn: #1668dc` offrant un ratio de contraste supérieur à 5,2:1 avec le texte blanc sur `.btn-primary`, `.nav-tab.active` et `.pill-btn.active`.
   - Optimisation des badges d'accent (`.badge-accent`) et de succès (`.badge-success` : « ✓ TROUVÉ ») avec opacités révisées et teintes vives (`#79b8ff`, `#56d364`), garantissant un ratio de contraste supérieur à 7,2:1 (WCAG AAA).

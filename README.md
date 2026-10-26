@@ -370,7 +370,7 @@ cemantix.cyril-randon.fr {
 
     # API du Solveur (prioritaire et exclusive)
     handle /api/* {
-        reverse_proxy cemantix_solver:8000
+        reverse_proxy cemantix_web:8000
     }
 
     # Fichiers statiques et routes propres (/play, /battle, /multi)
@@ -417,10 +417,15 @@ docker compose run --rm cemantix --export-web
 
 ## 🌐 Variables d'Environnement
 
-Ces variables peuvent être définies dans votre shell ou dans un fichier `.env` :
+Ces variables peuvent être définies dans votre shell ou dans un fichier `.env` (voir `.env.example`) :
 
 | Variable | Défaut | Description |
 | :--- | :--- | :--- |
+| `DB_HOST` | `cemantix_db` | Nom d'hôte du conteneur ou serveur PostgreSQL. |
+| `DB_PORT` | `5432` | Port de la base relationnelle PostgreSQL. |
+| `DB_NAME` | `cemantix` | Nom de la base de données relationnelle. |
+| `DB_USER` | `cemantix_user` | Utilisateur de connexion PostgreSQL. |
+| `DB_PASS` | `—` | Mot de passe sécurisé de la base PostgreSQL. |
 | `TZ` | `Europe/Paris` | Fuseau horaire officiel pour le planificateur de veille 00h00. |
 | `LM_API` | `http://host.docker.internal:1234/v1` (ou `http://localhost:1234/v1`) | URL de l'API OpenAI compatible de LM Studio. |
 | `LLM_MODEL` | `qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2` | Identifiant du modèle chargé dans LM Studio. |
@@ -433,13 +438,20 @@ Ces variables peuvent être définies dans votre shell ou dans un fichier `.env`
 ```
 cemantix-rag-solver/
 ├── cemantix_rag.py          # Point d'entrée CLI et orchestration générale
-├── requirements.txt         # Dépendances Python (NumPy, ChromaDB, Requests)
+├── requirements.txt         # Dépendances Python (NumPy, ChromaDB, Requests, Psycopg 3)
 ├── Dockerfile               # Image conteneurisée prête à l'emploi (tzdata, Python 3.12)
-├── docker-compose.yml       # Configuration Docker Daemon (restart: unless-stopped)
+├── docker-compose.yml       # Déploiement 3-tiers durci (cemantix_db, cemantix_worker, cemantix_web)
+├── docker-compose.local.yml # Configuration locale autonome avec visualiseur Nginx
+├── .env.example             # Gabarit des variables d'environnement de production
 ├── .gitignore               # Exclut les fichiers binaires volumineux et caches
 ├── README.md                # Documentation complète du projet
 ├── CHANGELOG.md             # Historique des versions et refactorings
+├── database/                # Schémas SQL relationnels
+│   └── init.sql             # DDL PostgreSQL officiel (daily_puzzles, multi_rooms, solo_sessions)
+├── scripts/                 # Scripts d'exploitation et de migration
+│   └── migrate_json_to_pg.py# Migration d'historique daily_history.json vers PostgreSQL
 ├── volumes/                 # Volumes partagés
+│   ├── db/data/             # Données persistantes PostgreSQL
 │   └── web/                 # Application web servie par Caddy (mot du jour, jeu & API)
 │       ├── index.html       # Tableau de bord principal (URL : /)
 │       ├── play/            # Interface de jeu interactif Solo (URL : /play/)
@@ -454,10 +466,16 @@ cemantix-rag-solver/
 │       └── sitemap.xml      # Plan de site XML officiel pour l'indexation Google
 ├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)
 │   ├── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
-│   └── daily_history.json   # Historique persistant des résolutions quotidiennes
+│   └── daily_history.json   # Historique persistant des résolutions quotidiennes (miroir)
 └── src/                     # Architecture modulaire découplée
     ├── __init__.py          # Expose les classes et fonctions du package avec rétrocompatibilité
     ├── config.py            # Constantes, styles ANSI, chemins et configuration LLM
+    ├── db/                  # Couche d'accès aux données PostgreSQL / SQLite thread-safe
+    │   ├── __init__.py      # Exports des services de persistance
+    │   ├── connection.py    # Gestionnaire de connexion, transactions et bascule SQLite
+    │   ├── daily.py         # Persistance et consultation des puzzles quotidiens
+    │   ├── multi.py         # Gestion relationnelle des salons 1v1 et tours de jeu
+    │   └── solo.py          # Sauvegarde et reprise des sessions de jeu solo
     ├── engine/              # Moteur mathématique, RAG & clients réseau (Core Engine)
     │   ├── __init__.py      # Point d'entrée et exports du moteur
     │   ├── vocab.py         # VocabStore (lexique Lexique383, vecteurs frWac, ChromaDB)
@@ -469,7 +487,7 @@ cemantix-rag-solver/
     │   ├── solo.py          # Moteur de session Solo & Défi du Jour (GameSession)
     │   ├── battle.py        # Moteur de duel Joueur vs Bot IA (BattleSession)
     │   ├── multi.py         # Moteur de salon et tours Multijoueur 1v1 (MultiplayerSession)
-    │   └── manager.py       # Gestionnaire d'état, persistance disque et pools (GameManager)
+    │   └── manager.py       # Gestionnaire d'état, persistance relationnelle et pools (GameManager)
     ├── api/                 # Couche d'exposition HTTP & API REST modulaire (Web API)
     │   ├── __init__.py      # Point d'accès du paquet API & exports rétrocompatibles
     │   ├── server.py        # Serveur HTTP, parsing JSON, gestion CORS & cycle de vie
