@@ -113,10 +113,22 @@ export function initDashboard() {
   initTrajectoryModal();
   fetchDashboardData();
 
-  // Polling automatique toutes les 30 secondes
-  setInterval(() => {
+  // Resynchronisation toutes les 30 s, suspendue quand l'onglet est masqué :
+  // les données ne bougent qu'à minuit, et un onglet en arrière-plan n'a rien à
+  // afficher. Au retour, on resynchronise immédiatement pour ne pas montrer un
+  // état périmé pendant les 30 s suivantes.
+  let dashboardTimer = setInterval(() => fetchDashboardData(false), 30000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      clearInterval(dashboardTimer);
+      dashboardTimer = null;
+      return;
+    }
     fetchDashboardData(false);
-  }, 30000);
+    if (!dashboardTimer) {
+      dashboardTimer = setInterval(() => fetchDashboardData(false), 30000);
+    }
+  });
 }
 
 export function revealSecretWord() {
