@@ -385,9 +385,67 @@ cemantix.cyril-randon.fr {
 
 #### Synchronisation manuelle des données web :
 Pour actualiser ou exporter manuellement les données du mot du jour à tout moment :
-`ash
+```bash
 docker compose run --rm cemantix --export-web
-`
+```
+
+---
+
+## 🔎 SEO : Archives Quotidiennes Indexables & Sitemap
+
+Le démon ne se contente plus d'afficher le mot du jour en JavaScript : il **publie du
+contenu indexable** à chaque résolution. C'est ce qui permet de capter la longue traîne
+« cemantix du 26 octobre 2026 », invisible tant que le contenu est rendu côté client.
+
+```
+volumes/web/
+├── puzzles/
+│   ├── index.html                     # Index paginé (60 archives par page)
+│   ├── page/2/index.html              # Pages d'index suivantes
+│   └── 2026-10-26/index.html          # Page dédiée au puzzle du jour
+├── sitemap.xml                        # Régénéré avec le lastmod réel de chaque page
+├── robots.txt                         # /api/, data.json et ?reveal= exclus de l'index
+├── llms.md                            # Documentation pour agents IA (standard llms)
+├── manifest.webmanifest               # PWA installable (shortcuts Solo & Archives)
+└── .well-known/ai-catalog.json        # Découverte ARD (endpoint non spoilant)
+```
+
+### Ce que contient une page `/puzzles/AAAA-MM-JJ/`
+- `<title>` et meta description datés (« Cémantix du lundi 26 octobre 2026… »), URL
+  canonique, Open Graph et Twitter Card ;
+- **tableau des 10 mots les plus proches** avec score en °C et similarité en ‰, rendu
+  **côté serveur** donc lisible sans JavaScript ;
+- la solution dans un bloc `<details>` dépliable (lisible par les moteurs, masquée au
+  visiteur qui ne clique pas) ;
+- JSON-LD `Article` (avec `datePublished` / `dateModified` réels) + `BreadcrumbList` ;
+- navigation `rel="prev"` / `rel="next"` entre les jours et vers l'index des archives.
+
+Les pages sont **auto-suffisantes** : les tokens de style sont extraits de
+`css/variables.css` et injectés dans une balise `<style>`, donc aucune requête CSS
+supplémentaire et un rendu correct même sans JS.
+
+### Régénérer uniquement le SEO
+```bash
+docker compose run --rm cemantix --publish-seo
+```
+La publication est aussi déclenchée automatiquement par `--export-web` et par le démon
+après chaque résolution de minuit. En cas d'échec, le log signale l'erreur sans bloquer
+l'export de `data.json`.
+
+### Icônes du site
+Les icônes PNG (`apple-touch-icon.png`, `icon-512.png`) sont générées par un script sans
+dépendance externe (stdlib Python uniquement) :
+```bash
+python tools/generate_icons.py
+```
+
+### Après la mise en production
+1. Soumettre `https://cemantix.cyril-randon.fr/sitemap.xml` dans Google Search Console
+   et Bing Webmaster Tools ;
+2. vérifier le rendu avec « Inspection de l'URL » puis « Test d'affichage en temps
+   réel » : les pages d'archives doivent s'afficher sans JavaScript ;
+3. contrôler les données structurées sur <https://validator.schema.org>.
+
 
 ---
 
@@ -397,6 +455,8 @@ docker compose run --rm cemantix --export-web
 | :--- | :---: | :---: | :--- |
 | `--daemon` | Flag | `False` | Lance le mode démon 24h/24 : reste en veille et résout le mot du jour chaque nuit à 00h00 (Europe/Paris). |
 | `--no-run-on-start` | Flag | `False` | En mode démon, ne résout pas immédiatement si non résolu, attend le cycle de 00h00. |
+| `--export-web` | Flag | `False` | Exporte `data.json` pour le serveur web et régénère les pages d'archives SEO + `sitemap.xml`. |
+| `--publish-seo` | Flag | `False` | Régénère uniquement les pages `/puzzles/<date>/`, l'index paginé et `sitemap.xml` depuis l'historique. |
 | `--duel` | Flag | `False` | Lance le mode duel croisé interactif (Humain vs IA RAG). |
 | `--difficulty`, `-d` | Choix (`facile`, `moyen`, `expert`) | `moyen` | Règle le niveau d'agressivité de l'IA en mode duel. |
 | `--play`, `--game` | Flag | `False` | Active le mode jeu interactif solo dans le terminal. |
