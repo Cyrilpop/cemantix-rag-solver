@@ -517,6 +517,35 @@ Deux points de vigilance propres aux pages d'archives :
 > les liens `prev`/`next` à chaque publication. Un `max-age` rendrait ces mises à jour
 > invisibles pendant des heures sans benefit mesurable (les pages pèsent 13 ko).
 
+### Feuilles de style et modules JavaScript
+Chaque page ne charge **qu'une seule** feuille CSS, générée à partir des fichiers
+sources de `css/` :
+
+```bash
+python tools/build_css_bundles.py     # régénère volumes/web/css/dist/*.css
+python tools/build_css_bundles.py --check   # échoue si les bundles sont périmés
+```
+
+À faire **après chaque modification d'un fichier de `css/`**, avant de déployer.
+Les sources (`variables.css`, `base.css`, …) restent dans le dépôt : `src/services/seo.py`
+lit `variables.css` pour injecter les tokens dans les pages d'archives, qui n'emploient
+aucun lien CSS.
+
+Côté JavaScript, `js/app.js` charge `dashboard.js` et `game.js` en `import()` dynamique :
+un module n'est téléchargé et évalué que si la vue correspondante est présente dans le
+DOM. `/battle/` et `/multi/` ont leur propre point d'entrée et ne passent pas par `app.js`.
+
+### Image de partage (à corriger)
+`volumes/web/og-image.jpg` pèse **2,95 Mo en 2752×1536** alors que les balises annoncent
+1200×630 : chaque partage social et chaque crawl paient 3 Mo pour une vignette affichée
+en 1200 px. La compression exige un encodeur d'image (ni Pillow ni ImageMagick dans les
+dépendances du projet) et doit donc être faite une fois à la main :
+
+```bash
+convert volumes/web/og-image.jpg -resize 1200x630 -quality 82 volumes/web/og-image.jpg
+python tools/check_og_image.py     # doit sortir 0, avec un poids sous 200 ko
+```
+
 ### Icônes du site
 Les icônes PNG (`apple-touch-icon.png`, `icon-512.png`) sont générées par un script sans
 dépendance externe (stdlib Python uniquement) :
