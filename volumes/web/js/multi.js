@@ -35,6 +35,24 @@ const state = {
   isSubmitting: false,
 };
 
+// Rythme de la sonde en salle d'attente : réactive au départ, puis plus douce
+// tant que rien ne bouge, et totalement suspendue quand l'onglet est masqué.
+const WAITING_POLL_MIN_MS = 2000;
+const WAITING_POLL_MAX_MS = 10000;
+
+// Au retour d'onglet, on resonde immédiatement : l'adversaire a pu rejoindre
+// pendant l'absence, et un salon qui met 10 s à réagir paraitrait cassé.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || !state.currentRoomId) return;
+  if (state.pollInterval) {
+    clearTimeout(state.pollInterval);
+    state.pollInterval = null;
+  }
+  if (document.getElementById("view-waiting")?.classList.contains("active")) {
+    startWaitingPoll();
+  }
+});
+
 // --------------------------------------------------------------------------
 // 1. Initialisation & Routage Automatique par URL
 // --------------------------------------------------------------------------
@@ -779,15 +797,27 @@ function stopPolling() {
 
 function startWaitingPoll() {
   stopPolling();
-  state.pollInterval = setInterval(async () => {
+  // Sonde adaptative : la salle d'attente peut rester ouverte longtemps (le temps
+  // que l'ami rejoigne). Un intervalle fixe de 2 s générait ~1800 requêtes/heure
+  // d'onglet ouvert, y compris en arrière-plan. On part sur 2 s pour une détection
+  // réactive, on remonte progressivement à 10 s si rien ne bouge, et on met tout en
+  // pause dès que l'onglet est masqué — le `visibilitychange` relance une sonde
+  // immédiate au retour pour ne pas donner l'impression d'un salon figé.
+  let delay = WAITING_POLL_MIN_MS;
+
+  const tick = async () => {
     if (!state.currentRoomId || !state.currentPlayerKey) return;
+    if (document.hidden) return;
     try {
       const res = await fetch(`/api/multi/status?r=${state.currentRoomId}&k=${state.currentPlayerKey}`);
       if (!res.ok) return;
       const data = await res.json();
       if (!data.valid) return;
 
+      const progressed = data.state !== state.sessionData?.state;
       state.sessionData = data;
+      if (progressed) delay = WAITING_POLL_MIN_MS;
+      else delay = Math.min(delay * 1.6, WAITING_POLL_MAX_MS);
 
       // Si l'adversaire a rejoint et que la partie est prête
       if (data.state === "in_progress") {
@@ -798,11 +828,15 @@ function startWaitingPoll() {
         if (!data.is_my_turn) {
           startPolling();
         }
+        return;
       }
     } catch {
       // Silence
     }
-  }, 2000);
+    state.pollInterval = setTimeout(tick, delay);
+  };
+
+  state.pollInterval = setTimeout(tick, delay);
 }
 
 // --------------------------------------------------------------------------
