@@ -7,9 +7,32 @@ Architecture en couches étanches :
 - engine/   : Cœur algorithmique & IA (Ridge, Rerank, VocabStore, ChromaDB, clients)
 - cli/      : Expérience terminal & console (jauges, menus, modes benchmark/battle)
 - services/ : Démon 24h/24, veille quotidienne 00h00, export web Caddy
+- db/       : Persistance relationnelle PostgreSQL / SQLite thread-safe
 - config.py : Configuration transversale, chemins & styles ANSI
 """
 from .config import *
+from .db import (
+    db,
+    init_db,
+    get_db_type,
+    save_daily_puzzle,
+    get_daily_puzzle,
+    get_latest_daily_puzzle,
+    get_all_daily_puzzles,
+    save_room,
+    get_room,
+    delete_room,
+    cleanup_old_rooms,
+    save_multiplayer_session,
+    load_multiplayer_session,
+    save_solo_session_record,
+    get_solo_session,
+    delete_solo_session,
+    cleanup_old_solo,
+    save_game_session,
+    load_game_session,
+)
+
 from .engine import (
     CemantixClient,
     CemantixSolver,
@@ -134,4 +157,24 @@ __all__ = [
     "start_api_server",
     "start_api_thread",
     "get_weather_tier",
+    # DB
+    "db",
+    "init_db",
+    "get_db_type",
+    "save_daily_puzzle",
+    "get_daily_puzzle",
+    "get_latest_daily_puzzle",
+    "get_all_daily_puzzles",
+    "save_room",
+    "get_room",
+    "delete_room",
+    "cleanup_old_rooms",
+    "save_multiplayer_session",
+    "load_multiplayer_session",
+    "save_solo_session_record",
+    "get_solo_session",
+    "delete_solo_session",
+    "cleanup_old_solo",
+    "save_game_session",
+    "load_game_session",
 ]

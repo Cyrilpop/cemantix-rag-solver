@@ -22,6 +22,15 @@ from .common import MULTI_SESSIONS_FILE, WEB_SESSIONS_FILE
 from .multi import MultiplayerSession
 from .solo import GameSession
 from ..config import DATA_DIR, STOPWORDS, log
+from ..db import (
+    cleanup_old_rooms,
+    cleanup_old_solo,
+    get_latest_daily_puzzle,
+    load_game_session,
+    load_multiplayer_session,
+    save_game_session,
+    save_multiplayer_session,
+)
 from ..engine import VocabStore, strip_accents
 from ..services import DAILY_HISTORY_FILE, load_history
 
@@ -41,9 +50,20 @@ class GameManager:
             self._load_sessions()
 
     def _save_sessions(self):
-        """Persiste les sessions actives sur disque (volume Docker)."""
+        """Persiste les sessions actives en base relationnelle PostgreSQL et sur disque."""
         if not self.persist:
             return
+
+        # 1. Sauvegarde relationnelle PostgreSQL (ou repli SQLite)
+        try:
+            for s in list(self.sessions.values()):
+                save_game_session(s)
+            for m in list(self.multi_sessions.values()):
+                save_multiplayer_session(m)
+        except Exception as e:
+            log(f"⚠️  Erreur sauvegarde base relationnelle : {e}")
+
+        # 2. Sauvegarde miroir JSON (rétrocompatibilité)
         try:
             WEB_SESSIONS_FILE.parent.mkdir(parents=True, exist_ok=True)
             serializable = {
@@ -64,17 +84,50 @@ class GameManager:
                 json.dump(serializable_multi, f, ensure_ascii=False)
             tmp_multi.replace(MULTI_SESSIONS_FILE)
         except Exception as e:
-            log(f"⚠️  Erreur sauvegarde sessions : {e}")
+            log(f"⚠️  Erreur sauvegarde sessions JSON : {e}")
 
     def _load_sessions(self):
-        """Recharge les sessions sauvegardées depuis le volume Docker."""
-        if WEB_SESSIONS_FILE.exists():
+        """Recharge les sessions sauvegardées (priorité PostgreSQL, repli JSON)."""
+        loaded_count = 0
+        loaded_multi = 0
+
+        # 1. Tentative de restauration depuis PostgreSQL / SQLite
+        try:
+            from ..db.connection import db
+            # Chargement des sessions solo actives
+            rows_solo = db.fetch_all("SELECT game_id FROM solo_sessions;")
+            for r in rows_solo:
+                gid = r.get("game_id")
+                if gid:
+                    s = load_game_session(gid, self.store)
+                    if s and (time.time() - s.last_activity) <= 86400.0:
+                        self.sessions[gid] = s
+                        loaded_count += 1
+
+            # Chargement des salons multi actifs (derniers 7 jours)
+            rows_multi = db.fetch_all("SELECT room_id FROM multi_rooms;")
+            for r in rows_multi:
+                rid = r.get("room_id")
+                if rid:
+                    m = load_multiplayer_session(rid, self.store)
+                    if m and (time.time() - m.last_activity) <= (7 * 86400.0):
+                        self.multi_sessions[rid] = m
+                        loaded_multi += 1
+
+            if loaded_count > 0:
+                log(f"🐘  [API JEU] {loaded_count} session(s) active(s) restaurée(s) depuis la base relationnelle.")
+            if loaded_multi > 0:
+                log(f"🐘  [API MULTI] {loaded_multi} salon(s) multijoueur restauré(s) depuis la base relationnelle.")
+        except Exception as e:
+            log(f"⚠️  Erreur lecture base relationnelle : {e}")
+
+        # 2. Repli JSON si aucune session restaurée
+        if loaded_count == 0 and WEB_SESSIONS_FILE.exists():
             try:
                 with open(WEB_SESSIONS_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
                 now = time.time()
                 max_age = 86400.0  # 24 heures de conservation
-                loaded_count = 0
                 for gid, sdata in data.items():
                     if (now - sdata.get("last_activity", 0)) <= max_age:
                         secret = sdata.get("secret", "")
@@ -86,13 +139,12 @@ class GameManager:
             except Exception as e:
                 log(f"⚠️  Erreur lecture web_sessions.json : {e}")
 
-        if MULTI_SESSIONS_FILE.exists():
+        if loaded_multi == 0 and MULTI_SESSIONS_FILE.exists():
             try:
                 with open(MULTI_SESSIONS_FILE, "r", encoding="utf-8") as f:
                     mdata = json.load(f)
                 now = time.time()
                 max_age_multi = 7 * 86400.0  # 7 jours de conservation
-                loaded_multi = 0
                 for rid, sdata in mdata.items():
                     if (now - sdata.get("last_activity", 0)) <= max_age_multi:
                         t1 = sdata.get("target_for_p1")
@@ -107,6 +159,7 @@ class GameManager:
                     log(f"💾  [API MULTI] {loaded_multi} session(s) multijoueur restaurée(s) depuis le disque.")
             except Exception as e:
                 log(f"⚠️  Erreur lecture multi_sessions.json : {e}")
+
 
     def _init_difficulty_pools(self):
         """Initialise les pools de mots par niveau de difficulté."""
@@ -135,6 +188,15 @@ class GameManager:
 
     def get_daily_secret(self) -> tuple[str, str]:
         """Récupère le mot secret du jour consigné dans l'historique."""
+        # 1. Priorité à la base relationnelle PostgreSQL
+        try:
+            latest = get_latest_daily_puzzle(winning_only=True)
+            if latest and latest.get("word"):
+                return latest.get("word"), str(latest.get("puzzle", "JOUR"))
+        except Exception as e:
+            log(f"⚠️  Impossible de charger le mot du jour depuis la base relationnelle : {e}")
+
+        # 2. Repli sur le fichier JSON historique
         try:
             history = load_history(DAILY_HISTORY_FILE)
             winning = [h for h in history if h.get("win") is True and h.get("word")]
@@ -192,6 +254,15 @@ class GameManager:
             if session:
                 return session
 
+            # Tentative de restauration depuis la base relationnelle
+            try:
+                db_session = load_game_session(game_id, self.store)
+                if db_session:
+                    self.sessions[game_id] = db_session
+                    return db_session
+            except Exception:
+                pass
+
             # Si c'est le défi du jour et que la session n'était pas en mémoire sous cet ID
             if game_id.startswith("daily-") or game_id == "daily":
                 secret, puzzle_id = self.get_daily_secret()
@@ -216,6 +287,7 @@ class GameManager:
                 return session
 
             return None
+
 
     def give_up(self, game_id: str) -> Optional[dict]:
         with self.lock:
@@ -347,6 +419,15 @@ class GameManager:
             return None
         rid = room_id.strip().upper()
         with self.lock:
+            # Toujours recharger depuis la base relationnelle pour éliminer toute race condition
+            # et garantir la synchronisation instantanée des coups entre joueurs distants
+            try:
+                db_multi = load_multiplayer_session(rid, self.store)
+                if db_multi:
+                    self.multi_sessions[rid] = db_multi
+                    return db_multi
+            except Exception:
+                pass
             return self.multi_sessions.get(rid)
 
     def _cleanup_stale(self, max_age: float = 7200.0):
@@ -361,3 +442,10 @@ class GameManager:
         to_del_multi = [rid for rid, m in self.multi_sessions.items() if (now - m.last_activity) > (7 * 86400.0)]
         for rid in to_del_multi:
             del self.multi_sessions[rid]
+
+        # Nettoyage en base de données relationnelle
+        try:
+            cleanup_old_solo(max_age_seconds=max_age)
+            cleanup_old_rooms(max_age_seconds=7 * 86400.0)
+        except Exception:
+            pass

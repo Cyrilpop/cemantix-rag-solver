@@ -78,7 +78,18 @@ def check_health(max_age_seconds: int = 90) -> int:
 
 
 def load_history(filepath: Path = DAILY_HISTORY_FILE) -> list:
-    """Charge l'historique des résolutions quotidiennes."""
+    """Charge l'historique des résolutions quotidiennes (priorité PostgreSQL, repli JSON)."""
+    # 1. Tentative de lecture en base relationnelle uniquement sur le chemin officiel
+    if filepath == DAILY_HISTORY_FILE:
+        try:
+            from ..db import get_all_daily_puzzles
+            db_entries = get_all_daily_puzzles()
+            if db_entries:
+                return db_entries
+        except Exception as e:
+            log(f"⚠️  Lecture base relationnelle indisponible ({e}), repli JSON.")
+
+    # 2. Repli sur le fichier JSON historique
     if not filepath.exists():
         return []
     try:
@@ -91,7 +102,7 @@ def load_history(filepath: Path = DAILY_HISTORY_FILE) -> list:
 
 
 def save_history(history: list, filepath: Path = DAILY_HISTORY_FILE) -> None:
-    """Sauvegarde l'historique des résolutions dans un fichier JSON indenté."""
+    """Sauvegarde l'historique des résolutions dans un fichier JSON indenté (rétrocompatibilité)."""
     try:
         filepath.parent.mkdir(parents=True, exist_ok=True)
         with open(filepath, "w", encoding="utf-8") as f:
@@ -102,9 +113,20 @@ def save_history(history: list, filepath: Path = DAILY_HISTORY_FILE) -> None:
 
 def has_solved_today(history: list, today_str: str) -> tuple[bool, dict | None]:
     """Vérifie si le puzzle de la date donnée a déjà été résolu avec succès."""
-    for entry in history:
-        if entry.get("date") == today_str and entry.get("win") is True:
-            return True, entry
+    if history:
+        for entry in history:
+            if entry.get("date") == today_str and entry.get("win") is True:
+                return True, entry
+        return False, None
+
+    try:
+        from ..db import get_daily_puzzle
+        db_entry = get_daily_puzzle(today_str)
+        if db_entry and db_entry.get("win") is True:
+            return True, db_entry
+    except Exception:
+        pass
+
     return False, None
 
 
@@ -163,6 +185,14 @@ def run_daily_solver(args) -> dict:
         "timestamp": now.isoformat(),
     }
 
+    # Persistance relationnelle ACID dans PostgreSQL (ou repli SQLite)
+    try:
+        from ..db import save_daily_puzzle
+        save_daily_puzzle(entry)
+        log("🐘  Résultat consigné avec succès dans la table PostgreSQL daily_puzzles.")
+    except Exception as e:
+        log(f"⚠️  Erreur sauvegarde base relationnelle : {e}")
+
     history = load_history()
     # Remplacer toute entrée précédente pour la même date pour garantir l'enregistrement de la trajectoire
     history = [h for h in history if h.get("date") != today_str]
@@ -170,6 +200,7 @@ def run_daily_solver(args) -> dict:
     save_history(history)
 
     log(f"📝  Résultat enregistré dans {DAILY_HISTORY_FILE}")
+
     update_heartbeat("sleeping", {"last_solved_puzzle": puzzle_id, "last_solved_word": result.get("word")})
 
     # Synchronisation automatique de la page web pour Caddy
