@@ -846,6 +846,24 @@
 /* Section SEO & FAQ Guide */
 .seo-section {
   margin-top: 2rem;
+  /* Le guide, la FAQ et le résumé du jour forment le bas de la page d'accueil :
+     jamais visibles à l'arrivée, ils coûtent pourtant une mise en page et une
+     peinture complètes à chaque chargement et à chaque changement de thème.
+     `content-visibility: auto` saute ce travail tant que le bloc approche du
+     viewport. `contain-intrinsic-size` porte le mot-clé `auto`, qui mémorise la
+     hauteur réelle après le premier rendu : sans lui, la barre de défilement
+     sauterait à chaque passage. Les navigateurs sans support ignorent les deux
+     propriétés et affichent normalement le contenu. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 520px;
+}
+
+@media print {
+  /* À l'impression comme pour les lecteurs d'écran qui reconstruisent le
+     document, rien ne doit rester non rendu. */
+  .seo-section {
+    content-visibility: visible;
+  }
 }
 
 .seo-card {

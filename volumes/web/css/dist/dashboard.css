@@ -246,7 +246,9 @@ body{font-family:var(--font-main);background-color:var(--bg-app);color:var(--tex
 .word-spoiler.is-hidden:hover{filter:blur(3px);}
 .btn-trajectory{display:inline-flex;align-items:center;gap:0.35rem;font-size:0.78rem;font-weight:600;padding:0.3rem 0.65rem;border-radius:var(--radius-sm);background:rgba(88,166,255,0.12);color:var(--accent);border:1px solid rgba(88,166,255,0.3);transition:var(--transition);white-space:nowrap;}
 .btn-trajectory:hover{background:var(--accent-btn,#1668dc);color:#fff;border-color:rgba(88,166,255,0.4);transform:translateY(-1px);box-shadow:0 2px 8px var(--accent-glow);}
-.seo-section{margin-top:2rem;}
+.seo-section{margin-top:2rem;content-visibility:auto;contain-intrinsic-size:auto 520px;}
+@media print{.seo-section{content-visibility:visible;}
+}
 .seo-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.75rem;box-shadow:var(--shadow-md);backdrop-filter:blur(8px);}
 .seo-header{margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border-color);}
 .seo-header h2{font-size:1.35rem;font-weight:700;color:var(--text-main);margin-bottom:0.35rem;}
