@@ -4,7 +4,7 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
-## [Non publié] - 2026-10-26
+## [Non publié] - 2026-10-26 · Sécurité
 
 ### Corrigé
 - **Fuite du mot secret du jour (anti-spoiler contournable)** :
@@ -25,17 +25,23 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - **Clé de salon laissée dans l'URL** : le lien d'invitation `/multi/?r=…&k=…` conservait la clé du joueur dans la barre d'adresse — donc dans l'historique du navigateur, le champ d'URL et les captures d'écran — et restait cliquable des heures plus tard, soit une prise de contrôle du duel sur un ordinateur partagé. Le polling passait en outre la clé en query string `GET`, c'est-à-dire dans la ligne de requête transmise au proxy. `stripKeyFromUrl()` retire la clé dès le chargement (avant même la requête de connexion) et à chaque changement d'état, ne laissant que le code de salon, qui n'autorise aucune action ; les deux points de polling basculent sur `POST /api/multi/status` (charge utile identique, dans le corps) ; `handle_multi_get` ne sert plus aucune route, la voie GET étant fermée avec un message indiquant le POST équivalent. Le lien de partage conserve sa clé — c'est la fonctionnalité — mais elle n'est lue qu'une fois.
 - **Surface globale laissée par les `onclick` supprimés** : les quatre fonctions que les gestionnaires inline appelaient restaient publiées sur `window` (`copyToClipboard`, `showConfirmDialog`, `multiResumeGame`, `multiDeleteGame`) alors qu'elles n'avaient plus aucun appelant global — vérifié : zéro `onclick=` dans les quatre pages, zéro appel `window.<ces noms>` dans tout `volumes/web/`, tous les appels passant par `import` ES modules ou par la délégation `data-copy`. Rendues locales à leur module : une CSP `script-src 'self'` stricte reste tenable même si un `onclick` inline réapparaissait, et l'API interne du jeu n'est plus atteignable depuis la console.
 - **Codes du multijoueur énumérables** : `room_id` et clés `J1-` / `J2-` n'avaient que 4 chiffres hexadécimaux (65 536 valeurs) avec des salons actifs 7 jours, ce qui permettait un balayage systématique pour retomber sur une partie ouverte. Portés à 8 chiffres hexadécimaux (`uuid.uuid4`, 4,3 milliards de valeurs, facteur ×65 536) ; comparaison toujours par égalité de chaîne, les parties en cours restent utilisables.
+- **Sessions inactives jamais purgées** : le TTL existait mais `_cleanup_stale()` n'était déclenché qu'à la **création** d'une partie — un serveur qui tourne des semaines sans nouvelle partie ne libérait rien, et la mémoire croissait avec le volume de parties jouées. Pire, `_load_sessions()` écartait les entrées périmées **sans jamais réécrire le fichier** : `web_sessions.json` conservait à vie toutes les parties depuis la création du volume, le filtrage étant rejoué à chaque démarrage.
+  - `_maybe_cleanup()` cadence la purge au plus une fois par 5 minutes sur les points d'accès chauds (`get_session`, `get_multiplayer`) : un simple comparateur d'horodatage le plus souvent, sans thread ni cycle de vie supplémentaire.
+  - TTL distincts assumés : 2 h pour une partie solo ou battle abandonnée, 7 jours pour un duel dont les deux joueurs se reconnectent souvent le lendemain.
+  - `_compact_session_file()` réécrit le fichier sans les entrées écartées, en écriture atomique comme `_save_sessions`, pour qu'un arrêt en cours de compactage ne laisse pas un JSON tronqué.
+  - La purge s'exécute sous `self.lock`, qui est un `Lock` simple **non réentrant** : le reprendre dans `_cleanup_stale()` aurait bloqué le thread.
 
 ### Ajouté
+- **`.gitignore`** : le dépôt n'en avait aucun ; `data.json`, les fichiers de sessions et les `__pycache__` produits à l'exécution pouvaient être commités par erreur. Vérifié : aucun fichier actuellement suivi (`cemantix_data/lexique_fr.txt`) n'est masqué par ces règles.
 - **Documentation de sécurité** : nouvelle section « 🔐 Sécurité » (chemin d'accès à la solution, tableau des protections du serveur avec leurs variables, échappement XSS, entropie des codes de salon, trois commandes `curl` de vérification après déploiement) ; le `Caddyfile` documenté gagne une `Content-Security-Policy` (`script-src 'self'`, le site n'emploie aucune ressource externe), une CSP durcie sur `/puzzles/*`, HSTS, `Permissions-Policy` et `Cross-Origin-Opener-Policy`, plus un bloc `@intercepted` renvoyant `404` sur `data.json`, les historiques, les sessions, `.env`, `.git`, `*.py`, `*.pyc`, `*.log` et `*.bin`.
 - Variables d'environnement documentées : `API_ALLOWED_ORIGIN`, `API_MAX_BODY_BYTES`, `API_MAX_WORKERS`, `API_SOCKET_TIMEOUT`, `DASHBOARD_DATA_FILE`.
+- **`Caddyfile` versionné à la racine du dépôt** : la configuration du serveur web (CSP, en-têtes de sécurité, politique de cache, bloc `@intercepted`) n'existait que en prose dans le README, où elle avait déjà divergé du code. Le fichier fait désormais foi ; le README y renvoie avec la commande de rechargement à chaud.
+- **Outils de contrôle sans dépendance** : `tools/check_og_image.py` compare le poids et les dimensions réels de `og-image.jpg` aux balises `og:image` (code de sortie `1` si hors norme, exploitable en CI) et `tools/check_js_balance.py` vérifie l'équilibre des délimiteurs JavaScript en l'absence de `node`.
 
 ### Refactorisé
 - **Journalisation des requêtes** : `log_message()` était réduit à `pass`, ce qui rendait tout abus invisible ; les requêtes sont désormais tracées de façon minimale avec l'IP cliente, sans le débit du flux d'origine.
 
-### Ajouté
-- **`Caddyfile` versionné à la racine du dépôt** : la configuration du serveur web (CSP, en-têtes de sécurité, politique de cache, bloc `@intercepted`) n'existait que en prose dans le README, où elle avait déjà divergé du code. Le fichier fait désormais foi ; le README y renvoie avec la commande de rechargement à chaud.
-- **Outils de contrôle sans dépendance** : `tools/check_og_image.py` compare le poids et les dimensions réels de `og-image.jpg` aux balises `og:image` (code de sortie `1` si hors norme, exploitable en CI) et `tools/check_js_balance.py` vérifie l'équilibre des délimiteurs JavaScript en l'absence de `node`.
+## [Non publié] - 2026-10-26 · Performance
 
 ### Corrigé
 - **Politique de cache incohérente avec la règle « no-cache, pas de `?v=` »** : le `max-age=3600` posé sur `@html` et les `max-age` suggérés pour les archives contredisaient la revalidation par ETag ; tout ce qui change repasse en `no-cache, must-revalidate`, seules les polices gardent un `max-age` d'un an.
