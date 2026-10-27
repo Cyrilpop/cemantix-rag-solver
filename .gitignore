@@ -1,0 +1,58 @@
+# =============================================================================
+# Cémantix Solver — Fichier .gitignore
+# -----------------------------------------------------------------------------
+# Complète le plan d'optimisation (.idea/PLAN_OPTIMISATION.MD, point SEC-10) :
+# empêche la fuite des secrets, des données PostgreSQL et des modèles lourds.
+# =============================================================================
+
+# --- Secrets & environnement -------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# --- Environnement local de test (WSL / nginx) — jamais committé -------------
+/local/
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# --- Données PostgreSQL (volume monté dans le conteneur cemantix_db) ---------
+volumes/db/
+
+# --- Données exportées contenant les mots secrets ----------------------------
+volumes/web/data.json
+
+# --- Cache & modèles lourds (téléchargés au premier lancement) ---------------
+cemantix_data/*.bin
+cemantix_data/*.part
+cemantix_data/*.npy
+cemantix_data/*.npz
+cemantix_data/*.tmp
+cemantix_data/*.sqlite3
+cemantix_data/chroma_w2v/
+# Cache du memmap (liste des lemmes retenus, régénéré automatiquement)
+cemantix_data/*_words.txt
+# Tous les exports de données : data.json et les miroirs de sessions contiennent
+# les MOTS SECRETS des parties en cours et l'historique des solutions.
+cemantix_data/*.json
+
+# --- Éditeurs & OS -----------------------------------------------------------
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dataSources*
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store
