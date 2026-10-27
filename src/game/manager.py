@@ -36,6 +36,10 @@ class GameManager:
         self.battle_sessions: dict[str, BattleSession] = {}
         self.multi_sessions: dict[str, MultiplayerSession] = {}
         self.lock = threading.Lock()
+        # Horodatage de la dernière purge : initialisé au démarrage pour que la
+        # première requête ne relance pas un balayage juste après le chargement,
+        # qui vient déjà d'écarter les entrées périmées.
+        self._last_cleanup = time.time()
         self._init_difficulty_pools()
         if self.persist:
             self._load_sessions()
@@ -67,7 +71,13 @@ class GameManager:
             log(f"⚠️  Erreur sauvegarde sessions : {e}")
 
     def _load_sessions(self):
-        """Recharge les sessions sauvegardées depuis le volume Docker."""
+        """Recharge les sessions sauvegardées depuis le volume Docker.
+
+        Les entrées périmées sont écartées **et le fichier est réécrit épuré** :
+        sans cette réécriture, le filtrage ne se produisait qu'en mémoire à chaque
+        démarrage, et `web_sessions.json` grossissait indéfiniment en conservant
+        toutes les parties jouées depuis la création du volume.
+        """
         if WEB_SESSIONS_FILE.exists():
             try:
                 with open(WEB_SESSIONS_FILE, "r", encoding="utf-8") as f:
@@ -75,14 +85,18 @@ class GameManager:
                 now = time.time()
                 max_age = 86400.0  # 24 heures de conservation
                 loaded_count = 0
+                kept = {}
                 for gid, sdata in data.items():
                     if (now - sdata.get("last_activity", 0)) <= max_age:
                         secret = sdata.get("secret", "")
                         if secret and secret in self.store:
                             self.sessions[gid] = GameSession.from_serializable(sdata, self.store)
                             loaded_count += 1
+                            kept[gid] = sdata
                 if loaded_count > 0:
                     log(f"💾  [API JEU] {loaded_count} session(s) active(s) restaurée(s) depuis le disque.")
+                if len(kept) != len(data):
+                    self._compact_session_file(WEB_SESSIONS_FILE, kept, "web_sessions")
             except Exception as e:
                 log(f"⚠️  Erreur lecture web_sessions.json : {e}")
 
@@ -93,6 +107,7 @@ class GameManager:
                 now = time.time()
                 max_age_multi = 7 * 86400.0  # 7 jours de conservation
                 loaded_multi = 0
+                kept_multi = {}
                 for rid, sdata in mdata.items():
                     if (now - sdata.get("last_activity", 0)) <= max_age_multi:
                         t1 = sdata.get("target_for_p1")
@@ -101,12 +116,31 @@ class GameManager:
                             try:
                                 self.multi_sessions[rid] = MultiplayerSession.from_serializable(sdata, self.store)
                                 loaded_multi += 1
+                                kept_multi[rid] = sdata
                             except Exception:
                                 pass
                 if loaded_multi > 0:
                     log(f"💾  [API MULTI] {loaded_multi} session(s) multijoueur restaurée(s) depuis le disque.")
+                if len(kept_multi) != len(mdata):
+                    self._compact_session_file(MULTI_SESSIONS_FILE, kept_multi, "multi_sessions")
             except Exception as e:
                 log(f"⚠️  Erreur lecture multi_sessions.json : {e}")
+
+    @staticmethod
+    def _compact_session_file(path, kept: dict, label: str) -> None:
+        """Réécrit un fichier de sessions en omettant les entrées écartées.
+
+        Écriture atomique par fichier temporaire, comme `_save_sessions`, pour
+        qu'un arrêt pendant le compactage ne laisse pas un fichier tronqué.
+        """
+        try:
+            tmp = path.with_suffix(".tmp")
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(kept, f, ensure_ascii=False)
+            tmp.replace(path)
+            log(f"🧹  [{label}] fichier compacté : {len(kept)} entrée(s) conservée(s).")
+        except Exception as e:
+            log(f"⚠️  Compactage {label} impossible : {e}")
 
     def _init_difficulty_pools(self):
         """Initialise les pools de mots par niveau de difficulté."""
@@ -188,6 +222,7 @@ class GameManager:
 
     def get_session(self, game_id: str) -> Optional[GameSession]:
         with self.lock:
+            self._maybe_cleanup()
             session = self.sessions.get(game_id)
             if session:
                 return session
@@ -349,17 +384,55 @@ class GameManager:
             return None
         rid = room_id.strip().upper()
         with self.lock:
+            self._maybe_cleanup()
             return self.multi_sessions.get(rid)
 
-    def _cleanup_stale(self, max_age: float = 7200.0):
-        """Nettoie les sessions inactives depuis plus de 2 heures (et 7 jours pour le multi)."""
+    def _cleanup_stale(self, max_age: float = 7200.0, multi_max_age: float = None) -> int:
+        """Retire les sessions inactives ; renvoie le nombre de sessions supprimées.
+
+        Deux TTL distincts : une partie solo ou battle abandonnée ne présente plus
+        d'intérêt au bout de 2 heures, alors qu'un duel en cours doit survivre à une
+        nuit (les deux joueurs se reconnectent le lendemain).
+
+        Doit être appelé **déjà sous `self.lock`** : le verrou est un `Lock` simple,
+        non réentrant, et reprendre le verrou ici bloquerait le thread.
+        """
         now = time.time()
+        multi_limit = multi_max_age if multi_max_age is not None else 7 * 86400.0
+        removed = 0
+
         to_del = [gid for gid, s in self.sessions.items() if (now - s.last_activity) > max_age]
         for gid in to_del:
             del self.sessions[gid]
         to_del_battle = [bid for bid, b in self.battle_sessions.items() if (now - b.last_activity) > max_age]
         for bid in to_del_battle:
             del self.battle_sessions[bid]
-        to_del_multi = [rid for rid, m in self.multi_sessions.items() if (now - m.last_activity) > (7 * 86400.0)]
+        to_del_multi = [rid for rid, m in self.multi_sessions.items() if (now - m.last_activity) > multi_limit]
         for rid in to_del_multi:
             del self.multi_sessions[rid]
+
+        removed = len(to_del) + len(to_del_battle) + len(to_del_multi)
+        if removed:
+            log(f"🧹  [API JEU] {removed} session(s) inactive(s) retirée(s) "
+                f"({len(to_del)} solo, {len(to_del_battle)} battle, {len(to_del_multi)} multi)")
+        return removed
+
+    def _maybe_cleanup(self, min_interval: float = 300.0) -> None:
+        """Purge au plus une fois toutes les `min_interval` secondes, sans thread.
+
+        Le TTL existait déjà mais n'était déclenché qu'à la **création** d'une
+        partie : un serveur qui tourne des semaines sans nouvelle partie ne purge
+        jamais rien, et la mémoire croît avec le nombre de parties jouées. Une
+        purge périodique par thread ajouterait un cycle de vie et de la contention
+        de verrou pour un bénéfice nul ; la cadencer sur les points d'accès chauds
+        la rend gratuite (un comparateur d'horodatage le plus souvent) et la
+        déclenche précisément quand il y a du trafic.
+
+        Appel sous `self.lock` (voir `_cleanup_stale`).
+        """
+        now = time.time()
+        if now - getattr(self, "_last_cleanup", 0.0) < min_interval:
+            return
+        self._last_cleanup = now
+        if self._cleanup_stale():
+            self._save_sessions()
