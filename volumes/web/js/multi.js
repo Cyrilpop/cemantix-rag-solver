@@ -110,13 +110,13 @@ function initRoomActions() {
   document.addEventListener("click", (event) => {
     const deleteEl = event.target.closest("[data-delete-room]");
     if (deleteEl) {
-      window.multiDeleteGame(deleteEl.getAttribute("data-delete-room"));
+      multiDeleteGame(deleteEl.getAttribute("data-delete-room"));
       return;
     }
 
     const resumeEl = event.target.closest("[data-resume-room]");
     if (resumeEl) {
-      window.multiResumeGame(
+      multiResumeGame(
         resumeEl.getAttribute("data-resume-room"),
         resumeEl.getAttribute("data-player-key")
       );
@@ -206,11 +206,11 @@ function renderRecentGames() {
   }).join("");
 }
 
-window.multiResumeGame = function (roomId, playerKey) {
+function multiResumeGame(roomId, playerKey) {
   connectToRoom(roomId, playerKey);
-};
+}
 
-window.multiDeleteGame = async function (roomId) {
+async function multiDeleteGame(roomId) {
   const confirmed = await showConfirmDialog({
     title: "Oublier ce duel ?",
     message: `Voulez-vous retirer le salon ${roomId} de cet appareil ? (La partie restera active sur le serveur).`,

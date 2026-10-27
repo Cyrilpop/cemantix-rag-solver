@@ -594,6 +594,12 @@ ont été supprimés au profit d'attributs `data-*` et d'une délégation d'év�
 une apostrophe dans un mot ou un pseudonyme ne peut plus fermer la chaîne et exécuter
 de code.
 
+Les quatre fonctions que ces `onclick` appelaient étaient exposées sur `window`
+(`copyToClipboard`, `showConfirmDialog`, `multiResumeGame`, `multiDeleteGame`). Elles n'ont
+plus aucun appelant global — plus aucun `onclick=` ne subsiste dans les quatre pages — et
+ont été rendues locales à leur module. Cette surface globale était le dernier point qui
+rendrait une CSP `script-src 'self'` intenable si un `onclick` inline réapparaissait.
+
 ### Codes du multijoueur
 Les `room_id` et clés `J1-` / `J2-` sont générés sur **8 chiffres hexadécimaux**
 (`uuid.uuid4`, aléatoire cryptographique), soit 4,3 milliards de valeurs. À 4

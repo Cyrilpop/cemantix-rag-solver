@@ -109,8 +109,6 @@ export function copyToClipboard(text) {
   });
 }
 
-// Rendre accessible globalement pour les onclick inline du HTML/table
-window.copyToClipboard = copyToClipboard;
 
 // Formatage Date en Français
 export function formatDateFr(isoDateStr) {
@@ -263,5 +261,3 @@ export function showConfirmDialog({
   });
 }
 
-// Rendre également accessible globalement sur window pour commodité
-window.showConfirmDialog = showConfirmDialog;
