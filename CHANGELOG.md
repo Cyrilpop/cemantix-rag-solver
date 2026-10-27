@@ -60,6 +60,9 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - **Faux positifs de `tools/check_js_balance.py`** : l'outil échouait (code de sortie `1`) sur 7 des 9 modules du projet, ce qui le rendait inexploitable en CI. Trois ambiguïtés du JavaScript étaient mal tranchées — la regex confondue avec une division (dans `.replace(/"/g, "&quot;")`, le guillemet ouvrait une chaîne et tout le reste du fichier était mal lu), le `/` de `</span>` pris pour une regex à l'intérieur d'un template literal, et une interpolation `${…}` consommée par une boucle interne qui perdait la position de fermeture du gabarit. La lecture devient une machine à états plate (une seule position de cours, une pile de gabarits pour les interpolations imbriqués, test de contexte pour regex/division) : **9/9 modules acceptés, 13/13 cas valides, 5/6 fautes réelles détectées**. Le cas non couvert — un gabarit jamais fermé — est assumé et documenté.
 - **Taille annoncée à tort dans `app.js`** : le commentaire indiquait « 67 ko du point d'entrée », valeur sans correspondance mesurable ; le graphe statique pesait 94 794 o (~93 ko), dont 27 794 o (~27 ko, 29 %) inutilisés depuis `/play/`.
 
+### Optimisé
+- **Rendu différé des blocs bas de page** : le résumé du jour, le guide et la FAQ constituent le bas du tableau de bord, jamais visible à l'arrivée, mais payaient une mise en page et une peinture à chaque chargement et à chaque changement de thème. `content-visibility: auto` saute ce travail tant que le bloc approche du viewport. `contain-intrinsic-size` porte le mot-clé `auto`, qui mémorise la hauteur réelle après le premier rendu — sans lui la barre de défilement sauterait à chaque passage. Un garde-fou `@media print` remet `content-visibility: visible` pour que rien ne reste non rendu à l'impression ; les navigateurs sans support ignorent les deux propriétés et affichent normalement.
+
 ## [Non publié] - 2026-10-26 · SEO
 
 ### Ajouté
@@ -79,6 +82,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - `robots.txt` durci : `Disallow` sur `/api/`, `/data.json`, `/.well-known/` et les paramètres spoilants `?reveal=`, `?r=`, `?k=`.
   - `llms.txt` renommé en **`llms.md`** (extension du standard) et enrichi : format des URLs d'archives, contenu garanti sans JavaScript, endpoints API et mentions légales sur frWac, Lexique 3.83 et l'absence d'affiliation avec Certitudes.
   - Manifeste ARD **`.well-known/ai-catalog.json`** : suppression du doublon en racine, réorientation de l'entrée d'outillage vers `/api/health` (sans spoiler) et déclaration des pages d'archives en ressource `text/html`.
+- **Donnée structurée `HowTo` sur l'accueil** : le guide exposait déjà une liste ordonnée de trois stratégies sans l'annoncer comme telle. Le nœud rejoint le `@graph` existant (`WebApplication`, `WebSite`, `FAQPage`) en répétant **mot pour mot** le texte visible — Google déclasse les données structurées qui contredisent la page. Vérifié : 3 étapes du schéma égales aux 3 éléments de la liste, JSON-LD valide sur les quatre pages. `aggregateRating` volontairement omis (aucun avis réel : sanction manuelle). À noter, Google a supprimé les résultats enrichis `HowTo` des SERP en août 2023 : le balisage reste lu par d'autres moteurs et par les assistants, sans promesse de bloc enrichi.
 
 ### Corrigé
 - **Balises SEO obsolètes sur les quatre pages** : suppression de `<meta name="title">` (doublon de `<title>`) et de `<meta name="keywords">` (ignoré par Google).
