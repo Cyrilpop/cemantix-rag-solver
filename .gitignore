@@ -1,0 +1,11 @@
+# IDE / fichiers de travail locaux (jamais versionnés)
+.idea/
+*.local.md
+
+# Données & volumes
+cemantix_data/*.json
+cemantix_data/*.tmp
+volumes/web/data.json
+__pycache__/
+*.py[cod]
+.venv/
