@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Console d'exploitation — Cémantix</title>
+<!-- Chemins ABSOLUS : la page est aussi servie sur /panier-9x (sans slash final),
+     auquel cas un chemin relatif résoudrait à la racine du site et échouerait. -->
+<!-- Si tu changes ADMIN_API_PATH dans .env, change aussi le content ci-dessous :
+     c'est le seul endroit côté client qui référence l'API d'administration. -->
+<meta name="admin-api-path" content="/api/snap-9x">
+<link rel="stylesheet" href="/panier-9x/console.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<header>
+  <span class="dot" id="state-dot"></span>
+  <h1>Console d'exploitation Cémantix</h1>
+  <span class="muted" id="uptime"></span>
+  <span style="flex:1"></span>
+  <button class="secondary" id="btn-refresh" disabled>Actualiser</button>
+  <button class="secondary" id="btn-logout">Quitter</button>
+</header>
+
+<main>
+  <section class="card" id="gate">
+    <h2 style="margin:0 0 10px;font-size:14px">Authentification</h2>
+    <div class="row">
+      <input type="password" id="password" placeholder="Mot de passe d'administration" style="flex:1 1 260px" autocomplete="current-password">
+      <button id="btn-login">Se connecter</button>
+    </div>
+    <p class="muted" style="margin:10px 0 0">Session signée, valable deux heures. Le mot de passe ne quitte jamais cette machine.</p>
+  </section>
+
+  <section id="app" class="hide">
+    <div class="tabs">
+      <button data-tab="stats" class="active">Statistiques</button>
+      <button data-tab="logs">Journaux</button>
+      <button data-tab="actions">Actions</button>
+    </div>
+
+    <div id="tab-stats">
+      <div class="card"><div class="grid" id="stats-grid"></div></div>
+      <div class="card"><h3 style="margin:0 0 8px;font-size:13px">Détail</h3><pre id="stats-raw" class="raw"></pre></div>
+    </div>
+
+    <div id="tab-logs" class="hide">
+      <div class="card">
+        <div class="row" style="align-items:center">
+          <select id="log-source">
+            <option value="app">Application (mémoire)</option>
+            <option value="worker">Conteneur worker</option>
+            <option value="web">Conteneur web</option>
+          </select>
+          <select id="log-tail">
+            <option value="100">100 lignes</option>
+            <option value="300" selected>300 lignes</option>
+            <option value="1000">1000 lignes</option>
+          </select>
+          <button id="btn-log-load">Charger</button>
+          <button id="btn-log-follow" class="secondary">Suivre en direct</button>
+          <button id="btn-log-clear" class="secondary">Vider</button>
+        </div>
+        <p class="muted" style="margin:10px 0 8px">Le suivi en direct alimente aussi automatiquement la fenêtre pendant une action.</p>
+      </div>
+      <pre id="log"></pre>
+    </div>
+
+    <div id="tab-actions" class="hide">
+      <div class="card">
+        <h3 style="margin:0 0 6px;font-size:13px">Forcer la découverte du mot du jour</h3>
+        <p class="muted" style="margin:0 0 10px">Lance une résolution complète immédiatement, sans attendre minuit. Le journal du worker s'affiche en dessous.</p>
+        <button class="danger" data-action="solve">Résoudre maintenant</button>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 6px;font-size:13px">Reconstruire l'index ChromaDB</h3>
+        <p class="muted" style="margin:0 0 10px">Supprime puis régénère l'index vectoriel (plusieurs minutes). À faire si le démon annonce « ChromaDB non chargé ».</p>
+        <button class="danger" data-action="chroma">Reconstruire l'index</button>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 6px;font-size:13px">Régénérer data.json et le SEO</h3>
+        <p class="muted" style="margin:0 0 10px">Rediffuse les données du tableau de bord et les pages d'archive.</p>
+        <button data-action="export">Régénérer</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="confirm-modal" class="modal">
+  <div class="modal-box">
+    <h3 id="modal-title">Confirmation</h3>
+    <p id="modal-desc" class="muted"></p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="modal-cancel">Annuler</button>
+      <button type="button" class="danger" id="modal-confirm">Confirmer</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+<script src="/panier-9x/console.js"></script>
+</body>
+</html>
