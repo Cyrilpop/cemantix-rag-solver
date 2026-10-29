@@ -6,7 +6,7 @@ Point d'entrée principal et CLI du projet Cémantix Solver.
 
 Modes disponibles :
   - Démon 24h/24 (--daemon : veille et résolution quotidienne chaque nuit à 00h00)
-  - Export web (--export-web : génère data.json dans ./volumes/web pour Caddy)
+  - Export web (--export-web : génère data.json dans ./cemantix_data, hors webroot)
   - Autonome (Hybride LLM ou 100% RAG pur via --rag-only)
   - Simulation Benchmark (--benchmark N ou --mock)
   - Tournoi Battle (--battle N ou --secrets ...)
@@ -45,7 +45,9 @@ def main():
     ap.add_argument("--healthcheck", action="store_true",
                     help="vérifie la santé du démon pour le HEALTHCHECK Docker")
     ap.add_argument("--export-web", action="store_true",
-                    help="génère et exporte les données du mot du jour dans ./volumes/web/data.json pour le serveur web Caddy")
+                    help="régénère data.json dans ./cemantix_data (jamais dans le webroot Caddy) et publie les pages SEO")
+    ap.add_argument("--publish-seo", action="store_true",
+                    help="régénère uniquement les pages d'archives /puzzles/<date>/, l'index paginé et sitemap.xml depuis l'historique")
     ap.add_argument("--force-solve", action="store_true",
                     help="force la résolution immédiate du mot du jour et régénère l'historique complet avec trajectoire dans data.json")
     ap.add_argument("--api", action="store_true",
@@ -104,6 +106,12 @@ def main():
         export_web_data()
         return
 
+    if getattr(args, "publish_seo", False):
+        from datetime import datetime
+        from src.services import load_history, publish_seo_pages, PARIS_TZ
+        publish_seo_pages(history=load_history(), generated_at=datetime.now(PARIS_TZ))
+        return
+
     if getattr(args, "force_solve", False):
         from src.services import run_daily_solver
         args.rag_only = True
@@ -113,14 +121,13 @@ def main():
     if getattr(args, "api", False):
         from src.engine import VocabStore
         from src.api import start_api_server
-        store = VocabStore()
+        store = VocabStore(with_chroma=False)
         server = start_api_server(store, host=args.api_host, port=args.api_port)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
             log("\n🛑  Arrêt du serveur d'API Cémantix.")
         return
-
 
     # Lancement automatique du menu interactif si aucun argument CLI n'est passé ou si --menu est spécifié
     if not has_cli_options or args.menu:

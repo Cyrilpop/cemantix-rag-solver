@@ -389,10 +389,12 @@ def run_solo_loop(store: VocabStore, secret_arg=None):
                 tries_count += 1
                 w_icon, w_lbl = weather_for_score(s_h, p_h)
                 guesses[chosen_hint] = (s_h, p_h, tries_count, w_icon, f"{w_lbl} 💡")
-                history_guesses.append((tries_count, chosen_hint, s_h, p_h, w_icon, f"{w_lbl} 💡"))
-                if s_h > best_score:
-                    best_score = s_h
-                    best_word = chosen_hint
+                # Pas de suivi séparé ici : `guesses` est la seule structure lue
+                # par l'affichage, et le meilleur score est recalculé plus bas à
+                # partir de `guesses`. Les lignes résiduelles qui suivaient
+                # (history_guesses / best_score / best_word, recopiées d'ailleurs)
+                # référençaient des variables inexistantes : demander un indice en
+                # mode solo levait une NameError et faisait planter la partie.
                 rk_info = f"{p_h} ‰" if p_h else f"{s_h*100:+.2f}°C"
                 notice = f"💡  Indice #{len(hints)} accordé : « {chosen_hint.upper()} » ({rk_info}, {w_icon}) — (+1 coup comptabilisé, Essai #{tries_count})"
             else:

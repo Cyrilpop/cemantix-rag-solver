@@ -4,8 +4,11 @@ Cémantix Solver — Configuration & Constantes
 Centralise l'ensemble des constantes métier, chemins de données,
 paramètres d'environnement, styles ANSI et listes de référence.
 """
+import collections
+import logging
 import os
 import re
+import threading
 from pathlib import Path
 
 # --------------------------------------------------------------------------- #
@@ -40,6 +43,49 @@ CHROMA_DIR = DATA_DIR / "chroma_w2v"
 COLLECTION = "frwac_" + re.sub(r"\W", "_", Path(W2V_FILE).stem)[-50:]
 
 # --------------------------------------------------------------------------- #
+# Validation de la configuration (QUAL-04)
+# --------------------------------------------------------------------------- #
+# Valeur livrée dans .env.example : si elle survit jusqu'en exécution, la base est
+# accessible avec un mot de passe public. Mieux vaut refuser de démarrer.
+DB_PASS_PLACEHOLDER = "cemantix_secure_password_replace_in_prod"
+
+
+def validate_runtime_config() -> list:
+    """Contrôle la configuration nécessaire pour servir ou résoudre.
+
+    Retourne la liste des problèmes détectés. Le mode SQLite (aucun DB_HOST) n'est
+    pas concerné : c'est le mode des tests et du développement hors conteneur.
+    """
+    problems = []
+    db_host = os.getenv("DB_HOST")
+    db_pass = os.getenv("DB_PASS", "")
+
+    if db_host:
+        if not db_pass:
+            problems.append("DB_PASS est vide alors que DB_HOST est configuré")
+        elif db_pass == DB_PASS_PLACEHOLDER:
+            problems.append(
+                "DB_PASS porte encore la valeur d'exemple "
+                f"{DB_PASS_PLACEHOLDER!r} (: .env.example)"
+            )
+        for name in ("DB_NAME", "DB_USER"):
+            if not os.getenv(name):
+                problems.append(f"{name} est requis quand DB_HOST est configuré")
+    return problems
+
+
+def enforce_runtime_config() -> None:
+    """Refuse de démarrer sur une configuration invalide (message actionnable)."""
+    problems = validate_runtime_config()
+    if problems:
+        for problem in problems:
+            log(f"❌  [CONFIGURATION] {problem}")
+        raise SystemExit(
+            "Configuration refusée : corrigez les variables d'environnement ci-dessus."
+        )
+
+
+# --------------------------------------------------------------------------- #
 # Endpoints Réseau & API
 # --------------------------------------------------------------------------- #
 SITE = "https://cemantix.certitudes.org"
@@ -52,6 +98,7 @@ HEADERS = {
 
 LM_API = os.getenv("LM_API", "http://host.docker.internal:1234/v1")
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2")
+LLM_TIMEOUT = float(os.getenv("LLM_TIMEOUT", "120"))
 
 # --------------------------------------------------------------------------- #
 # Données linguistiques & Amorçages
@@ -96,86 +143,118 @@ SEEDS_EXPERT = [
 ]
 
 # --------------------------------------------------------------------------- #
-# Mots et tokens anglais parasites à exclure impérativement du vocabulaire Cémantix
-# (Mots anglais purs issus de sous-titres, corpus web ou hallucinations LLM,
-# ainsi que les graphies anglaises sans accent de mots français : decision, region, etc.)
-# ATTENTION : Ne contient STRICTEMENT AUCUN mot français ni anglicisme admis par Cémantix.
+# Mots et tokens anglais parasites à exclure impérativement du vocabulaire Cémantix (QUAL-09)
 # --------------------------------------------------------------------------- #
-ENGLISH_WORDS = set("""
-about after again against all also always another any around ask baby back bad
-be beat beautiful because become before begin behind believe best better between
-big black blood blue body book both boy bring brother build business buy
-call can cat child children city clear close cold come company could country
-create creation dark day dead death decide decision deep develop die different do dog door
-down draw early east easy eat economic economy education end enough even evening
-ever every expect eye fact fall family far fast father feel few fight fill
-find finish first fly follow food friend from full game generation get girl give go
-good great ground group grow hair half hand happen hard have head hear
-heart heavy help here high history hold home hope horse hot house how
-huge human hundred husband idea include industry inside instead
-interest into join just keep kill kind king kitchen know land last
-late later laugh lead learn leave left let letter level lie life light
-like line listen little live lose love low make man many market
-marry matter mean measure meet member middle military mind
-money month more morning most mother move much music name
-near need never new news next night north not nothing now
-number officer often oil old once one only operation order other others
-our out outside over own party pay people person phone picture
-play player political power president price problem produce
-product program project provide push put quick quite
-raise reach read ready real really reason receive red remain remember
-reaction region require research resource response return right rise roll room
-rule run same save say school sea season seat security seek seem
-selection send sense series serve seven several sex shake share she
-should shoulder side sign since sing sister sit
-size skill skin small smile society soldier somebody someone something
-sometimes song soon sound south space speak special specific spend
-spring start state statement stay step
-still story strategy street strong student study stuff
-subject success successful such suddenly suffer suggest summer sure
-system take talk task tax teach teacher team technology television tell ten term
-than thank that the their them themselves then theory there these they thing
-think third this those though thought thousand through throughout throw thus time
-today together tonight too tough toward town trade traditional training
-travel treat treatment tree trial trip true truth try turn two under
-understand unit until upon usually value various very victim view visit
-voice wait walk wall want war watch water weapon wear week weight well west
-what whatever when where whether which while white who whole whom whose why wide
-wife will win wind window wish with within without woman wonder word work worker
-world worry would write writer wrong yard yeah year yes yet young your yourself
-shit fuck sorry online download website thread feed definition revolution
-evolution preparation
-""".split())
+ENGLISH_WORDS_FILE = Path(__file__).resolve().parent / "engine" / "english_stopwords.txt"
+
+def _load_english_words() -> set[str]:
+    if ENGLISH_WORDS_FILE.exists():
+        try:
+            with open(ENGLISH_WORDS_FILE, "r", encoding="utf-8") as f:
+                words = set()
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#"):
+                        words.update(line.split())
+                return words
+        except Exception:
+            pass
+    return set()
+
+ENGLISH_WORDS = _load_english_words()
 
 
 # --------------------------------------------------------------------------- #
-# Prompt LLM Local
+# Prompt LLM Local (chargé depuis le template src/engine/prompt_template.txt) (QUAL-09)
 # --------------------------------------------------------------------------- #
-PROMPT = """Tu joues à Cémantix : trouver un mot secret français par proximité \
-sémantique (modèle word2vec).
-RÈGLE STRICTE LINGUISTIQUE : uniquement des mots de la LANGUE FRANÇAISE ! Tout mot anglais \
-ou anglicisme non français est formellement interdit.
-RÈGLE GRAMMATICALE STRICTE : uniquement des lemmes — nom ou adjectif au MASCULIN SINGULIER, \
-verbe à l'INFINITIF. Jamais de pluriel, jamais de féminin, pas de nom propre.
-Température de -100 à 100 ; au-delà de ~25°C on est dans le top 1000 (rang ‰, \
-1000 = trouvé).
+PROMPT_TEMPLATE_FILE = Path(__file__).resolve().parent / "engine" / "prompt_template.txt"
 
-Meilleurs essais réels (mot : température, rang ‰) :
-{best}
+def _load_prompt_template() -> str:
+    if PROMPT_TEMPLATE_FILE.exists():
+        try:
+            with open(PROMPT_TEMPLATE_FILE, "r", encoding="utf-8") as f:
+                return f.read().strip()
+        except Exception:
+            pass
+    return "Tu joues à Cémantix : {best} {worst} {candidates} {n}"
 
-Mots les plus froids (direction à éviter) : {worst}
-
-Candidats estimés par la recherche vectorielle (les premiers sont les plus \
-cohérents avec tous les scores réels) :
-{candidates}
-
-Déduis le champ sémantique du mot secret et propose {n} NOUVEAUX mots français, non \
-déjà testés, les plus susceptibles d'être le secret. Tu peux reprendre des \
-candidats ou proposer tes propres idées en français.
-Réponds UNIQUEMENT par un tableau JSON de chaînes, ex: ["mot1", "mot2"]."""
+PROMPT = _load_prompt_template()
 
 
-def log(msg: str = "") -> None:
-    print(msg, flush=True)
+class _MemoryLogHandler(logging.Handler):
+    """Tampon circulaire des derniers messages journalisés (console d'admin).
+
+    L'API d'administration doit pouvoir relire l'activité récente sans accès
+    disque : la boucle est bornée pour que sa mémoire reste constante, quel que
+    soit le volume de logs produit.
+    """
+
+    def __init__(self, capacity: int = 800):
+        super().__init__()
+        self._lines: "collections.deque[tuple[int, str]]" = collections.deque(maxlen=int(capacity))
+        self._seq = 0
+        self._lock = threading.Lock()
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            line = self.format(record)
+        except Exception:
+            return
+        with self._lock:
+            self._seq += 1
+            self._lines.append((self._seq, line))
+
+    def tail(self, count: int = 200) -> list:
+        with self._lock:
+            lines = [l for _s, l in self._lines]
+        return lines[-max(1, int(count)):]
+
+    def since(self, last_seq: int) -> tuple[int, list[str]]:
+        with self._lock:
+            if not self._lines:
+                return self._seq, []
+            new_lines = [l for s, l in self._lines if s > last_seq]
+            return self._seq, new_lines
+
+
+_MEMORY_LOG_CAPACITY = int(os.getenv("ADMIN_LOG_BUFFER", "800"))
+
+_logger = logging.getLogger("cemantix")
+if not _logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+    _logger.addHandler(_handler)
+    _logger.setLevel(logging.INFO)
+_MEMORY_HANDLER = _MemoryLogHandler(_MEMORY_LOG_CAPACITY)
+_MEMORY_HANDLER.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+if _MEMORY_HANDLER not in _logger.handlers:
+    _logger.addHandler(_MEMORY_HANDLER)
+
+
+def recent_logs(count: int = 200) -> list:
+    """Retourne les `count` dernières lignes journalisées par ce processus."""
+    return _MEMORY_HANDLER.tail(count)
+
+
+def logs_since(last_seq: int) -> tuple[int, list[str]]:
+    """Retourne les nouvelles lignes depuis le numéro de séquence `last_seq`."""
+    return _MEMORY_HANDLER.since(last_seq)
+
+
+def log(msg: str = "", level=logging.INFO) -> None:
+    """Journalise un message avec horodatage et niveau (QUAL-05).
+
+    `level` accepte un entier `logging` ou son nom (`"WARNING"`, `"ERROR"`) :
+    l'appel est très répandu sous la forme texte et doit rester sans effet de
+    bord si le nom est inconnu (on retombe sur INFO).
+    """
+    if not msg:
+        print("", flush=True)
+        return
+    if isinstance(level, str):
+        level = logging.getLevelName(level.upper())
+        if not isinstance(level, int):
+            level = logging.INFO
+    _logger.log(level, msg)
 
 

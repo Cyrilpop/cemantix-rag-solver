@@ -15,25 +15,81 @@ Fonctionnalités :
 - Logs clairs et horodatés sur stdout (visibles via docker logs -f).
 """
 import json
+import logging
 import os
 import signal
 import sys
-import tempfile
+import threading
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from ..config import DATA_DIR, log
+from ..config import DATA_DIR, enforce_runtime_config, log
 from ..engine import Solver
 
 PARIS_TZ = ZoneInfo("Europe/Paris")
 DAILY_HISTORY_FILE = DATA_DIR / "daily_history.json"
-HEARTBEAT_FILE = Path(os.environ.get("DAEMON_HEARTBEAT_FILE", Path(tempfile.gettempdir()) / "daemon_heartbeat.json"))
+# Le battement doit être lisible par le service web : `/tmp` est propre à chaque
+# conteneur, l'y écrire rendait le widget « État du démon » du tableau de bord
+# structurellement faux (il affichait « inactif » pendant que le worker travaillait).
+HEARTBEAT_FILE = Path(
+    os.environ.get("DAEMON_HEARTBEAT_FILE", str(DATA_DIR / "daemon_heartbeat.json"))
+)
+DAEMON_COMMAND_FILE = DATA_DIR / "daemon_command.json"
+
+
+def check_and_consume_command() -> str | None:
+    """Lit et supprime un ordre déposé par l'API web (ex: solve immédiat)."""
+    if not DAEMON_COMMAND_FILE.exists():
+        return None
+    try:
+        content = DAEMON_COMMAND_FILE.read_text(encoding="utf-8")
+        data = json.loads(content)
+        DAEMON_COMMAND_FILE.unlink(missing_ok=True)
+        return data.get("action")
+    except Exception as e:
+        log(f"⚠️  Erreur lecture ordre démon : {e}")
+        DAEMON_COMMAND_FILE.unlink(missing_ok=True)
+        return None
+
+# Le battement est rafraîchi en arrière-plan : une phase longue (chargement du
+# modèle de mots, indexation, appel LLM) bloquait le thread principal et laissait
+# le battement vieillir au-delà du seuil du HEALTHCHECK — le conteneur passait
+# `unhealthy` **pendant qu'il travaillait**, et tout pilotage par la santé aurait
+# tué une résolution en cours.
+HEARTBEAT_INTERVAL_SECONDS = float(os.environ.get("DAEMON_HEARTBEAT_INTERVAL", "15"))
+_heartbeat_state = {"status": "starting", "extra": {}}
+_heartbeat_stop = threading.Event()
+_heartbeat_thread: threading.Thread | None = None
+
+
+def _heartbeat_loop() -> None:
+    while not _heartbeat_stop.wait(HEARTBEAT_INTERVAL_SECONDS):
+        update_heartbeat(_heartbeat_state["status"], dict(_heartbeat_state["extra"]))
+
+
+def start_heartbeat_monitor() -> None:
+    """Démarre le rafraîchissement périodique du battement (idempotent)."""
+    global _heartbeat_thread
+    if _heartbeat_thread is not None and _heartbeat_thread.is_alive():
+        return
+    _heartbeat_stop.clear()
+    _heartbeat_thread = threading.Thread(
+        target=_heartbeat_loop, name="CemantixHeartbeat", daemon=True
+    )
+    _heartbeat_thread.start()
+
+
+def stop_heartbeat_monitor() -> None:
+    """Arrête le rafraîchissement périodique (appelé avant l'écriture de « stopped »)."""
+    _heartbeat_stop.set()
 
 
 def update_heartbeat(status: str, extra: dict = None) -> None:
     """Met à jour le fichier de battement de cœur (heartbeat) pour le HEALTHCHECK Docker."""
+    _heartbeat_state["status"] = status
+    _heartbeat_state["extra"] = dict(extra or {})
     data = {
         "status": status,
         "pid": os.getpid(),
@@ -48,8 +104,10 @@ def update_heartbeat(status: str, extra: dict = None) -> None:
         with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(data, f)
         tmp_file.replace(HEARTBEAT_FILE)
-    except Exception:
-        pass
+    except Exception as e:
+        # Muet ici, le HEALTHCHECK Docker finirait par déclarer le conteneur
+        # `unhealthy` alors que le démon tourne : la cause doit rester visible.
+        log(f"⚠️  [DÉMON] Impossible d'écrire le battement {HEARTBEAT_FILE} : {e}")
 
 
 def check_health(max_age_seconds: int = 90) -> int:
@@ -78,7 +136,18 @@ def check_health(max_age_seconds: int = 90) -> int:
 
 
 def load_history(filepath: Path = DAILY_HISTORY_FILE) -> list:
-    """Charge l'historique des résolutions quotidiennes."""
+    """Charge l'historique des résolutions quotidiennes (priorité PostgreSQL, repli JSON)."""
+    # 1. Tentative de lecture en base relationnelle uniquement sur le chemin officiel
+    if filepath == DAILY_HISTORY_FILE:
+        try:
+            from ..db import get_all_daily_puzzles
+            db_entries = get_all_daily_puzzles()
+            if db_entries:
+                return db_entries
+        except Exception as e:
+            log(f"⚠️  Lecture base relationnelle indisponible ({e}), repli JSON.")
+
+    # 2. Repli sur le fichier JSON historique
     if not filepath.exists():
         return []
     try:
@@ -91,7 +160,7 @@ def load_history(filepath: Path = DAILY_HISTORY_FILE) -> list:
 
 
 def save_history(history: list, filepath: Path = DAILY_HISTORY_FILE) -> None:
-    """Sauvegarde l'historique des résolutions dans un fichier JSON indenté."""
+    """Sauvegarde l'historique des résolutions dans un fichier JSON indenté (rétrocompatibilité)."""
     try:
         filepath.parent.mkdir(parents=True, exist_ok=True)
         with open(filepath, "w", encoding="utf-8") as f:
@@ -102,10 +171,36 @@ def save_history(history: list, filepath: Path = DAILY_HISTORY_FILE) -> None:
 
 def has_solved_today(history: list, today_str: str) -> tuple[bool, dict | None]:
     """Vérifie si le puzzle de la date donnée a déjà été résolu avec succès."""
-    for entry in history:
-        if entry.get("date") == today_str and entry.get("win") is True:
-            return True, entry
+    if history:
+        for entry in history:
+            if entry.get("date") == today_str and entry.get("win") is True:
+                return True, entry
+        return False, None
+
+    try:
+        from ..db import get_daily_puzzle
+        db_entry = get_daily_puzzle(today_str)
+        if db_entry and db_entry.get("win") is True:
+            return True, db_entry
+    except Exception as e:
+        # Une base injoignable ressemble ici à « pas encore résolu » : le démon
+        # relancerait une résolution complète pour un mot déjà gagné.
+        log(f"⚠️  [DÉMON] Base de données inaccessible pour le statut du jour : {e}")
+
     return False, None
+
+
+def has_failed_entry_today(history: list, today_str: str) -> bool:
+    """Indique si une tentative échouée a déjà été consignée pour cette date.
+
+    `run_daily_solver` consigne aussi les défaites : après un échec réseau, la
+    relance immédiate qui suit ne doit pas écraser cette trace par un nouvel
+    échec — l'historique de la journée reste ainsi lisible.
+    """
+    return any(
+        entry.get("date") == today_str and entry.get("win") is not True
+        for entry in history or []
+    )
 
 
 def get_next_run(target_hour: int = 0, target_minute: int = 0, buffer_seconds: int = 10) -> tuple[float, datetime]:
@@ -163,6 +258,14 @@ def run_daily_solver(args) -> dict:
         "timestamp": now.isoformat(),
     }
 
+    # Persistance relationnelle ACID dans PostgreSQL (ou repli SQLite)
+    try:
+        from ..db import save_daily_puzzle
+        save_daily_puzzle(entry)
+        log("🐘  Résultat consigné avec succès dans la table PostgreSQL daily_puzzles.")
+    except Exception as e:
+        log(f"⚠️  Erreur sauvegarde base relationnelle : {e}")
+
     history = load_history()
     # Remplacer toute entrée précédente pour la même date pour garantir l'enregistrement de la trajectoire
     history = [h for h in history if h.get("date") != today_str]
@@ -170,6 +273,7 @@ def run_daily_solver(args) -> dict:
     save_history(history)
 
     log(f"📝  Résultat enregistré dans {DAILY_HISTORY_FILE}")
+
     update_heartbeat("sleeping", {"last_solved_puzzle": puzzle_id, "last_solved_word": result.get("word")})
 
     # Synchronisation automatique de la page web pour Caddy
@@ -179,11 +283,18 @@ def run_daily_solver(args) -> dict:
     except Exception as e:
         log(f"⚠️  Export web automatique non disponible : {e}")
 
+    try:
+        from ..api.routes.system import invalidate_system_cache
+        invalidate_system_cache()
+    except Exception:
+        pass
+
     return entry
 
 
 def run_daemon_loop(args) -> None:
     """Boucle principale du démon 24h/24."""
+    enforce_runtime_config()
     running = True
 
     def signal_handler(signum, frame):
@@ -197,6 +308,7 @@ def run_daemon_loop(args) -> None:
     signal.signal(signal.SIGTERM, signal_handler)
 
     update_heartbeat("starting")
+    start_heartbeat_monitor()
     log("=" * 60)
     log("⏰  DÉMON CÉMANTIX SOLVER — VEILLE QUOTIDIENNE (00h00)")
     log("=" * 60)
@@ -209,8 +321,8 @@ def run_daemon_loop(args) -> None:
     try:
         from .web import export_web_data
         export_web_data()
-    except Exception:
-        pass
+    except Exception as e:
+        log(f"⚠️  [DÉMON] Synchronisation initiale de la page web échouée : {e}")
 
     # Démarrage de l'API locale du jeu interactif (partage en mémoire du VocabStore)
     if not getattr(args, "no_api", False):
@@ -240,7 +352,22 @@ def run_daemon_loop(args) -> None:
             try:
                 run_daily_solver(args)
             except Exception as e:
-                log(f"❌  Erreur lors de la résolution initiale : {e}")
+                # Sans ce rattrapage, le dashboard reste privé de son mot du jour
+                # (POST /api/daily/reveal renvoie « pas encore résolu ») et le
+                # démon ne le découvrira qu'au prochain réveil de minuit.
+                log(f"❌  Erreur lors de la résolution initiale : {e}", level=logging.WARNING)
+                if not has_failed_entry_today(history, today_str):
+                    log("🔁  Nouvel essai de résolution initiale dans 60 secondes...")
+                    for _ in range(60):
+                        if not running:
+                            break
+                        time.sleep(1)
+                    if running:
+                        try:
+                            run_daily_solver(args)
+                        except Exception as retry_error:
+                            log(f"❌  Échec définitif de la résolution initiale : {retry_error}",
+                                level=logging.WARNING)
 
     # Boucle de veille permanente
     while running:
@@ -249,9 +376,15 @@ def run_daemon_loop(args) -> None:
         log(f"\n💤  Mise en veille du démon jusqu'à 00h00 Paris (prochain réveil : {target_str}, dans {format_duration(seconds_left)}).")
         update_heartbeat("sleeping", {"next_run": target_str})
 
-        # Sommeil par tranche de 1 seconde pour réactivité immédiate à SIGINT/SIGTERM
+        # Sommeil par tranche de 1 seconde pour réactivité immédiate à SIGINT/SIGTERM ou commandes admin
         tick = 0
+        forced_action = None
         while running and datetime.now(PARIS_TZ) < next_target:
+            cmd = check_and_consume_command()
+            if cmd == "solve":
+                log("\n⚡  [DÉMON WORKER] Ordre de résolution immédiate reçu depuis l'API web !")
+                forced_action = "solve"
+                break
             time.sleep(1)
             tick += 1
             if tick % 15 == 0:
@@ -259,6 +392,13 @@ def run_daemon_loop(args) -> None:
 
         if not running:
             break
+
+        if forced_action == "solve":
+            try:
+                run_daily_solver(args)
+            except Exception as e:
+                log(f"⚠️  Échec lors de la résolution commandée : {e}", level=logging.WARNING)
+            continue
 
         log("\n⏰  Réveil du démon Cémantix — Minuit passé, lancement de la résolution !")
         max_attempts = 3
@@ -275,5 +415,6 @@ def run_daemon_loop(args) -> None:
                             break
                         time.sleep(1)
 
+    stop_heartbeat_monitor()
     update_heartbeat("stopped")
     log("👋  Démon Cémantix arrêté.")
