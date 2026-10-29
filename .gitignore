@@ -1,0 +1,91 @@
+# =============================================================================
+# Cémantix Solver — Fichier .gitignore
+# -----------------------------------------------------------------------------
+# Complète l'évolution docs/roadmap/2026-10-securite-seo-performance (point SEC-10) :
+# empêche la fuite des secrets, des données PostgreSQL et des modèles lourds.
+# =============================================================================
+
+# --- Secrets & environnement -------------------------------------------------
+# Un seul motif global : `.env.*` ne couvrait ni `.env_local`, ni `.env-local`,
+# ni `.envbackup` — trois variantes rencontrées dans la vraie vie.
+.env*
+*.env
+!.env.example
+*.pem
+*.key
+*.crt
+
+# --- Environnement local de test (WSL / nginx) -------------------------------
+# Le dossier EST versionné : il contient l'outillage qui prouve les correctifs
+# (smoke test, compose de test, config nginx, pool test). Ce qui reste exclu :
+local/.env
+local/*.log
+local/__pycache__/
+local/.pytest_cache/
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+/dist/
+
+# --- Données PostgreSQL (volume monté dans le conteneur cemantix_db) ---------
+volumes/db/
+
+# --- Données exportées contenant les mots secrets ou générées automatiquement ---
+volumes/web/data.json
+volumes/web/sitemap.xml
+volumes/web/puzzles/
+
+# --- Cache & modèles lourds (téléchargés au premier lancement) ---------------
+cemantix_data/*.bin
+cemantix_data/*.part
+cemantix_data/*.npy
+cemantix_data/*.npz
+cemantix_data/*.tmp
+cemantix_data/*.sqlite3*
+cemantix_data/chroma_w2v/
+# Cache du memmap (liste des lemmes retenus, régénéré automatiquement)
+cemantix_data/*_words.txt
+# Tous les exports de données : data.json et les miroirs de sessions contiennent
+# les MOTS SECRETS des parties en cours et l'historique des solutions.
+cemantix_data/*.json
+
+# --- Éditeurs & OS -----------------------------------------------------------
+# Tout `.idea/` est ignoré : la configuration IDE n'a rien à faire dans le dépôt,
+# et les documents de travail qui y vivaient ont été versionnés sous docs/roadmap/.
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store
+
+# --- Fichiers et configurations locales / temporaires -----------------------
+.agents/
+Caddyfile
+docker-compose.local.yml
+volumes/nginx/
+
+# --- Données et scripts spécifiques cemantix_data --------------------------
+cemantix_data/check_frwac.py
+cemantix_data/chroma/
+cemantix_data/fr_vocab.txt
+cemantix_data/words.txt
+
+# --- Tests locaux non suivis ------------------------------------------------
+tests/__init__.py
+tests/test_api.py
+tests/test_battle.py
+tests/test_clients.py
+tests/test_daemon.py
+tests/test_db.py
+tests/test_multiplayer.py
+tests/test_seeds.py
+tests/test_vocab.py
+tests/test_web.py
