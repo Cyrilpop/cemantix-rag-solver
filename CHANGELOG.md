@@ -4,9 +4,137 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-27 · Roadmap Sécurité, SEO, Performance & Qualité
+
+### Ajouté
+- **Tests unitaires exhaustifs (QUAL-01)** : Suite de **81 tests unitaires** automatisés avec repli SQLite pur (`tests/`), couvrant l'architecture, le serveur HTTP, les fuites de connexions, la sanitisation des entrées et la logique multi.
+- **CI GitHub Actions & Lighthouse (QUAL-02, SEO-12)** : Workflow multi-jobs `.github/workflows/ci.yml` intégrant tests bloquants, vérification documentaire automatique (`tools/check_docs.py`), lint statique `ruff`, audit de dépendances `pip-audit` et contrôle Lighthouse CI.
+- **Rendu front mutualisé (QUAL-08)** : Module `volumes/web/js/render.js` factorisant la génération HTML et l'injection DOM des tuiles de coups entre le mode multijoueur (`multi.js`) et le mode battle (`battle.js`), avec cache de comparaison anti-scintillement.
+- **Contrôle d'intégrité des téléchargements (SEC-11)** : Validation structurelle et empreinte SHA-256 (`W2V_SHA256`, `LEXIQUE_SHA256`) lors de la récupération des modèles et lexiques.
+- **Garde-fous de configuration (QUAL-04, QUAL-16)** : Fail-fast au démarrage interdisant le mot de passe d'exemple en environnement non-dev, et syntaxe stricte `${VAR:?erreur}` dans `docker-compose.yml` empêchant toute substitution silencieuse vide.
+- **Observabilité et conformité RGPD (SEC-09, RGPD-01, RGPD-02, RGPD-03)** : Anonymisation des adresses IP en sous-réseaux `/24` (IPv4) et `/48` (IPv6) avant journalisation, traçage explicite des statuts d'erreur HTTP 4xx/429/5xx, exclusion des pseudonymes des logs d'accès, et cadrage du cookie de révélation comme strictement nécessaire.
+- **Extraction des stopwords et templates de prompt (QUAL-09)** : Fichiers dédiés `src/engine/english_stopwords.txt` et `src/engine/prompt_template.txt` découplés de `src/config.py`.
+
+### Modifié & Optimisé
+- **Performance base de données & Pool de connexions (PERF-06, PERF-06b, PERF-05)** :
+  - Fin de la fuite de connexions PostgreSQL via un pool réutilisable thread-safe borné (`max_size=8`) dans `src/db/connection.py`.
+  - Contrôle `SELECT 1` conditionnel espacé de 30 s au lieu de systématique par requête.
+  - Persistance ciblée $O(1)$ par coup joué (`save_solo_session`, `save_multi_session`) dans `GameManager` éliminant la réécriture complète de toutes les sessions.
+- **Cache mémoire & ETag sur `/api/daily` (PERF-01, PERF-02, PERF-03)** : Cache TTL 15 s avec verrou, réponse `304 Not Modified` via ETag MD5, suppression du paramètre cache-buster `?t=`, et polling conditionnel suspendu lorsque l'onglet est masqué.
+- **Sécurité des clés & sessions (SEC-05, SEC-05b)** : Clés de session portées à 96-128 bits d'entropie (`secrets.token_hex(12)`), hachage cryptographique HMAC-SHA256 des clés stockées en base (`multi_rooms`) et rétrocompatibilité transparente.
+- **Sécurité des conteneurs (SEC-13, QUAL-13)** : Exécution de l'image sous utilisateur dédié non-root `cemantix` (UID 1000), durcissement Compose (`no-new-privileges: true`, `cap_drop: [ALL]`), et `.dockerignore` réduisant le contexte de build de 2,7 Go à < 800 ko.
+- **SEO & AEO (SEO-01b, SEO-06, SEO-07, SEO-11)** : Balise anti thin-content conditionnelle sur les archives non résolues, métadonnées JSON-LD enrichies (auteur Cyril Randon, `sameAs`, `isPartOf`), cartes Open Graph 1200x630 dédiées, et publication d'une spécification statique `openapi.json` liée à `.well-known/ai-catalog.json`.
+- **Accessibilité, Contraste WCAG & Pré-rendu SEO (A11Y-04, SEO-01)** : Rehaussement des ratios de contraste sur tous les éléments du pied de page et de la section Daily (`#resume-du-jour`, sous-titres, gras, liens avec soulignement explicite, boutons `.btn-ghost`), harmonisation du balisage du footer sur les 4 pages (`index.html`, `play/`, `battle/`, `multi/`), et fiabilisation de l'idempotence du remplacement de balises `data-seo` dans `src/services/seo.py` éliminant tout risque de duplication de texte lors de la publication quotidienne.
+
+---
+
+## [Non publié] - 2026-10-26 · Architecture & Persistance
+
+### Ajouté
+- **Architecture 3-Tiers Découplée (PostgreSQL 16 + Worker RAG + API Web)** :
+  - Découpage de l'application monolithique en 3 conteneurs autonomes et durcis (`cemantix_db`, `cemantix_worker`, `cemantix_web`).
+  - Persistance relationnelle ACID dans PostgreSQL (`daily_puzzles`, `multi_rooms`, `solo_sessions`) avec schéma déclaratif `database/init.sql`.
+  - Couche d'accès aux données thread-safe dans `src/db/` (`connection.py`, `daily.py`, `multi.py`, `solo.py`) avec gestionnaire de transactions et repli automatique transparent sur SQLite pour les tests unitaires et le dev local.
+  - Découplage mémoire haute performance : le conteneur web partage la mémoire physique des vecteurs NumPy (`np.memmap`) en lecture seule (`:ro`) et exclut le chargement lourd de ChromaDB, assurant un démarrage instantané en 0.1s et une empreinte RAM totale < 200 Mo sur l'hôte.
+  - Élimination des race conditions sur les parties multijoueurs grâce à la synchronisation relationnelle immédiate en base de données.
+  - Script de migration d'historique `scripts/migrate_json_to_pg.py` pour importer les puzzles quotidiens archivés vers PostgreSQL.
+  - Fichier de configuration sécurisé `.env.example` et externalisation complète des identifiants et variables d'environnement hors de Git.
+
+## [Non publié] - 2026-10-26 · Sécurité
+
+### Corrigé
+- **Fuite du mot secret du jour (anti-spoiler contournable)** :
+  - `GET /api/daily` acceptait le paramètre public `?reveal=true` et renvoyait la solution à n'importe quel `curl`, `prefetch` ou crawler : le bouclier anti-spoiler n'était que visuel. La solution est désormais **absente de toute réponse `GET`** ; sa consultation passe par la nouvelle route `POST /api/daily/reveal`, qui exige une action volontaire.
+  - `_scrub_secret()` masque aussi le mot cible dans `trajectory`, `top_guesses` et l'entrée du jour de `history` : jusqu'ici la solution restait intégralement lisible dans ces tableaux annexes alors que le champ `word` était vidé.
+  - `dashboard.js` n'exploite plus `current.word` (source de la fuite côté client) et appelle la route POST pour révéler ou copier le mot.
+  - Le mot révélé n'est plus effacé par le polling de 30 s, l'API ne le renvoyant plus.
+- **Exposition de `data.json` dans le webroot** : le fichier, qui contient l'historique complet des solutions, était documenté comme devant être publié dans `./volumes/web` et se récupérait par un simple `curl https://…/data.json`. `export_web_data()` refuse désormais toute cible située dans le webroot ou l'un de ses sous-répertoires, et la documentation corrige l'emplacement réel (`./cemantix_data`).
+- **Serviteur HTTP non durci** :
+  - Corps de requête illimité : un `Content-Length` mensonge forçait l'allocation mémoire. Le corps est plafonné à `API_MAX_BODY_BYTES` (32 ko) et **validé avant tout traitement** (le test du gestionnaire était passé avant la lecture) ; au-delà : `413`.
+  - CORS ouvert par `Access-Control-Allow-Origin: *` (et `Authorization` déclaré) : remplacé par une liste blanche d'origine (`API_ALLOWED_ORIGIN`) avec `Vary: Origin`.
+  - Absence de limitation de débit : nouveau module `src/api/ratelimit.py` (seau à jetons par IP via `X-Forwarded-For`, thread-safe, mémoire bornée, `429` + `retry_after`), `/api/health` en étant exempté pour ne pas casser le `healthcheck` Docker.
+  - Un thread créé par connexion sans plafond : `BoundedHTTPServer` limite les workers (`API_MAX_WORKERS`, 64) et renvoie un `503` propre.
+  - En-têtes de sécurité ajoutés à chaque réponse : `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `Cache-Control: no-store` ; version Python retirée de l'en-tête `Server` ; timeout socket de 10 s ; écriture tolérante aux déconnexions navigateur.
+- **XSS dans tous les rendus dynamiques** : aucune fonction d'échappement n'existait ; mots, dates, numéros de puzzle, identifiants de salon et pseudonymes d'adversaire étaient injectés bruts dans `innerHTML`.
+  - Introduction de `escapeHtml()` (et `safeNumber()`) dans `js/utils.js`, appliqués aux indices, à l'historique, aux listes de coups, à la trajectoire, aux cartes de duel et aux cibles révélées en multijoueur.
+  - Suppression des gestionnaires construits par concaténation — `onclick="copyToClipboard('${mot}')"`, `onclick="window.multiResumeGame('${room}', '${clé}')"` — qui permettaient de fermer la chaîne JS avec une simple apostrophe ; remplacés par des attributs `data-copy` / `data-resume-room` / `data-delete-room` et une délégation d'événements enregistrée une seule fois.
+- **Clé de salon laissée dans l'URL** : le lien d'invitation `/multi/?r=…&k=…` conservait la clé du joueur dans la barre d'adresse — donc dans l'historique du navigateur, le champ d'URL et les captures d'écran — et restait cliquable des heures plus tard, soit une prise de contrôle du duel sur un ordinateur partagé. Le polling passait en outre la clé en query string `GET`, c'est-à-dire dans la ligne de requête transmise au proxy. `stripKeyFromUrl()` retire la clé dès le chargement (avant même la requête de connexion) et à chaque changement d'état, ne laissant que le code de salon, qui n'autorise aucune action ; les deux points de polling basculent sur `POST /api/multi/status` (charge utile identique, dans le corps) ; `handle_multi_get` ne sert plus aucune route, la voie GET étant fermée avec un message indiquant le POST équivalent. Le lien de partage conserve sa clé — c'est la fonctionnalité — mais elle n'est lue qu'une fois.
+- **Surface globale laissée par les `onclick` supprimés** : les quatre fonctions que les gestionnaires inline appelaient restaient publiées sur `window` (`copyToClipboard`, `showConfirmDialog`, `multiResumeGame`, `multiDeleteGame`) alors qu'elles n'avaient plus aucun appelant global — vérifié : zéro `onclick=` dans les quatre pages, zéro appel `window.<ces noms>` dans tout `volumes/web/`, tous les appels passant par `import` ES modules ou par la délégation `data-copy`. Rendues locales à leur module : une CSP `script-src 'self'` stricte reste tenable même si un `onclick` inline réapparaissait, et l'API interne du jeu n'est plus atteignable depuis la console.
+- **Codes du multijoueur énumérables** : `room_id` et clés `J1-` / `J2-` n'avaient que 4 chiffres hexadécimaux (65 536 valeurs) avec des salons actifs 7 jours, ce qui permettait un balayage systématique pour retomber sur une partie ouverte. Portés à 8 chiffres hexadécimaux (`uuid.uuid4`, 4,3 milliards de valeurs, facteur ×65 536) ; comparaison toujours par égalité de chaîne, les parties en cours restent utilisables.
+- **Sessions inactives jamais purgées** : le TTL existait mais `_cleanup_stale()` n'était déclenché qu'à la **création** d'une partie — un serveur qui tourne des semaines sans nouvelle partie ne libérait rien, et la mémoire croissait avec le volume de parties jouées. Pire, `_load_sessions()` écartait les entrées périmées **sans jamais réécrire le fichier** : `web_sessions.json` conservait à vie toutes les parties depuis la création du volume, le filtrage étant rejoué à chaque démarrage.
+  - `_maybe_cleanup()` cadence la purge au plus une fois par 5 minutes sur les points d'accès chauds (`get_session`, `get_multiplayer`) : un simple comparateur d'horodatage le plus souvent, sans thread ni cycle de vie supplémentaire.
+  - TTL distincts assumés : 2 h pour une partie solo ou battle abandonnée, 7 jours pour un duel dont les deux joueurs se reconnectent souvent le lendemain.
+  - `_compact_session_file()` réécrit le fichier sans les entrées écartées, en écriture atomique comme `_save_sessions`, pour qu'un arrêt en cours de compactage ne laisse pas un JSON tronqué.
+  - La purge s'exécute sous `self.lock`, qui est un `Lock` simple **non réentrant** : le reprendre dans `_cleanup_stale()` aurait bloqué le thread.
+
+### Ajouté
+- **`.gitignore`** : le dépôt n'en avait aucun ; `data.json`, les fichiers de sessions et les `__pycache__` produits à l'exécution pouvaient être commités par erreur. Vérifié : aucun fichier actuellement suivi (`cemantix_data/lexique_fr.txt`) n'est masqué par ces règles.
+- **Documentation de sécurité** : nouvelle section « 🔐 Sécurité » (chemin d'accès à la solution, tableau des protections du serveur avec leurs variables, échappement XSS, entropie des codes de salon, trois commandes `curl` de vérification après déploiement) ; le `Caddyfile` documenté gagne une `Content-Security-Policy` (`script-src 'self'`, le site n'emploie aucune ressource externe), une CSP durcie sur `/puzzles/*`, HSTS, `Permissions-Policy` et `Cross-Origin-Opener-Policy`, plus un bloc `@intercepted` renvoyant `404` sur `data.json`, les historiques, les sessions, `.env`, `.git`, `*.py`, `*.pyc`, `*.log` et `*.bin`.
+- Variables d'environnement documentées : `API_ALLOWED_ORIGIN`, `API_MAX_BODY_BYTES`, `API_MAX_WORKERS`, `API_SOCKET_TIMEOUT`, `DASHBOARD_DATA_FILE`.
+- **`Caddyfile` versionné à la racine du dépôt** : la configuration du serveur web (CSP, en-têtes de sécurité, politique de cache, bloc `@intercepted`) n'existait que en prose dans le README, où elle avait déjà divergé du code. Le fichier fait désormais foi ; le README y renvoie avec la commande de rechargement à chaud.
+- **Outils de contrôle sans dépendance** : `tools/check_og_image.py` compare le poids et les dimensions réels de `og-image.jpg` aux balises `og:image` (code de sortie `1` si hors norme, exploitable en CI) et `tools/check_js_balance.py` vérifie l'équilibre des délimiteurs JavaScript en l'absence de `node`.
+
+### Refactorisé
+- **Journalisation des requêtes** : `log_message()` était réduit à `pass`, ce qui rendait tout abus invisible ; les requêtes sont désormais tracées de façon minimale avec l'IP cliente, sans le débit du flux d'origine.
+
+## [Non publié] - 2026-10-26 · Performance
+
+### Corrigé
+- **Politique de cache incohérente avec la règle « no-cache, pas de `?v=` »** : le `max-age=3600` posé sur `@html` et les `max-age` suggérés pour les archives contredisaient la revalidation par ETag ; tout ce qui change repasse en `no-cache, must-revalidate`, seules les polices gardent un `max-age` d'un an.
+- **Pages d'archives sans `Cache-Control`** : le sélecteur `@html path *.html` ne matche pas une URL comme `/puzzles/2026-10-26/` (servie par `try_files`, sans extension) ; un bloc `@pages` couvre désormais ces URLs, ainsi que `sitemap.xml`, `robots.txt`, `llms.md` et `.well-known/*`.
+- **`X-Frame-Options` contradictoire** : le README documentait `SAMEORIGIN` alors que le serveur envoie `DENY` ; aligné sur `DENY`, avec `frame-ancestors 'none'` dans les deux CSP qui autorisaient pourtant l'encadrement par le site lui-même.
+- **Polling de la salle d'attente multijoueur** : un `setInterval` fixe de 2 s ignorait l'onglet masqué (~1 800 requêtes/heure d'onglet ouvert). Le rythme devient adaptatif (2 s → 10 s, réinitialisé à chaque changement d'état), aucune requête n'est émise quand l'onglet est caché, et un `visibilitychange` resonde immédiatement au retour. Le `setInterval` a été remplacé par une chaîne de `setTimeout` : `stopPolling()` appelait `clearTimeout`, qui ne stoppe pas un `setInterval` — le polling continuait donc de tourner après le retour au lobby.
+- **Métadonnées d'image de partage incomplètes** : `play/` déclarait `og:image` sans dimensions ni texte alternatif, et aucune page n'avait de `twitter:image:alt` ; les quatre pages portent désormais `og:image:width/height/alt` et `twitter:image:alt`.
+- **Compte à rebours coûteux et faux à minuit** : `new Intl.DateTimeFormat(...)` — l'objet le plus onéreux de l'API Intl — était reconstruit dans le tick, soit 86 400 allocations par jour et par onglet pour une configuration invariable. Le formatter est hoisté hors de la boucle, le DOM n'est écrit que si la valeur change, le tick est suspendu onglet masqué. Corrige au passage l'affichage « 24:00:00 » pendant la première seconde du jour (`currentSeconds == 0` donnait un reste de 86 400 s) ; vérifié sur les 86 400 secondes de la journée, plus aucune valeur supérieure à 23.
+- **Re-rendu inutile de l'historique** : la recherche reconstruisait le tableau à chaque frappe (débounced à 150 ms) et le polling de 30 s réinjectait un `innerHTML` identique alors que l'historique ne change qu'une fois par jour (comparaison du gabarit avant écriture, ce qui préserve aussi focus et défilement). Sans effet sur l'anti-spoiler, porté par la classe `is-hidden` basculée en direct.
+- **Pollings actifs en arrière-plan** : le tableau de bord (30 s) et la salle d'attente (2 s) continuaient d'émettre des requêtes onglet masqué ; les timers sont suspendus à la masque et relancés avec une resynchronisation immédiate à la reprise.
+- **Poids des feuilles et des modules par page** : chaque page chargeait 5 à 6 feuilles CSS et un point d'entrée JavaScript important statiquement des modules inutilisés.
+  - `tools/build_css_bundles.py` génère une feuille par page dans `css/dist/` (index 48 054 o/5 requêtes → 37 586 o/1, play 43 453/5 → 33 829/1, battle 60 844/6 → 46 489/1, multi 59 658/6 → 45 124/1). Le gain porte sur le **nombre de requêtes**, pas sur le poids : chaque page ne chargeait déjà que le CSS utile, il n'y avait pas de CSS mort. Le mode `--check` échoue si les bundles sont périmés. La minification se limite aux commentaires et aux blancs ; validée par comparaison canonique des règles, imbrication `@media`/`@keyframes` comprise : **519 règles sur 8 fichiers, 0 perdue**.
+  - `js/app.js` charge désormais `dashboard.js` et `game.js` en `import()` dynamique : un `import` statique fait télécharger **et** évaluer le module même quand la branche `if` ne s'exécute pas — depuis `/play/`, `dashboard.js` + `trajectory.js` + `countdown.js` coûtaient ~27 ko sur les ~93 ko du graphe statique d'import (29 %).
+  - Les sources `css/*.css` sont conservées : `src/services/seo.py` lit `variables.css` pour injecter les tokens dans les pages d'archives.
+  - Branche Battle supprimée de `app.js` : morte, puisque `/battle/` charge `js/battle.js` directement et que ce module s'auto-initialise.
+- **Faux positifs de `tools/check_js_balance.py`** : l'outil échouait (code de sortie `1`) sur 7 des 9 modules du projet, ce qui le rendait inexploitable en CI. Trois ambiguïtés du JavaScript étaient mal tranchées — la regex confondue avec une division (dans `.replace(/"/g, "&quot;")`, le guillemet ouvrait une chaîne et tout le reste du fichier était mal lu), le `/` de `</span>` pris pour une regex à l'intérieur d'un template literal, et une interpolation `${…}` consommée par une boucle interne qui perdait la position de fermeture du gabarit. La lecture devient une machine à états plate (une seule position de cours, une pile de gabarits pour les interpolations imbriqués, test de contexte pour regex/division) : **9/9 modules acceptés, 13/13 cas valides, 5/6 fautes réelles détectées**. Le cas non couvert — un gabarit jamais fermé — est assumé et documenté.
+- **Taille annoncée à tort dans `app.js`** : le commentaire indiquait « 67 ko du point d'entrée », valeur sans correspondance mesurable ; le graphe statique pesait 94 794 o (~93 ko), dont 27 794 o (~27 ko, 29 %) inutilisés depuis `/play/`.
+
+### Optimisé
+- **Rendu différé des blocs bas de page** : le résumé du jour, le guide et la FAQ constituent le bas du tableau de bord, jamais visible à l'arrivée, mais payaient une mise en page et une peinture à chaque chargement et à chaque changement de thème. `content-visibility: auto` saute ce travail tant que le bloc approche du viewport. `contain-intrinsic-size` porte le mot-clé `auto`, qui mémorise la hauteur réelle après le premier rendu — sans lui la barre de défilement sauterait à chaque passage. Un garde-fou `@media print` remet `content-visibility: visible` pour que rien ne reste non rendu à l'impression ; les navigateurs sans support ignorent les deux propriétés et affichent normalement.
+
+## [Non publié] - 2026-10-26 · SEO
+
+### Ajouté
+- **Archives Quotidiennes Indexables & Sitemap Dynamique (Référencement de la longue traîne)** :
+  - Nouveau sous-package `src/services/seo.py` qui convertit l'historique des résolutions en **contenu indexable rendu côté serveur**, là où le tableau de bord ne publiait son contenu qu'après exécution de JavaScript.
+  - **Pages par date `/puzzles/AAAA-MM-JJ/`** : titre et meta description datés (« Cémantix du lundi 26 octobre 2026 : indices, solution et trajectoire du solveur IA »), URL canonique, Open Graph et Twitter Card, tableau des 10 mots les plus proches (score en °C et similarité en ‰) et solution placée derrière un bloc `<details>` dépliable.
+  - **Données structurées par archive** : bloc JSON-LD `@graph` combinant un `Article` (avec `datePublished` et `dateModified` réels) et un `BreadcrumbList` à trois niveaux.
+  - **Pages auto-suffisantes** : les tokens de style sont extraits de `css/variables.css` et injectés dans une balise `<style>` unique, donc aucun JavaScript requis et aucune requête CSS supplémentaire (page complète ≈ 13 ko).
+  - **Index paginé `/puzzles/`** (60 archives par page) avec `rel="prev"` / `rel="next"`, schéma `CollectionPage` et navigation bornée sur les pages extrêmes.
+  - **`sitemap.xml` régénéré** avec le `lastmod` réel de chaque page, l'URL `/puzzles/`, les pages de pagination et un passage de `play/`, `battle/` et `multi/` en `changefreq` `weekly` (le fichier versionné était figé au `2026-10-25`).
+  - **Pré-rendu du tableau de bord** : nouvelle section « Résumé du jour » dans `index.html`, balisée par les commentaires `SEO-PRERENDER` et l'attribut `data-seo`, remplie par `prerender_dashboard()`. Le remplacement s'effectue de l'intérieur vers l'extérieur (index préservés), reste **idempotent** et retombe sur un texte neutre si l'historique est vide. Le mot secret n'y est **jamais** écrit : seuls la date, le numéro de puzzle, les coups, la durée et les mots d'approche sont publiés.
+  - **Option en ligne de commande `--publish-seo`** pour régénérer uniquement les archives, l'index et le sitemap ; la publication est aussi déclenchée par `--export-web` et par le démon après chaque résolution de minuit, en non bloquant (une erreur de SEO ne casse plus l'export de `data.json`).
+  - **Outil `tools/generate_icons.py`** produisant `apple-touch-icon.png` (180×180) et `icon-512.png` avec la seule bibliothèque standard (encodage PNG par `zlib`), sans dépendance de traitement d'image.
+- **Installabilité & Découverte** :
+  - Manifeste `manifest.webmanifest` (PWA `standalone`, `shortcuts` Solo et Archives, trois icônes) avec `apple-touch-icon` et icônes SVG `any` / `maskable`.
+  - Onglet « Archives » ajouté à la navigation des quatre pages pour le maillage interne vers `/puzzles/`.
+  - `robots.txt` durci : `Disallow` sur `/api/`, `/data.json`, `/.well-known/` et les paramètres spoilants `?reveal=`, `?r=`, `?k=`.
+  - `llms.txt` renommé en **`llms.md`** (extension du standard) et enrichi : format des URLs d'archives, contenu garanti sans JavaScript, endpoints API et mentions légales sur frWac, Lexique 3.83 et l'absence d'affiliation avec Certitudes.
+  - Manifeste ARD **`.well-known/ai-catalog.json`** : suppression du doublon en racine, réorientation de l'entrée d'outillage vers `/api/health` (sans spoiler) et déclaration des pages d'archives en ressource `text/html`.
+- **Donnée structurée `HowTo` sur l'accueil** : le guide exposait déjà une liste ordonnée de trois stratégies sans l'annoncer comme telle. Le nœud rejoint le `@graph` existant (`WebApplication`, `WebSite`, `FAQPage`) en répétant **mot pour mot** le texte visible — Google déclasse les données structurées qui contredisent la page. Vérifié : 3 étapes du schéma égales aux 3 éléments de la liste, JSON-LD valide sur les quatre pages. `aggregateRating` volontairement omis (aucun avis réel : sanction manuelle). À noter, Google a supprimé les résultats enrichis `HowTo` des SERP en août 2023 : le balisage reste lu par d'autres moteurs et par les assistants, sans promesse de bloc enrichi.
+
+### Corrigé
+- **Balises SEO obsolètes sur les quatre pages** : suppression de `<meta name="title">` (doublon de `<title>`) et de `<meta name="keywords">` (ignoré par Google).
+- **`theme-color` incohérent en thème clair** : deux valeurs conditionnées par `prefers-color-scheme` (`#0d1117` sombre, `#f6f8fa` clair) remplacent la valeur unique figée.
+- **Bloc de code cassé du README** : la commande de synchronisation manuelle était encapsulée dans un backtick suivi d'un caractère backspace (`\bash`) au lieu d'une barrière ` ```bash `.
+
+### Refactorisé
+- **Robustesse de la génération SEO** : échappement systématique via `html.escape`, rejet des dates mal formées et des puzzles non résolus, plafond de 45 000 URLs de sitemap et 500 pages d'index, et `</` échappé en `<\/` dans le JSON-LD pour ne jamais fermer prématurément le bloc.
+
+### Documenté
+- Nouvelle section « 🔎 SEO : Archives Quotidiennes Indexables & Sitemap » dans `README.md` : arborescence publiée, contenu d'une page d'archive, régénération via `--publish-seo`, politique de cache Caddy recommandée pour `/puzzles/*` et `/sitemap.xml`, génération des icônes et étapes de soumission Search Console.
+
 ## [Non publié] - 2026-10-25
 
 ### Corrigé
+
 - **Accessibilité & Contraste des Couleurs (PageSpeed Insights WCAG AA)** :
   - Introduction du token de couleur `--accent-btn: #1668dc` offrant un ratio de contraste supérieur à 5,2:1 avec le texte blanc sur `.btn-primary`, `.nav-tab.active` et `.pill-btn.active`.
   - Optimisation des badges d'accent (`.badge-accent`) et de succès (`.badge-success` : « ✓ TROUVÉ ») avec opacités révisées et teintes vives (`#79b8ff`, `#56d364`), garantissant un ratio de contraste supérieur à 7,2:1 (WCAG AAA).

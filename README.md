@@ -6,8 +6,9 @@ Ce projet implémente deux approches d'Intelligence Artificielle en compétition
 1. ⚡ **100% RAG Mathématique Pur** : Estimation analytique par régression Ridge de la direction du mot secret dans l'espace vectoriel, reranking géométrique multi-indices et détection vectorielle directe (*Sniper RAG*). **Zéro appel LLM, zéro GPU requis, résolution en moins d'une seconde.**
 2. 🤖 **Hybride RAG + Local LLM** : Coopération itérative entre l'espace vectoriel et un LLM local (via [LM Studio](https://lmstudio.ai/)) pour explorer le champ lexical et affiner les hypothèses sémantiques.
 3. ⚔️ **Mode Battle** : Tournoi en face-à-face sur $N$ manches comparant rigoureusement les deux approches sur le **même mot secret** et avec les **mêmes mots graines** de départ.
-4. ⏰ **Démon 24h/24 & Veille Quotidienne** : Fonctionnement permanent en conteneur Docker en mode sommeil, réveil automatique chaque nuit à 00h00 (heure de Paris) pour trouver le mot officiel du jour dès sa parution et historisation automatique.
-5. 🌐 **Page Web & Publication Caddy** : Interface web moderne et réactive servant le mot du jour en direct depuis le volume obligatoire ./volumes/web (protection anti-spoiler, thermomètre sémantique, compte à rebours minuit et KPIs).
+4. ⏰ **Démon 24h/24 & Veille Quotidienne** : Fonctionnement permanent en conteneur Docker en mode sommeil, réveil automatique chaque nuit à 00h00 (heure de Paris) pour trouver le mot officiel du jour dès sa parution et historisation automatique en base relationnelle PostgreSQL 16.
+5. 🌐 **Page Web & Publication Caddy** : Interface web moderne et réactive servant le mot du jour en direct depuis le volume `./volumes/web` avec reverse-proxy vers l'API `cemantix_web:8000` (protection anti-spoiler serveur, thermomètre sémantique, compte à rebours minuit et KPIs).
+6. 🏗️ **Architecture 3-Tiers Découplée & Durcie** : Découpage strict entre base de données (`cemantix_db`), démon de calcul vectoriel (`cemantix_worker`), API REST légère (`cemantix_web`) et conteneur CLI (`cemantix`), avec pool de connexions borné thread-safe et conformité stricte sécurité/RGPD (anonymisation IP /24, CSP sans inline, rejet XSS, hachage HMAC-SHA256).
 
 ---
 
@@ -102,35 +103,45 @@ pip install -r requirements.txt
 
 ---
 
-### Option B : Déploiement avec Docker
+### Option B : Déploiement avec Docker (Architecture 3-Tiers Découplée)
 
-Le conteneur Docker isole l'environnement et monte un volume hôte pour conserver les données vectorielles entre les exécutions.
+Le déploiement s'appuie sur une **architecture 3-tiers découplée et durcie** définie dans `docker-compose.yml` :
+- `cemantix_db` : Base de données relationnelle PostgreSQL 16 Alpine pour la persistance transactionnelle ACID (`daily_puzzles`, `solo_sessions`, `multi_rooms`).
+- `cemantix_worker` : Démon planificateur d'arrière-plan 24h/24 (calcul vectoriel lourd ChromaDB, résolution quotidienne à 00h00 heure de Paris et publication SEO).
+- `cemantix_web` : API REST HTTP haute performance (< 200 Mo RAM) servant le frontend web, le jeu Solo, le mode Battle, le Multijoueur 1v1 et le mot du jour.
+- `cemantix` : Conteneur CLI éphémère (profil `cli`) pour les commandes interactives, les benchmarks et les tests unitaires.
 
-#### 1. Construire l'image Docker
+#### 1. Construire les images Docker
 ```bash
 docker compose build
 ```
 
-#### 2. Lancement du Démon 24h/24 (Veille Permanente & Résolution à 00h00)
-Le conteneur est configuré par défaut pour tourner en tâche de fond permanente (`restart: unless-stopped`). Il se met en sommeil léger et se réveille chaque nuit à **00h00 (heure de Paris)** pour résoudre le mot du jour en mode RAG pur :
+#### 2. Lancement des services en arrière-plan
+Les conteneurs démarrent ensemble de manière orchestrée (la base PostgreSQL est validée par healthcheck avant le lancement du worker et du serveur web) :
 
 ```bash
-# Lancer le démon en arrière-plan :
+# Lancer les services (base de données, worker et API web) en arrière-plan :
 docker compose up -d
 
-# Suivre les logs de veille et les résolutions en temps réel :
-docker compose logs -f cemantix
+# Suivre les logs du démon worker (résolution quotidienne RAG) :
+docker compose logs -f cemantix_worker
 
-# Arrêter proprement le démon :
+# Suivre les logs de l'API web :
+docker compose logs -f cemantix_web
+
+# Suivre les logs de la base de données :
+docker compose logs -f cemantix_db
+
+# Arrêter proprement l'ensemble des conteneurs :
 docker compose down
 ```
 
 > [!NOTE]
-> - **Historique automatique** : Chaque mot trouvé est consigné dans `./cemantix_data/daily_history.json` (date, numéro du puzzle, mot secret, nombre d'essais, durée).
-> - **Rattrapage au démarrage** : Si le mot d'aujourd'hui n'a pas encore été résolu, le démon le trouve dès le démarrage avant de s'endormir jusqu'au prochain minuit.
+> - **Persistance relationnelle & ACID** : Chaque puzzle résolu est persisté de façon transactionnelle dans PostgreSQL (`daily_puzzles`) avec calcul SQL direct des métriques et miroir dans `./cemantix_data/daily_history.json`.
+> - **Rattrapage au démarrage** : Si le mot d'aujourd'hui n'a pas encore été résolu, le worker le trouve dès son lancement avant de se mettre en sommeil jusqu'au prochain minuit.
 
-#### 3. Lancer une commande ponctuelle ou interactive
-Sans arrêter le démon, vous pouvez exécuter n'importe quelle commande interactive ou de test :
+#### 3. Lancer une commande ponctuelle, interactive ou les tests
+Sans arrêter les services de production, vous pouvez exécuter le menu interactif ou les suites de tests via le conteneur CLI éphémère :
 
 ```bash
 # Afficher l'aide CLI
@@ -150,6 +161,9 @@ docker compose run --rm cemantix --rag-only
 
 # Lancer un tournoi Battle de 3 manches
 docker compose run --rm cemantix --battle 3
+
+# Exécuter l'intégralité des 81 tests unitaires sous Docker
+docker compose run --rm -v ./tests:/app/tests --entrypoint python cemantix -m unittest discover -s tests
 ```
 
 > [!TIP]
@@ -295,9 +309,19 @@ python cemantix_rag.py --duel -d expert
 
 Le projet intègre une interface web complète et réactive déposée dans le volume obligatoire ./volumes/web, conçue pour être servie ultra-efficacement par **Caddy** (ou tout autre serveur HTTP) :
 
+> [!WARNING]
+> **Le webroot ne doit contenir que des fichiers publics.** Les données du solveur
+> (`data.json`, `daily_history.json`, `web_sessions.json`) sont écrites dans
+> `./cemantix_data`, **jamais** dans `./volumes/web` : `data.json` renferme l'historique
+> complet des solutions, et un fichier de ce type dans le webroot se récupère d'un simple
+> `curl https://…/data.json`. `export_web_data()` refuse désormais toute cible située dans
+> le webroot. Le front-end ne lit que `/api/*`.
+
 ```
 volumes/web/
 ├── index.html        # Tableau de bord du mot du jour (URL : /)
+├── puzzles/          # Archives quotidiennes indexables (générées par --publish-seo)
+│   └── 2026-10-26/index.html
 ├── play/             # Interface dédiée au jeu interactif (URL propre : /play/)
 │   └── index.html    # Page de jeu (mode défi du jour, mode illimité)
 ├── battle/           # Mode Battle Joueur vs Bot IA RAG (URL propre : /battle/)
@@ -341,37 +365,78 @@ Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volu
 > **Pourquoi aucun paramètre de version (`?v=...`) dans le code HTML/JS ?**
 > Les paramètres de requête manuels (`?v=202610...`) sont proscrits : ils compliquent les imports ES modules imbriqués et sont redondants avec les capacités natives de Caddy / Nginx. En configurant `Cache-Control: "no-cache, must-revalidate"` sur les fichiers `.js` et `.css`, le navigateur valide automatiquement l'empreinte ETag du fichier auprès du serveur. Dès qu'un `git pull` met à jour un fichier sur disque, le navigateur reçoit instantanément la nouvelle version sans nécessiter de purge manuelle de cache (`Ctrl+F5`).
 
+> [!IMPORTANT]
+> **Le `Caddyfile` de déploiement est situé à la racine du serveur** (fichier local non versionné).
+> Le bloc ci-dessous en fournit la référence complète pour la configuration du reverse-proxy Caddy.
+> Pour appliquer les modifications, rechargez Caddy
+> (`docker exec <caddy> caddy reload --config /etc/caddy/Caddyfile`). Le monter en
+> lecture seule dans le conteneur Caddy : `./Caddyfile:/etc/caddy/Caddyfile:ro`.
+
 ```caddy
 cemantix.cyril-randon.fr {
     root * /volumes/web
 
-    # En-têtes de sécurité
+    # En-têtes de sécurité (toutes les réponses)
     header {
         X-Content-Type-Options "nosniff"
-        X-Frame-Options "SAMEORIGIN"
+        X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        Cross-Origin-Opener-Policy "same-origin"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+        # Politique de sécurité du contenu. Le site n'utilise AUCUNE ressource externe
+        # (ni CDN, ni police, ni script tiers) : la politique peut donc être
+        # restrictive. 'unsafe-inline' pour les styles est nécessaire car les feuilles
+        # de style sont locales et les style="…" posés par le JS sont des valeurs codées
+        # en dur, jamais des données utilisateur.
+        # script-src 'self' suffit : seul js/app.js (module ES local) est chargé, donc
+        # tout <script> injecté par une faille XSS est bloqué par le navigateur.
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+    }
+
+    # Pages d'archives : contenu statique, aucun script ni connexion sortante.
+    header /puzzles/* {
+        Content-Security-Policy "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     }
 
     # 1. Polices web immuables (cache 1 an)
     @fonts path *.woff *.woff2
     header @fonts Cache-Control "public, max-age=31536000, immutable"
 
-    # 2. Images revalidées automatiquement (cache 24h avec ETag)
+    # 2. Images : revalidation par ETag. Pas de max-age long ici, car le projet a
+    #    supprimé les suffixes ?v= : sans revalidation, un og-image.jpg remplacé
+    #    resterait invisible jusqu'à l'expiration du cache (et les partages sociaux
+    #    sont justement sensibles aux anciennes vignettes).
     @images path *.ico *.png *.jpg *.jpeg *.webp *.svg
-    header @images Cache-Control "public, max-age=86400, must-revalidate"
+    header @images Cache-Control "no-cache, must-revalidate"
 
     # 3. Code applicatif JS & CSS : rechargement immédiat sans mise en cache bloquante
     @code path *.css *.js *.mjs
     header @code Cache-Control "no-cache, must-revalidate"
 
-    # 4. Pages HTML : revalidation rapide
+    # 4. Pages HTML : revalidation systématique par ETag (aucun paramètre ?v= nécessaire).
+    #    Le bloc @pages ci-dessous couvre les URLs SANS extension (/puzzles/2026-10-26/),
+    #    que le motif *.html ne matcherait pas.
     @html path *.html
-    header @html Cache-Control "public, max-age=3600, must-revalidate"
+    header @html Cache-Control "no-cache, must-revalidate"
+
+    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/*
+    header @pages Cache-Control "no-cache, must-revalidate"
+
+    @sitemap path /sitemap.xml /robots.txt /llms.txt /llms.md /agent-skills.md /.well-known/*
+    header @sitemap Cache-Control "no-cache, must-revalidate"
 
     # API du Solveur (prioritaire et exclusive)
     handle /api/* {
-        reverse_proxy cemantix_solver:8000
+        header X-Robots-Tag "noindex, nofollow"
+        reverse_proxy cemantix_web:8000
     }
+
+    # Blocage des fichiers de données et de configuration, même s'ils venaient
+    # à atterrir dans le webroot par erreur (défense en profondeur).
+    @intercepted path /data.json /daily_history.json /web_sessions.json /multi_sessions.json /.env /.env.* /.git /*.py /*.pyc /*.log /*.bin
+    respond @intercepted 404
 
     # Fichiers statiques et routes propres (/play, /battle, /multi)
     handle {
@@ -385,9 +450,244 @@ cemantix.cyril-randon.fr {
 
 #### Synchronisation manuelle des données web :
 Pour actualiser ou exporter manuellement les données du mot du jour à tout moment :
-`ash
+```bash
 docker compose run --rm cemantix --export-web
-`
+```
+
+---
+
+## 🔎 SEO : Archives Quotidiennes Indexables & Sitemap
+
+Le démon ne se contente plus d'afficher le mot du jour en JavaScript : il **publie du
+contenu indexable** à chaque résolution. C'est ce qui permet de capter la longue traîne
+« cemantix du 26 octobre 2026 », invisible tant que le contenu est rendu côté client.
+
+```
+volumes/web/
+├── puzzles/
+│   ├── index.html                     # Index paginé (60 archives par page)
+│   ├── page/2/index.html              # Pages d'index suivantes
+│   └── 2026-10-26/index.html          # Page dédiée au puzzle du jour
+├── sitemap.xml                        # Régénéré avec le lastmod réel de chaque page
+├── robots.txt                         # /api/, data.json et ?reveal= exclus de l'index
+├── llms.txt                           # Découverte agents IA (H1 + liens, format canonique)
+├── llms.md                            # Documentation longue pour agents IA
+├── agent-skills.md                    # Protocole d'usage pour agent autonome (urn:air:agent-skills)
+├── manifest.webmanifest               # PWA installable (shortcuts Solo & Archives)
+└── .well-known/
+    ├── ai-catalog.json                # Catalogue ARD (types de médias autorisés uniquement)
+    └── agent-card.json                # Carte d'agent (compétences et modes d'échange)
+```
+
+### Ce que contient une page `/puzzles/AAAA-MM-JJ/`
+- `<title>` et meta description datés (« Cémantix du lundi 26 octobre 2026… »), URL
+  canonique, Open Graph et Twitter Card ;
+- **tableau des 10 mots les plus proches** avec score en °C et similarité en ‰, rendu
+  **côté serveur** donc lisible sans JavaScript ;
+- la solution dans un bloc `<details>` dépliable (lisible par les moteurs, masquée au
+  visiteur qui ne clique pas) ;
+- JSON-LD `Article` (avec `datePublished` / `dateModified` réels) + `BreadcrumbList` ;
+- navigation `rel="prev"` / `rel="next"` entre les jours et vers l'index des archives.
+
+Les pages sont **auto-suffisantes** : les tokens de style sont extraits de
+`css/variables.css` et injectés dans une balise `<style>`, donc aucune requête CSS
+supplémentaire et un rendu correct même sans JS.
+
+### Régénérer uniquement le SEO
+```bash
+docker compose run --rm cemantix --publish-seo
+```
+La publication est aussi déclenchée automatiquement par `--export-web` et par le démon
+après chaque résolution de minuit. En cas d'échec, le log signale l'erreur sans bloquer
+l'export de `data.json`.
+
+### Cache HTTP : cohérence avec la politique « no-cache »
+Le projet applique `Cache-Control: "no-cache, must-revalidate"` sur le code applicatif
+(voir l'encadré « Pourquoi aucun paramètre de version (`?v=...`) » plus haut) : la
+revalidation se fait par ETag, ce qui rend les suffixes `?v=` inutiles. **Cette règle
+doit rester la source de vérité** — il ne faut pas introduire de `max-age` sur les
+fichiers qui changent, sous peine de devoir ressusciter les `?v=` pour forcer le
+renouvellement.
+
+Deux points de vigilance propres aux pages d'archives :
+
+1. **Le sélecteur `@html path *.html` ne suffit pas.** Une URL comme
+   `/puzzles/2026-10-26/` ne contient pas `.html` : Caddy la sert grâce à
+   `try_files {path} {path}/index.html`, mais le motif `*.html` ne la **matche pas**.
+   Sans règle explicite, ces pages partent donc sans `Cache-Control`. Ajoute ce bloc
+   **avant** `@code` :
+
+```caddy
+    # Pages du site (URL sans extension servies via try_files) : même traitement que le HTML
+    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/*
+    header @pages Cache-Control "no-cache, must-revalidate"
+```
+
+2. **`sitemap.xml` doit être revalidé**, sinon Google peut continuer à pointer des URLs
+   supprimées après une régénération :
+
+```caddy
+    @sitemap path /sitemap.xml /robots.txt /llms.txt /llms.md /agent-skills.md /.well-known/*
+    header @sitemap Cache-Control "no-cache, must-revalidate"
+```
+
+> Le `max-age=86400` précédemment suggéré pour `/puzzles/*` est **abandonné** : une page
+> d'archive est bien immuable en théorie, mais le générateur réécrit l'index paginé et
+> les liens `prev`/`next` à chaque publication. Un `max-age` rendrait ces mises à jour
+> invisibles pendant des heures sans benefit mesurable (les pages pèsent 13 ko).
+
+### Feuilles de style et modules JavaScript
+Chaque page ne charge **qu'une seule** feuille CSS, générée à partir des fichiers
+sources de `css/` :
+
+```bash
+python tools/build_css_bundles.py     # régénère volumes/web/css/dist/*.css
+python tools/build_css_bundles.py --check   # échoue si les bundles sont périmés
+```
+
+À faire **après chaque modification d'un fichier de `css/`**, avant de déployer.
+Les sources (`variables.css`, `base.css`, …) restent dans le dépôt : `src/services/seo.py`
+lit `variables.css` pour injecter les tokens dans les pages d'archives, qui n'emploient
+aucun lien CSS.
+
+Côté JavaScript, `js/app.js` charge `dashboard.js` et `game.js` en `import()` dynamique :
+un module n'est téléchargé et évalué que si la vue correspondante est présente dans le
+DOM. `/battle/` et `/multi/` ont leur propre point d'entrée et ne passent pas par `app.js`.
+
+### Image de partage optimisée (PERF-08)
+L'image de prévisualisation sociale `volumes/web/og-image.jpg` est calibrée exactement aux dimensions recommandées Open Graph **1200×630**, pour un poids réduit de 3,09 Mo à **172 ko** (qualité 82). Son intégrité, ses dimensions et son seuil de poids (< 200 ko) sont vérifiés automatiquement en intégration continue par le script de contrôle dédié :
+
+```bash
+python tools/check_og_image.py     # valide les dimensions exactes 1200x630 et le poids sous 200 ko
+```
+
+### Icônes du site
+Les icônes PNG (`apple-touch-icon.png`, `icon-512.png`) sont générées par un script sans
+dépendance externe (stdlib Python uniquement) :
+```bash
+python tools/generate_icons.py
+```
+
+### Outillage de Contrôle Automatisé (`tools/`)
+Le dossier `tools/` fournit des scripts de contrôle qualité autonomes, branchés dans la pipeline CI GitHub Actions :
+- `tools/check_docs.py` : Contrôle la cohérence des documents (absence de liens relatifs cassés, validité des tableaux markdown et alignement des compteurs de la roadmap).
+- `tools/check_seo.py` : Valide la présence et la conformité des balises SEO indispensables sur toutes les pages (`<title>`, meta description, canonical absolu, Open Graph, JSON-LD).
+- `tools/check_og_image.py` : Vérifie que `og-image.jpg` respecte le gabarit 1200×630 et le plafond de 200 ko.
+- `tools/check_headers.sh` : Analyse les 6 en-têtes de sécurité HTTP sur le serveur web en production.
+- `tools/build_css_bundles.py` : Regroupe et minifie prudemment les feuilles de style par page dans `css/dist/*.css` (avec mode `--check` bloquant en cas de bundle obsolète).
+
+## 🔐 Sécurité
+
+### Le mot secret ne transite jamais sans action volontaire
+Le point le plus sensible du projet : la solution du jour. Elle est désormais
+**absente de toute réponse `GET`**.
+
+```
+GET  /api/daily            → current.word = null, mot masqué dans trajectory,
+                             top_guesses et l'entrée du jour de l'historique
+POST /api/daily/reveal     → { "word": "…" }   seul chemin vers la solution
+```
+
+Le POST est choisi exprès : un crawler, un prefetch de lien ou un `curl` ne peuvent
+pas récupérer la solution par accident. Le bouclier anti-spoiler n'est plus du CSS,
+il est côté serveur.
+
+`export_web_data()` refuse par ailleurs d'écrire `data.json` dans le webroot : le
+fichier contient l'historique complet des solutions et se serait récupéré d'un
+`curl https://…/data.json`.
+
+### En-têtes et restrictions réseau de l'API
+| Protection | Mise en œuvre | Variable d'environnement |
+|---|---|---|
+| Corps de requête | Refus au-delà de 32 ko (`413`), **avant** lecture du corps | `API_MAX_BODY_BYTES` |
+| CORS | Liste blanche d'origine, plus de `*`, `Vary: Origin` | `API_ALLOWED_ORIGIN` |
+| Débit | Seau à jetons par IP, `429` + `retry_after` ; `/api/health` exempté | — |
+| Threads | Plafond de workers, `503` propre au lieu d'une création sans limite | `API_MAX_WORKERS` |
+| Blocage | `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` | — |
+| Cache | `Cache-Control: no-store` sur toutes les réponses d'API | — |
+| Silences | Version Python retirée de l'en-tête `Server`, timeout socket 10 s | `API_SOCKET_TIMEOUT` |
+
+### Sanitisation serveur stricte des pseudonymes (SEC-01)
+Tous les pseudonymes saisis en multijoueur font l'objet d'un nettoyage strict côté serveur via la fonction `sanitize_player_name()` dans `src/api/routes/multi.py` :
+- Rejet systématique de toute balise HTML, balise `<script>` ou caractère de contrôle avant persistance.
+- Filtrage par expression régulière stricte (`[^\w \-À-ÿ'.]`) et limitation impérative à 24 caractères.
+- Toute tentative d'injection entraîne un refus immédiat en HTTP `400 Bad Request`.
+
+### XSS : échappement côté rendu et fin des gestionnaires inline (SEC-01b & SEC-02)
+Aucune donnée extérieure n'est injectée brute dans `innerHTML`. Le helper
+`escapeHtml()` de `js/utils.js` est appliqué aux mots, dates, numéros de puzzle,
+identifiants de salon et pseudonymes d'adversaire.
+
+Les gestionnaires construits par concaténation (`onclick="copyToClipboard('${mot}')"`)
+ont été supprimés au profit d'attributs `data-*` et d'une délégation d'événements :
+une apostrophe dans un mot ou un pseudonyme ne peut plus fermer la chaîne et exécuter
+de code.
+
+Les quatre fonctions que ces `onclick` appelaient étaient exposées sur `window`
+(`copyToClipboard`, `showConfirmDialog`, `multiResumeGame`, `multiDeleteGame`). Elles n'ont
+plus aucun appelant global — plus aucun `onclick=` ne subsiste dans les quatre pages — et
+ont été rendues locales à leur module. Cette surface globale était le dernier point qui
+rendrait une CSP `script-src 'self'` intenable si un `onclick` inline réapparaissait.
+
+### Résilience & Pool de connexions PostgreSQL borné (PERF-06)
+La couche d'accès aux données (`src/db/connection.py`) implémente un pool de connexions réutilisables thread-safe borné (par défaut 8 connexions simultanées maximum via `DB_POOL_MAX`). Cette limitation protège le serveur PostgreSQL de toute saturation :
+- Validé sous stress-test avec 400 threads concurrents sans aucune erreur de saturation `too many clients`.
+- Élimination des vérifications réseau superflues (`SELECT 1`) grâce à une fenêtre d'inactivité de 30 secondes (`DB_CONN_MAX_IDLE`).
+- Repli SQLite transparent automatique si aucune instance PostgreSQL n'est configurée (tests unitaires et développement local).
+
+### Codes du multijoueur & Hachage cryptographique
+Les `room_id` sont générés sur 8 caractères hexadécimaux et les clés joueurs sur **24 caractères hexadécimaux** (`secrets.token_hex(12)`, 96 à 128 bits d'entropie). En base de données (`multi_rooms`), les clés ne sont jamais conservées en clair : elles sont hachées cryptographiquement par `HMAC-SHA256(SECRET_KEY, key)` dès leur enregistrement (`SEC-05b`).
+
+### Protection des conteneurs & Isolation non-root
+L'image applicative s'exécute sous un utilisateur dédié non-root `cemantix` (UID 1000). Le fichier `docker-compose.yml` applique `no-new-privileges: true` et abandonne toutes les capacités Linux (`cap_drop: [ALL]`).
+
+### Respect de la vie privée & RGPD
+- **Anonymisation des journaux** : Les adresses IP sont systématiquement tronquées en sous-réseaux `/24` (IPv4) ou `/48` (IPv6) avant toute journalisation HTTP (`RGPD-03`).
+- **Pseudonymes** : Aucun pseudonyme de joueur n'est inscrit dans les logs d'accès serveur, et les salons inactifs sont automatiquement purgés après 7 jours (`RGPD-01`).
+- **Traceurs & Cookies** : Aucun cookie publicitaire tiers n'est déposé. Le cookie de révélation anti-triche est strictement nécessaire au fonctionnement de l'application et exempt de consentement préalable ePrivacy (`RGPD-02`).
+
+### La clé de salon ne reste pas dans l'URL
+
+Le lien d'invitation `/multi/?r=DUEL-XXXXXXXX&k=J2-YYYYYYYY` doit contenir la clé —
+c'est ce qui permet au second joueur d'entrer. Mais rien ne justifie qu'il **y reste** :
+une clé laissée dans la barre d'adresse survit dans l'historique du navigateur, dans le
+champ d'URL, dans les captures d'écran, et reste cliquable des heures plus tard — sur un
+ordinateur partagé, c'est une prise de contrôle du duel.
+
+```
+chargement de /multi/?r=…&k=…   → la clé est lue en mémoire, puis retirée de l'URL
+                                  l'URL devient /multi/?r=…  (le code de salon seul
+                                  n'autorise aucune action)
+polling de l'état               → POST /api/multi/status  (corps de requête)
+GET  /api/multi/*               → 404, la voie est fermée côté serveur
+```
+
+Le `GET /api/multi/status?r=…&k=…` est supprimé : une query string se retrouve dans la
+ligne de requête transmise au proxy. Le `POST` équivalent existait déjà et transporte la
+même charge utile.
+
+### À vérifier après le déploiement
+```bash
+# Le mot du jour ne doit apparaître nulle part :
+curl -s https://cemantix.cyril-randon.fr/api/daily | grep -i '"word"' | head
+
+# Les fichiers de données doivent renvoyer 404 :
+for f in data.json daily_history.json web_sessions.json; do
+  printf '%s -> ' "$f"
+  curl -s -o /dev/null -w '%{http_code}\n' "https://cemantix.cyril-randon.fr/$f"
+done
+
+# Les en-têtes doivent être présents :
+curl -sI https://cemantix.cyril-randon.fr/ | grep -iE 'content-security|strict-transport|x-frame'
+```
+
+### Après la mise en production
+1. Soumettre `https://cemantix.cyril-randon.fr/sitemap.xml` dans Google Search Console
+   et Bing Webmaster Tools ;
+2. vérifier le rendu avec « Inspection de l'URL » puis « Test d'affichage en temps
+   réel » : les pages d'archives doivent s'afficher sans JavaScript ;
+3. contrôler les données structurées sur <https://validator.schema.org>.
+
 
 ---
 
@@ -397,6 +697,8 @@ docker compose run --rm cemantix --export-web
 | :--- | :---: | :---: | :--- |
 | `--daemon` | Flag | `False` | Lance le mode démon 24h/24 : reste en veille et résout le mot du jour chaque nuit à 00h00 (Europe/Paris). |
 | `--no-run-on-start` | Flag | `False` | En mode démon, ne résout pas immédiatement si non résolu, attend le cycle de 00h00. |
+| `--export-web` | Flag | `False` | Exporte `data.json` pour le serveur web et régénère les pages d'archives SEO + `sitemap.xml`. |
+| `--publish-seo` | Flag | `False` | Régénère uniquement les pages `/puzzles/<date>/`, l'index paginé et `sitemap.xml` depuis l'historique. |
 | `--duel` | Flag | `False` | Lance le mode duel croisé interactif (Humain vs IA RAG). |
 | `--difficulty`, `-d` | Choix (`facile`, `moyen`, `expert`) | `moyen` | Règle le niveau d'agressivité de l'IA en mode duel. |
 | `--play`, `--game` | Flag | `False` | Active le mode jeu interactif solo dans le terminal. |
@@ -415,16 +717,44 @@ docker compose run --rm cemantix --export-web
 
 ---
 
+## 💡 Notes de Déploiement & Environnement
+
+### Stockage PostgreSQL sous WSL / Windows (QUAL-12)
+Les volumes PostgreSQL **ne doivent pas** être montés directement sur le système de fichiers hôte Windows (`/mnt/c/...` sous WSL) : le pilote de partage `drvfs`/`9p` ne gère pas les permissions POSIX exigées par `initdb` (`chmod: Operation not permitted`). 
+Le projet utilise donc un volume Docker nommé `cemantix_db_data` (ext4 interne Docker) pour garantir la stabilité et la performance du moteur relationnel.
+
+### Proxy d'entreprise & Variables Docker (QUAL-11)
+Si un proxy d'entreprise est configuré sur l'hôte Docker (`~/.docker/config.json`), le démon Docker peut injecter `http_proxy` en minuscules dans l'environnement des conteneurs. Pour éviter que `requests` ne contourne les exceptions locales, les variables doivent être définies en **deux casses** (`HTTP_PROXY` et `http_proxy`) ou neutralisées explicitement pour les services purement internes.
+
+---
+
 ## 🌐 Variables d'Environnement
 
-Ces variables peuvent être définies dans votre shell ou dans un fichier `.env` :
+Ces variables peuvent être définies dans votre shell ou dans un fichier `.env` (voir `.env.example`) :
 
 | Variable | Défaut | Description |
 | :--- | :--- | :--- |
+| `DB_HOST` | `cemantix_db` | Nom d'hôte du conteneur ou serveur PostgreSQL. |
+| `DB_PORT` | `5432` | Port de la base relationnelle PostgreSQL. |
+| `DB_NAME` | `cemantix` | Nom de la base de données relationnelle. |
+| `DB_USER` | `cemantix_user` | Utilisateur de connexion PostgreSQL. |
+| `DB_PASS` | `—` | Mot de passe sécurisé de la base PostgreSQL. |
+| `DB_POOL_MAX` | `8` | Nombre maximal de connexions simultanées dans le pool relationnel (PERF-06). |
+| `DB_POOL_TIMEOUT` | `10` | Secondes d'attente maximale avant levée d'exception si le pool est saturé. |
+| `DB_CONN_MAX_IDLE` | `30` | Secondes pendant lesquelles une connexion réutilisée est valide sans requêtes réseau superflues. |
+| `SQLITE_PATH` | `cemantix_data/cemantix.sqlite3` | Chemin du fichier de repli SQLite automatique si PostgreSQL est absent. |
 | `TZ` | `Europe/Paris` | Fuseau horaire officiel pour le planificateur de veille 00h00. |
 | `LM_API` | `http://host.docker.internal:1234/v1` (ou `http://localhost:1234/v1`) | URL de l'API OpenAI compatible de LM Studio. |
 | `LLM_MODEL` | `qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2` | Identifiant du modèle chargé dans LM Studio. |
 | `W2V_FILE` | `frWac_no_postag_phrase_500_cbow_cut10.bin` | Nom du fichier word2vec hébergé sur embeddings.net. |
+| `API_ALLOWED_ORIGIN` | `https://cemantix.cyril-randon.fr` | Origine(s) autorisée(s) par le CORS, séparées par des virgules. À changer si vous changez de domaine. |
+| `API_MAX_BODY_BYTES` | `32768` | Taille maximale acceptée pour le corps d'une requête `POST` (au-delà : `413`). |
+| `API_MAX_WORKERS` | `64` | Nombre maximal de requêtes traitées en parallèle par le serveur d'API. |
+| `API_SOCKET_TIMEOUT` | `10` | Timeout de socket en secondes, libère les connexions dormantes. |
+| `ADMIN_PASSWORD` | `—` | Mot de passe de la console d'exploitation `/panier-9x/` (vide = routes désactivées 403). |
+| `ADMIN_API_PATH` | `/api/snap-9x` | Préfixe d'accès sécurisé pour l'API de supervision de la console. |
+| `DOCKER_GID` | `120` | GID propriétaire du socket `/var/run/docker.sock` autorisant les logs sous utilisateur non-root. |
+| `DASHBOARD_DATA_FILE` | `cemantix_data/data.json` | Emplacement de `data.json`. **Ne doit pas** pointer dans `volumes/web` (refusé par `export_web_data`). |
 
 ---
 
@@ -433,13 +763,24 @@ Ces variables peuvent être définies dans votre shell ou dans un fichier `.env`
 ```
 cemantix-rag-solver/
 ├── cemantix_rag.py          # Point d'entrée CLI et orchestration générale
-├── requirements.txt         # Dépendances Python (NumPy, ChromaDB, Requests)
+├── requirements.txt         # Dépendances Python (NumPy, ChromaDB, Requests, Psycopg 3)
 ├── Dockerfile               # Image conteneurisée prête à l'emploi (tzdata, Python 3.12)
-├── docker-compose.yml       # Configuration Docker Daemon (restart: unless-stopped)
-├── .gitignore               # Exclut les fichiers binaires volumineux et caches
+├── docker-compose.yml       # Déploiement 3-tiers durci (cemantix_db, cemantix_worker, cemantix_web)
+├── .github/                 # Workflows d'intégration continue (CI tests, lint, audit, Lighthouse)
+│   └── workflows/ci.yml     # Pipeline automatisée GitHub Actions
+├── local/                   # Environnement local de test et outillage d'évaluation (smoke-test, test compose)
+├── tools/                   # Scripts de contrôle automatisé (check_docs.py, check_og_image.py, build_css_bundles.py)
+├── .env.example             # Gabarit des variables d'environnement de production
+├── .gitignore               # Exclut les fichiers binaires volumineux, Caddyfile et caches
+├── .dockerignore            # Optimisation du contexte de build Docker (< 800 ko)
 ├── README.md                # Documentation complète du projet
 ├── CHANGELOG.md             # Historique des versions et refactorings
+├── database/                # Schémas SQL relationnels
+│   └── init.sql             # DDL PostgreSQL officiel (daily_puzzles, multi_rooms, solo_sessions)
+├── scripts/                 # Scripts d'exploitation et de migration
+│   └── migrate_json_to_pg.py# Migration d'historique daily_history.json vers PostgreSQL
 ├── volumes/                 # Volumes partagés
+│   ├── db/data/             # Données persistantes PostgreSQL
 │   └── web/                 # Application web servie par Caddy (mot du jour, jeu & API)
 │       ├── index.html       # Tableau de bord principal (URL : /)
 │       ├── play/            # Interface de jeu interactif Solo (URL : /play/)
@@ -448,34 +789,42 @@ cemantix-rag-solver/
 │       │   └── index.html   # Page Mode Battle (versus IA, double jauge, indices)
 │       ├── multi/           # Mode Multijoueur 1v1 entre amis (URL : /multi/)
 │       │   └── index.html   # Page Multijoueur (Même Mot, Mots Choisis, lien direct)
-│       ├── css/             # Styles atomiques (variables, base, layout, dashboard, game, battle, multi, modal)
-│       ├── js/              # Modules JavaScript atomiques (app, utils, theme, game, battle, multi, dashboard...)
+│       ├── css/             # Styles atomiques et bundles optimisés par page (dist/)
+│       ├── js/              # Modules JavaScript atomiques (app, utils, render, game, battle, multi...)
 │       ├── robots.txt       # Directives d'exploration pour les moteurs de recherche
-│       └── sitemap.xml      # Plan de site XML officiel pour l'indexation Google
+│       └── sitemap.xml      # Plan de site XML officiel avec lastmod dynamiques
 ├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)
 │   ├── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
-│   └── daily_history.json   # Historique persistant des résolutions quotidiennes
+│   └── daily_history.json   # Historique persistant des résolutions quotidiennes (miroir)
 └── src/                     # Architecture modulaire découplée
     ├── __init__.py          # Expose les classes et fonctions du package avec rétrocompatibilité
     ├── config.py            # Constantes, styles ANSI, chemins et configuration LLM
+    ├── db/                  # Couche d'accès aux données PostgreSQL / SQLite thread-safe
+    │   ├── __init__.py      # Exports des services de persistance
+    │   ├── connection.py    # Pool de connexions borné (PERF-06), transactions et bascule SQLite
+    │   ├── daily.py         # Persistance, requêtes agrégées SQL et consultation des puzzles
+    │   ├── multi.py         # Gestion relationnelle des salons 1v1 avec hachage HMAC des clés
+    │   └── solo.py          # Sauvegarde et reprise des sessions de jeu solo
     ├── engine/              # Moteur mathématique, RAG & clients réseau (Core Engine)
     │   ├── __init__.py      # Point d'entrée et exports du moteur
-    │   ├── vocab.py         # VocabStore (lexique Lexique383, vecteurs frWac, ChromaDB)
+    │   ├── vocab.py         # VocabStore (lexique Lexique383, vecteurs frWac, import paresseux ChromaDB)
     │   ├── clients.py       # Clients API Cémantix officiel (IPv4/retry) & local (MockClient)
-    │   └── solvers.py       # Régression Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
+    │   ├── solvers.py       # Régression Ridge, Rerank, interface LLM & solveurs (Solver, RagDuelPlayer)
+    │   ├── english_stopwords.txt # Stopwords anglais parasites purs découplés (QUAL-09)
+    │   └── prompt_template.txt   # Gabarit de prompt pour l'hybride LLM découplé (QUAL-09)
     ├── game/                # Moteurs de jeu purs et gestionnaires de session (Domain Layer)
     │   ├── __init__.py      # Point d'accès et ré-exports des sessions
     │   ├── common.py        # Utilitaires partagés (météo sémantique, fichiers de persistance)
     │   ├── solo.py          # Moteur de session Solo & Défi du Jour (GameSession)
     │   ├── battle.py        # Moteur de duel Joueur vs Bot IA (BattleSession)
     │   ├── multi.py         # Moteur de salon et tours Multijoueur 1v1 (MultiplayerSession)
-    │   └── manager.py       # Gestionnaire d'état, persistance disque et pools (GameManager)
+    │   └── manager.py       # Gestionnaire d'état, persistance relationnelle O(1) et pools (GameManager)
     ├── api/                 # Couche d'exposition HTTP & API REST modulaire (Web API)
     │   ├── __init__.py      # Point d'accès du paquet API & exports rétrocompatibles
-    │   ├── server.py        # Serveur HTTP, parsing JSON, gestion CORS & cycle de vie
+    │   ├── server.py        # Serveur HTTP, parsing JSON, ratelimit, anonymisation IP /24 et logs
     │   └── routes/          # Contrôleurs HTTP découplés par domaine
     │       ├── __init__.py  # Point d'accès unifié des routes
-    │       ├── system.py    # Métriques système et données web (/api/health, /api/daily)
+    │       ├── system.py    # Métriques système, cache mémoire et ETag 304 (/api/health, /api/daily)
     │       ├── solo.py      # Contrôleur du Mode Solo (/api/game/*)
     │       ├── battle.py    # Contrôleur du Mode Battle IA (/api/battle/*)
     │       └── multi.py     # Contrôleur du Mode Multijoueur 1v1 (/api/multi/*)
@@ -486,8 +835,9 @@ cemantix-rag-solver/
     │   └── modes.py         # Boucles d'exécution interactives (solo, duel, battle, benchmark)
     └── services/            # Services d'arrière-plan & synchronisation (Background Services)
         ├── __init__.py      # Point d'entrée des services
-        ├── daemon.py        # Démon planificateur 24h/24 (veille et résolution quotidienne à 00h00)
-        └── web.py           # Générateur et exportateur de données web pour Caddy/Nginx (data.json)
+        ├── daemon.py        # Démon planificateur 24h/24 (veille, heartbeat threadé et résolution quotidienne)
+        ├── web.py           # Générateur et exportateur de données web avec masquage anti-spoiler
+        └── seo.py           # Génération des pages d'archives quotidiennes et sitemap.xml dynamique
 ```
 
 ---
