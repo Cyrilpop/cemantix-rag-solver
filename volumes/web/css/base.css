@@ -52,6 +52,47 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Liens Hypertextes Généraux (Style identique aux liens du footer) */
+a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable) {
+  color: #58a6ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+  position: relative;
+  display: inline;
+  transition: color 0.25s ease, text-shadow 0.25s ease;
+}
+
+[data-theme="light"] a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable) {
+  color: #0969da;
+}
+
+a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--accent), #79c0ff);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 1px;
+}
+
+a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hover {
+  color: #a5d6ff;
+  text-shadow: 0 0 12px var(--accent-glow);
+}
+
+a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hover::after {
+  width: 100%;
+}
+
+[data-theme="light"] a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hover {
+  color: #0550ae;
+  text-shadow: 0 0 8px rgba(9, 105, 218, 0.25);
+}
+
 /* Status Badges */
 .status-badge {
   display: inline-flex;

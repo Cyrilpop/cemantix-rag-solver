@@ -114,6 +114,10 @@
   border-radius: calc(var(--radius-lg) - 2px);
 }
 
+.secret-word-card.is-spoiled {
+  cursor: pointer;
+}
+
 .secret-word-card.is-spoiled .spoiler-overlay {
   display: flex;
 }
@@ -846,6 +850,24 @@
 /* Section SEO & FAQ Guide */
 .seo-section {
   margin-top: 2rem;
+  /* Le guide, la FAQ et le résumé du jour forment le bas de la page d'accueil :
+     jamais visibles à l'arrivée, ils coûtent pourtant une mise en page et une
+     peinture complètes à chaque chargement et à chaque changement de thème.
+     `content-visibility: auto` saute ce travail tant que le bloc approche du
+     viewport. `contain-intrinsic-size` porte le mot-clé `auto`, qui mémorise la
+     hauteur réelle après le premier rendu : sans lui, la barre de défilement
+     sauterait à chaque passage. Les navigateurs sans support ignorent les deux
+     propriétés et affichent normalement le contenu. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 520px;
+}
+
+@media print {
+  /* À l'impression comme pour les lecteurs d'écran qui reconstruisent le
+     document, rien ne doit rester non rendu. */
+  .seo-section {
+    content-visibility: visible;
+  }
 }
 
 .seo-card {
@@ -855,6 +877,53 @@
   padding: 1.75rem;
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(8px);
+}
+
+#resume-du-jour .card-subtitle {
+  color: #c9d1d9;
+  font-size: 0.85rem;
+}
+
+[data-theme="light"] #resume-du-jour .card-subtitle {
+  color: #424a53;
+}
+
+#seo-daily-summary {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text-main);
+  margin-bottom: 0.75rem;
+}
+
+#seo-daily-summary strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+[data-theme="light"] #seo-daily-summary strong {
+  color: #0969da;
+}
+
+#resume-du-jour .seo-list {
+  color: #c9d1d9;
+  font-size: 0.88rem;
+  padding-left: 0;
+  margin-top: 0.5rem;
+}
+
+[data-theme="light"] #resume-du-jour .seo-list {
+  color: #424a53;
+}
+
+#resume-du-jour a {
+  color: #58a6ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+}
+
+[data-theme="light"] #resume-du-jour a {
+  color: #0969da;
 }
 
 .seo-header {

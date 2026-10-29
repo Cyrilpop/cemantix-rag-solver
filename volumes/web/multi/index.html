@@ -11,14 +11,17 @@
        SEO & Référencement Naturel Google
        ====================================================================== -->
   <title>Cémantix Multijoueur : Duel 1v1 en Direct &amp; Tour par Tour | Cémantix Solver</title>
-  <meta name="title" content="Cémantix Multijoueur : Duel 1v1 en Direct &amp; Tour par Tour | Cémantix Solver">
   <meta name="description" content="Affrontez vos amis en duel Cémantix 1v1 au tour par tour ! Deux modes : Même Mot (progression visible avec anti-triche masqué) et Mots Choisis (mots secrets personnalisés). Rejoignez par code ou lien direct.">
-  <meta name="keywords" content="cemantix multijoueur, duel cemantix ami, cemantix 1v1, jouer a deux cemantix, semantix multi, defi cemantix en ligne, duel mot secret, cemantix tour par tour ami">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Cyril Randon">
   <meta name="publisher" content="Cyril Randon">
   <link rel="canonical" href="https://cemantix.cyril-randon.fr/multi/">
-  <meta name="theme-color" content="#0d1117">
+  <link rel="alternate" hreflang="fr" href="https://cemantix.cyril-randon.fr/multi/">
+  <link rel="alternate" hreflang="x-default" href="https://cemantix.cyril-randon.fr/multi/">
+  <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 
   <!-- Open Graph / Facebook / LinkedIn -->
   <meta property="og:type" content="website">
@@ -38,15 +41,15 @@
   <meta name="twitter:title" content="Cémantix Multijoueur : Duel 1v1 entre Amis">
   <meta name="twitter:description" content="Qui devinera son mot secret en premier ? Relevez le défi Cémantix Multijoueur en 1v1 !">
   <meta name="twitter:image" content="https://cemantix.cyril-randon.fr/og-image.jpg">
+  <meta name="twitter:image:alt" content="Cémantix Multijoueur — Duel 1v1 entre amis">
+  <meta name="twitter:creator" content="@cyril_randon">
 
   <!-- Favicon & Styles -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👥</text></svg>">
-  <link rel="stylesheet" href="../css/variables.css">
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/layout.css">
-  <link rel="stylesheet" href="../css/game.css">
-  <link rel="stylesheet" href="../css/modal.css">
-  <link rel="stylesheet" href="../css/multi.css">
+  <link rel="stylesheet" href="../css/dist/multi.css">
+  <link rel="modulepreload" href="../js/multi.js">
+  <link rel="modulepreload" href="../js/render.js">
+  <link rel="modulepreload" href="../js/utils.js">
 
   <!-- Données Structurées JSON-LD -->
   <script type="application/ld+json">
@@ -63,7 +66,10 @@
         "genre": "Jeu de réflexion multijoueur",
         "operatingSystem": "All",
         "inLanguage": "fr-FR",
-        "image": "https://cemantix.cyril-randon.fr/og-image.jpg",
+        "isPartOf": {
+          "@type": "WebSite",
+          "@id": "https://cemantix.cyril-randon.fr/#website"
+        },
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -72,7 +78,11 @@
         "author": {
           "@type": "Person",
           "name": "Cyril Randon",
-          "url": "https://cyril-randon.fr"
+          "url": "https://cyril-randon.fr",
+          "sameAs": [
+            "https://github.com/Cyrilpop/cemantix-rag-solver",
+            "https://www.linkedin.com/in/cyril-randon"
+          ]
         }
       },
       {
@@ -176,9 +186,19 @@
         <span>Mode Multijoueur</span>
         <span class="tab-badge">1v1 Ami</span>
       </a>
+      <a href="../puzzles/" id="tab-archives" class="nav-tab">
+        <span class="tab-icon">📚</span>
+        <span>Archives</span>
+      </a>
     </nav>
 
     <div class="multi-container">
+      <noscript>
+        <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent, #6366f1); padding: 1rem;">
+          <h2 style="font-size: 1.1rem; margin-top: 0;">ℹ️ JavaScript requis pour le Multijoueur</h2>
+          <p>Le mode multijoueur 1v1 au tour par tour requiert JavaScript pour synchroniser l'état de la partie, échanger les tours de jeu et protéger les mots secrets de vos adversaires. Les puzzles passés restent consultables dans nos <a href="../puzzles/">archives indexables</a>.</p>
+        </div>
+      </noscript>
 
       <!-- ==================================================================
            VUE 1 : LOBBY MULTIJOUEUR (Créer / Rejoindre / Parties Récentes)
@@ -525,15 +545,21 @@
   <!-- Pied de page -->
   <footer class="app-footer">
     <div class="footer-container">
-      <div class="footer-links">
-        <a href="../">Tableau de Bord</a>
-        <a href="../play/">Jouer Solo</a>
-        <a href="../battle/">Mode Battle</a>
-        <a href="./">Mode Multijoueur</a>
+      <div class="footer-left">
+        <p><strong>Cémantix Solver</strong> — Propulsé par RAG vectoriel (frWac Word2Vec + ChromaDB).</p>
+        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>.</span>
       </div>
-      <p class="footer-copy">
-        Cémantix Solver — Conçu et développé avec passion par <a href="https://cyril-randon.fr" target="_blank" rel="noopener">Cyril Randon</a>.
-      </p>
+      <div class="footer-right">
+        <a href="../" class="btn btn-ghost btn-sm" title="Tableau de Bord">
+          <span>📊</span> Tableau de bord
+        </a>
+        <a href="../play/" class="btn btn-ghost btn-sm" title="Jouer Solo">
+          <span>🎮</span> Mode Solo
+        </a>
+        <a href="../battle/" class="btn btn-ghost btn-sm" title="Mode Battle">
+          <span>⚔️</span> Mode Battle
+        </a>
+      </div>
     </div>
   </footer>
 

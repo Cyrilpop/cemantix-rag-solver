@@ -11,14 +11,17 @@
        SEO & Indexation Moteurs de Recherche
        ====================================================================== -->
   <title>Jouer à Cémantix en Direct : Mode Illimité &amp; Défi du Jour</title>
-  <meta name="title" content="Jouer à Cémantix en Direct : Mode Illimité &amp; Défi du Jour">
   <meta name="description" content="Jouez à Cémantix en ligne gratuitement ! Relevez le défi du jour ou jouez en mode illimité avec 3 niveaux de difficulté (facile, moyen, expert). Indices et scoring en direct.">
-  <meta name="keywords" content="jouer cemantix, cemantix illimite, jeu cemantix, cemantix gratuit, entrainement cemantix, cémantix en ligne, defis cemantix, semantix jeu, mot du jour jeu">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Cyril Randon">
   <meta name="publisher" content="Cyril Randon">
   <link rel="canonical" href="https://cemantix.cyril-randon.fr/play/">
-  <meta name="theme-color" content="#0d1117">
+  <link rel="alternate" hreflang="fr" href="https://cemantix.cyril-randon.fr/play/">
+  <link rel="alternate" hreflang="x-default" href="https://cemantix.cyril-randon.fr/play/">
+  <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 
   <!-- Open Graph & Twitter Card -->
   <meta property="og:type" content="website">
@@ -26,16 +29,22 @@
   <meta property="og:title" content="Jouer à Cémantix en Direct : Mode Illimité &amp; Défi du Jour">
   <meta property="og:description" content="Entraînez-vous à Cémantix en illimité ou tentez le mot du jour avec analyse sémantique vectorielle en direct !">
   <meta property="og:image" content="https://cemantix.cyril-randon.fr/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Cémantix Solver — Jouer en solo, mode illimité et défi du jour">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://cemantix.cyril-randon.fr/play/">
+  <meta name="twitter:title" content="Jouer à Cémantix en Direct : Mode Illimité &amp; Défi du Jour">
+  <meta name="twitter:description" content="Entraînez-vous à Cémantix en illimité ou tentez le mot du jour avec analyse sémantique vectorielle en direct !">
   <meta name="twitter:image" content="https://cemantix.cyril-randon.fr/og-image.jpg">
+  <meta name="twitter:image:alt" content="Cémantix Solver — Jouer en solo, mode illimité et défi du jour">
+  <meta name="twitter:creator" content="@cyril_randon">
 
   <!-- Favicon & Styles Atomiques Spécifiques au Jeu -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
-  <link rel="stylesheet" href="../css/variables.css">
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/layout.css">
-  <link rel="stylesheet" href="../css/game.css">
-  <link rel="stylesheet" href="../css/modal.css">
+  <link rel="stylesheet" href="../css/dist/play.css">
+  <link rel="modulepreload" href="../js/game.js">
+  <link rel="modulepreload" href="../js/utils.js">
 
   <!-- Données Structurées JSON-LD (Schema.org / GameApplication & Fil d'Ariane) -->
   <script type="application/ld+json">
@@ -52,7 +61,10 @@
         "genre": "Jeu de réflexion et sémantique",
         "operatingSystem": "All",
         "inLanguage": "fr-FR",
-        "image": "https://cemantix.cyril-randon.fr/og-image.jpg",
+        "isPartOf": {
+          "@type": "WebSite",
+          "@id": "https://cemantix.cyril-randon.fr/#website"
+        },
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -61,7 +73,11 @@
         "author": {
           "@type": "Person",
           "name": "Cyril Randon",
-          "url": "https://cyril-randon.fr"
+          "url": "https://cyril-randon.fr",
+          "sameAs": [
+            "https://github.com/Cyrilpop/cemantix-rag-solver",
+            "https://www.linkedin.com/in/cyril-randon"
+          ]
         }
       },
       {
@@ -136,10 +152,21 @@
         <span>Mode Multijoueur</span>
         <span class="tab-badge">1v1 Ami</span>
       </a>
+      <a href="../puzzles/" id="tab-archives" class="nav-tab">
+        <span class="tab-icon">📚</span>
+        <span>Archives</span>
+      </a>
     </nav>
 
     <!-- Zone de Jeu Interactive -->
     <div id="view-play" class="view-content active">
+      <noscript>
+        <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent, #6366f1); padding: 1rem;">
+          <h2 style="font-size: 1.1rem; margin-top: 0;">ℹ️ JavaScript requis pour jouer</h2>
+          <p>Le jeu interactif Cémantix en solo (défi du jour ou mode illimité) requiert l'activation de JavaScript pour évaluer vos propositions et calculer le thermomètre de similarité en temps réel. Vous pouvez consulter les résolutions et indices dans les <a href="../puzzles/">archives complètes des énigmes</a>.</p>
+        </div>
+      </noscript>
+
       <!-- Barre de Contrôles du Jeu -->
       <section class="card game-control-card">
         <div class="game-control-header">
