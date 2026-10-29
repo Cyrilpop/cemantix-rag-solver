@@ -15,12 +15,14 @@ Les pages sont auto-suffisantes : les tokens de style sont extraits de
 un rendu correct même sans JavaScript et sans requête CSS supplémentaire.
 """
 import json
+import os
 import re
+import secrets
 from datetime import datetime
 from html import escape
 from pathlib import Path
 from typing import Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from ..config import BASE_DIR, log
 
@@ -124,6 +126,17 @@ def _load_style_tokens() -> str:
         return ""
     blocks = _CSS_ROOT_RE.findall(raw) + _CSS_LIGHT_RE.findall(raw)
     return "\n".join(blocks)
+
+
+def _load_puzzle_css() -> str:
+    """Charge et compacte `puzzle.css` pour l'injecter en `<style>` sans requête bloquante."""
+    puzzle_css_file = WEB_ROOT / "css" / "puzzle.css"
+    try:
+        raw = puzzle_css_file.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    cleaned = re.sub(r"/\*.*?\*/", "", raw, flags=re.DOTALL)
+    return re.sub(r"\s+", " ", cleaned).strip()
 
 
 # --------------------------------------------------------------------------- #
@@ -274,8 +287,7 @@ def render_page(
   <meta name="twitter:description" content="{escape(description)}">
   <meta name="twitter:image" content="{SITE_ORIGIN}/og-image.jpg">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
-  <style>{_load_style_tokens()}{PAGE_CSS}</style>
-   <link rel="stylesheet" href="/css/dist/puzzle.css">
+  <style>{_load_style_tokens()}{PAGE_CSS}{_load_puzzle_css()}</style>
 {json_ld}
 </head>
 <body>
@@ -660,9 +672,19 @@ def build_sitemap(entries: list, generated_at: datetime) -> str:
 
 
 def _write_file(path: Path, content: str) -> None:
-    """Écrit un fichier texte en UTF-8 (crée les répertoires parents)."""
+    """Écrit un fichier texte en UTF-8 de façon atomique (compatible multi-conteneurs)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8", newline="\n")
+    tmp_path = path.with_name(f".{path.name}.{secrets.token_hex(6)}.tmp")
+    try:
+        tmp_path.write_text(content, encoding="utf-8", newline="\n")
+        try:
+            os.chmod(tmp_path, 0o644)
+        except OSError:
+            pass
+        tmp_path.replace(path)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
 
 
 # --------------------------------------------------------------------------- #
@@ -787,7 +809,11 @@ def prerender_dashboard(entry: Optional[dict], web_root: Path = None) -> bool:
             flags=re.DOTALL,
         )
 
-    index_file.write_text(source, encoding="utf-8", newline="\n")
+    try:
+        _write_file(index_file, source)
+    except OSError as exc:
+        log(f"⚠️  Pré-rendu SEO non réécrit ({exc})")
+        return False
     return True
 
 
@@ -864,7 +890,7 @@ def refresh_agent_docs(entries: list, web_root: Path = None) -> int:
         if updated is None:
             continue
         try:
-            target.write_text(updated, encoding="utf-8", newline="\n")
+            _write_file(target, updated)
         except OSError as exc:
             log(f"⚠️  {filename} non réécrit ({exc})")
             continue
@@ -872,8 +898,162 @@ def refresh_agent_docs(entries: list, web_root: Path = None) -> int:
     return refreshed
 
 
+def build_ard_manifest(origin: str = SITE_ORIGIN) -> str:
+    """Construit le manifeste ARD conforme à Lighthouse (`ai-catalog.json` & `ard.json`)."""
+    base = origin.rstrip("/")
+    domain = urlparse(base).hostname or "cemantix.cyril-randon.fr"
+    payload = {
+        "specVersion": "1.0",
+        "host": {
+            "displayName": "Cémantix Solver",
+            "identifier": f"did:web:{domain}",
+            "documentationUrl": f"{base}/llms.txt",
+        },
+        "entries": [
+            {
+                "identifier": f"urn:air:{domain}:agent:cemantix-solver",
+                "displayName": "Cémantix Solver — carte d'agent",
+                "type": "application/agent-card+json",
+                "url": f"{base}/.well-known/agent-card.json",
+                "description": (
+                    "Carte d'agent du solveur sémantique Cémantix : compétences exposées, "
+                    "modes d'entrée et de sortie, endpoints publics. Le mot secret est "
+                    "masqué par conception (protection anti-spoiler) ; la solution d'une "
+                    "date donnée se consulte sur la page d'archive correspondante."
+                ),
+                "representativeQueries": [
+                    "Quels sont les indices sémantiques du Cémantix du jour ?",
+                    "Combien de coups ont été nécessaires pour trouver le Cémantix du jour ?",
+                    "Similarité sémantique et solveur Cémantix",
+                ],
+            },
+            {
+                "identifier": f"urn:air:{domain}:skills:cemantix-indices",
+                "displayName": "Compétences Cémantix Solver (mode d'emploi agent)",
+                "type": 'text/markdown; profile="urn:air:agent-skills"',
+                "url": f"{base}/agent-skills.md",
+                "description": (
+                    "Protocole d'usage pour un agent autonome : les trois requêtes "
+                    "autorisées (indices du jour, archive datée, état du service), la "
+                    "conduite à tenir en cas de 404 et l'interdiction de révéler ou de "
+                    "reconstituer le mot secret."
+                ),
+                "representativeQueries": [
+                    "Comment interroger le solveur Cémantix ?",
+                    "Solution et indices du Cémantix du 26 octobre 2026",
+                ],
+            },
+        ],
+    }
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+
+def build_agent_card(origin: str = SITE_ORIGIN) -> str:
+    """Construit la carte d'agent A2A `.well-known/agent-card.json`."""
+    base = origin.rstrip("/")
+    payload = {
+        "name": "Cémantix Solver",
+        "description": (
+            "Résolution sémantique du jeu Cémantix : indices thermiques quotidiens, "
+            "archives par date et solveur vectoriel Word2Vec. Les réponses publiques "
+            "sont sans spoiler : le mot secret n'est jamais exposé avant sa révélation "
+            "par le visiteur."
+        ),
+        "url": f"{base}/api/daily",
+        "provider": {
+            "organization": "Cyril RANDON",
+            "url": "https://cyril-randon.fr",
+        },
+        "version": "1.0.0",
+        "documentation": f"{base}/llms.txt",
+        "capabilities": {
+            "streaming": False,
+            "pushNotifications": False,
+            "stateTransitionHistory": False,
+        },
+        "authentication": {
+            "schemes": ["none"],
+        },
+        "defaultInputModes": ["text/plain"],
+        "defaultOutputModes": ["application/json"],
+        "skills": [
+            {
+                "id": "daily-indices",
+                "name": "Indices sémantiques du jour",
+                "description": (
+                    "Renvoie les données agrégées du puzzle du jour : date, numéro, "
+                    "nombre de coups, durée et dix mots les plus proches avec leur "
+                    "score. Le mot secret est masqué."
+                ),
+                "tags": ["cemantix", "semantique", "indices"],
+                "examples": [
+                    "Quels sont les indices sémantiques du Cémantix du jour ?",
+                    "Combien de coups ont été nécessaires pour trouver le Cémantix du jour ?",
+                ],
+                "inputModes": ["text/plain"],
+                "outputModes": ["application/json"],
+            },
+            {
+                "id": "dated-archive",
+                "name": "Archive d'une date précise",
+                "description": (
+                    "Interroge la page statique /puzzles/AAAA-MM-JJ/ d'un puzzle résolu. "
+                    "Un statut 404 signifie que la date n'a pas encore été résolue."
+                ),
+                "tags": ["cemantix", "archive", "date"],
+                "examples": [
+                    "Donne les indices du Cémantix du 26 octobre 2026",
+                    "Quand le puzzle du 23 octobre 2026 a-t-il été résolu ?",
+                ],
+                "inputModes": ["text/plain"],
+                "outputModes": ["text/html"],
+            },
+            {
+                "id": "service-health",
+                "name": "État du service",
+                "description": (
+                    "Vérifie la disponibilité du service et le nombre de sessions de "
+                    "jeu actives, sans aucune donnée de puzzle."
+                ),
+                "tags": ["sante", "disponibilite"],
+                "examples": ["Le solveur Cémantix est-il disponible ?"],
+                "inputModes": [],
+                "outputModes": ["application/json"],
+            },
+        ],
+    }
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+
+def publish_ard_manifests(web_root: Path = None) -> int:
+    """Génère atomiquement `.well-known/{ai-catalog,ard,agent-card}.json`.
+
+    Recrée systématiquement les manifestes ARD et A2A au démarrage des conteneurs
+    et lors de chaque publication SEO afin d'éliminer tout fichier absent, tronqué
+    ou resté sur un schéma obsolète.
+    """
+    root = web_root if web_root is not None else WEB_ROOT
+    well_known = root / ".well-known"
+    ard_content = build_ard_manifest(SITE_ORIGIN)
+    card_content = build_agent_card(SITE_ORIGIN)
+
+    targets = (
+        (well_known / "ai-catalog.json", ard_content),
+        (well_known / "ard.json", ard_content),
+        (well_known / "agent-card.json", card_content),
+    )
+    written_count = 0
+    for path, payload in targets:
+        try:
+            _write_file(path, payload)
+            written_count += 1
+        except OSError as exc:
+            log(f"⚠️  [ARD] Impossible d'écrire {path.name} ({exc})")
+    return written_count
+
+
 def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = None) -> dict:
-    """Génère les pages d'archives, l'index paginé et le sitemap dans le webroot.
+    """Génère les pages d'archives, l'index paginé, le sitemap et les manifestes ARD.
 
     Seuls les puzzles gagnés sont publiés : une page sans solution n'apporte aucune
     réponse au chercheur et ferait doublon avec le tableau de bord.
@@ -890,9 +1070,15 @@ def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = No
         reverse=True,
     )
 
-    written = {"archives": 0, "index_pages": 0, "sitemap": False}
+    written = {"archives": 0, "index_pages": 0, "sitemap": False, "ard_manifests": 0}
+
+    # Génération prioritaire et atomique de sitemap.xml et des manifestes ARD (.well-known/)
+    _write_file(root / "sitemap.xml", build_sitemap(entries, generated_at))
+    written["sitemap"] = True
+    written["ard_manifests"] = publish_ard_manifests(web_root=root)
+
     if not entries:
-        log("ℹ️  SEO : aucun puzzle résolu, génération du sitemap seul.")
+        log("ℹ️  SEO : aucun puzzle résolu, génération du sitemap et des manifestes ARD.")
     else:
         for idx, entry in enumerate(entries):
             newer = entries[idx - 1] if idx > 0 else None
@@ -910,16 +1096,39 @@ def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = No
             _write_file(target, html)
             written["index_pages"] += 1
 
-    _write_file(root / "sitemap.xml", build_sitemap(entries, generated_at))
-    written["sitemap"] = True
-
     written["prerender"] = prerender_dashboard(entries[0] if entries else None, web_root=root)
     written["agent_docs"] = refresh_agent_docs(entries, web_root=root)
     log(
         f"🔎  SEO publié : {written['archives']} archive(s), "
-        f"{written['index_pages']} page(s) d'index, sitemap.xml régénéré"
+        f"{written['index_pages']} page(s) d'index, sitemap.xml régénéré, "
+        f"{written['ard_manifests']} manifeste(s) ARD"
         + (", accueil pré-rendu" if written["prerender"] else "")
         + (f", {written['agent_docs']} doc(s) agent rafraîchie(s)" if written["agent_docs"] else "")
     )
     return written
+
+
+def ensure_seo_published(web_root: Path = None) -> Optional[dict]:
+    """Garantit la présence et la conformité de `sitemap.xml`, `.well-known/` et `/puzzles/` au démarrage.
+
+    Invoqué automatiquement au lancement des conteneurs (`cemantix_web` et
+    `cemantix_worker`) afin de recréer immédiatement `volumes/web/sitemap.xml`,
+    `volumes/web/.well-known/{ai-catalog,ard,agent-card}.json`, `/puzzles/` et le
+    pré-rendu SEO après un `git pull`, un déploiement vierge ou un redémarrage.
+    """
+    from .daemon import PARIS_TZ, load_history
+    try:
+        try:
+            history = load_history()
+        except Exception as db_exc:
+            log(f"⚠️  [SEO] Historique indisponible au démarrage ({db_exc}), repli sur historique vide.")
+            history = []
+        return publish_seo_pages(
+            history=history,
+            generated_at=datetime.now(PARIS_TZ),
+            web_root=web_root,
+        )
+    except Exception as exc:
+        log(f"⚠️  [SEO] Génération automatique SEO/ARD au démarrage en échec : {exc}")
+        return None
 

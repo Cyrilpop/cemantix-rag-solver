@@ -30,12 +30,16 @@ from .web import (
 )
 from .seo import (
     SITE_ORIGIN,
+    build_agent_card,
     build_archive_page,
     build_archives_index_page,
+    build_ard_manifest,
     build_sitemap,
+    ensure_seo_published,
     format_date_fr,
     format_duration_fr,
     prerender_dashboard,
+    publish_ard_manifests,
     publish_seo_pages,
 )
 
@@ -59,11 +63,15 @@ __all__ = [
     "build_web_data",
     "export_web_data",
     "SITE_ORIGIN",
+    "build_agent_card",
     "build_archive_page",
     "build_archives_index_page",
+    "build_ard_manifest",
     "build_sitemap",
+    "ensure_seo_published",
     "format_date_fr",
     "format_duration_fr",
     "prerender_dashboard",
+    "publish_ard_manifests",
     "publish_seo_pages",
 ]

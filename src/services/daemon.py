@@ -317,12 +317,17 @@ def run_daemon_loop(args) -> None:
     log(f"💾  Fichier historique          : {DAILY_HISTORY_FILE}")
     log(f"⚙   Mode d'exécution           : {'100% RAG Pur' if getattr(args, 'rag_only', False) else 'Hybride RAG + LLM'}")
 
-    # Synchronisation initiale de la page web au démarrage
+    # Synchronisation initiale de la page web et de sitemap.xml au démarrage
+    seo_synced = False
     try:
         from .web import export_web_data
         export_web_data()
+        seo_synced = True
     except Exception as e:
         log(f"⚠️  [DÉMON] Synchronisation initiale de la page web échouée : {e}")
+        from .seo import ensure_seo_published
+        if ensure_seo_published() is not None:
+            seo_synced = True
 
     # Démarrage de l'API locale du jeu interactif (partage en mémoire du VocabStore)
     if not getattr(args, "no_api", False):
@@ -333,7 +338,7 @@ def run_daemon_loop(args) -> None:
             args.store = store
             api_port = getattr(args, "api_port", 8000)
             api_host = getattr(args, "api_host", "0.0.0.0")
-            start_api_thread(store, host=api_host, port=api_port)
+            start_api_thread(store, host=api_host, port=api_port, publish_seo=not seo_synced)
         except Exception as e:
             log(f"⚠️  Impossible de démarrer l'API locale du jeu : {e}")
 

@@ -168,14 +168,15 @@ def export_web_data(
     except OSError:
         pass
 
-    out_dir.mkdir(parents=True, exist_ok=True)
     target_file = out_dir / "data.json"
-
     data = build_web_data(history=history, heartbeat_path=heartbeat_path)
 
-    # Écriture atomique via fichier temporaire
+    # Écriture atomique via fichier temporaire ; la publication SEO (sitemap.xml)
+    # s'exécute dans le bloc finally afin qu'un souci de droits sur cemantix_data/data.json
+    # n'empêche jamais la régénération de volumes/web/sitemap.xml.
     tmp_file = target_file.with_suffix(".tmp")
     try:
+        out_dir.mkdir(parents=True, exist_ok=True)
         with open(tmp_file, "w", encoding="utf-8", newline="\n") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         tmp_file.replace(target_file)
@@ -188,15 +189,15 @@ def export_web_data(
             except OSError:
                 pass
         raise
-
-    if publish_seo:
-        try:
-            from .seo import publish_seo_pages
-            publish_seo_pages(
-                history=data.get("history") or [],
-                generated_at=datetime.now(PARIS_TZ),
-            )
-        except Exception as e:
-            log(f"⚠️  Publication SEO non bloquante en échec : {e}")
+    finally:
+        if publish_seo:
+            try:
+                from .seo import publish_seo_pages
+                publish_seo_pages(
+                    history=data.get("history") or [],
+                    generated_at=datetime.now(PARIS_TZ),
+                )
+            except Exception as e:
+                log(f"⚠️  Publication SEO non bloquante en échec : {e}")
 
     return target_file
