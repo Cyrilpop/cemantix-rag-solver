@@ -19,6 +19,7 @@ import {
   getTierWeatherIcon,
   showConfirmDialog,
 } from "./utils.js";
+import { initTheme } from "./theme.js";
 import { renderGuessesContainer } from "./render.js";
 
 // Clé de stockage local des duels
@@ -59,6 +60,7 @@ document.addEventListener("visibilitychange", () => {
 // --------------------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
   initErrorHandling();
+  initTheme();
   initLobbyEvents();
   initArenaEvents();
   initRoomActions();
