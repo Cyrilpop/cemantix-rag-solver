@@ -1,0 +1,56 @@
+{
+  "name": "Cémantix Solver",
+  "description": "Résolution sémantique du jeu Cémantix : indices thermiques quotidiens, archives par date et solveur vectoriel Word2Vec. Les réponses publiques sont sans spoiler : le mot secret n'est jamais exposé avant sa révélation par le visiteur.",
+  "url": "https://cemantix.cyril-randon.fr/api/daily",
+  "provider": {
+    "organization": "Cyril RANDON",
+    "url": "https://cyril-randon.fr"
+  },
+  "version": "1.0.0",
+  "documentation": "https://cemantix.cyril-randon.fr/llms.txt",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false
+  },
+  "authentication": {
+    "schemes": ["none"]
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["application/json"],
+  "skills": [
+    {
+      "id": "daily-indices",
+      "name": "Indices sémantiques du jour",
+      "description": "Renvoie les données agrégées du puzzle du jour : date, numéro, nombre de coups, durée et dix mots les plus proches avec leur score. Le mot secret est masqué.",
+      "tags": ["cemantix", "semantique", "indices"],
+      "examples": [
+        "Quels sont les indices sémantiques du Cémantix du jour ?",
+        "Combien de coups ont été nécessaires pour trouver le Cémantix du jour ?"
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "dated-archive",
+      "name": "Archive d'une date précise",
+      "description": "Interroge la page statique /puzzles/AAAA-MM-JJ/ d'un puzzle résolu. Un statut 404 signifie que la date n'a pas encore été résolue.",
+      "tags": ["cemantix", "archive", "date"],
+      "examples": [
+        "Donne les indices du Cémantix du 26 octobre 2026",
+        "Quand le puzzle du 23 octobre 2026 a-t-il été résolu ?"
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["text/html"]
+    },
+    {
+      "id": "service-health",
+      "name": "État du service",
+      "description": "Vérifie la disponibilité du service et le nombre de sessions de jeu actives, sans aucune donnée de puzzle.",
+      "tags": ["sante", "disponibilite"],
+      "examples": ["Le solveur Cémantix est-il disponible ?"],
+      "inputModes": [],
+      "outputModes": ["application/json"]
+    }
+  ]
+}

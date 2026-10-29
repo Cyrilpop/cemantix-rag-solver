@@ -1,20 +1,30 @@
 {
   "specVersion": "1.0",
-  "host": {
-    "displayName": "Cémantix Solver"
-  },
+  "host": "cemantix.cyril-randon.fr",
   "entries": [
     {
-      "identifier": "urn:air:cemantix.cyril-randon.fr:tool:cemantix-solver",
-      "displayName": "Cémantix Solver API & Indices",
-      "type": "application/openapi+json",
-      "url": "https://cemantix.cyril-randon.fr/api/daily",
-      "description": "Résolution sémantique, indices de proximité et mot du jour pour le jeu Cémantix.",
+      "identifier": "urn:air:cemantix.cyril-randon.fr:agent:cemantix-solver",
+      "displayName": "Cémantix Solver — carte d'agent",
+      "type": "application/agent-card+json",
+      "url": "https://cemantix.cyril-randon.fr/.well-known/agent-card.json",
+      "description": "Carte d'agent du solveur sémantique Cémantix : compétences exposées, modes d'entrée et de sortie, endpoints publics. Le mot secret est masqué par conception (protection anti-spoiler) ; la solution d'une date donnée se consulte sur la page d'archive correspondante.",
       "representativeQueries": [
-        "Quel est le mot Cémantix du jour ?",
-        "Indices et solution pour Cémantix",
+        "Quels sont les indices sémantiques du Cémantix du jour ?",
+        "Combien de coups ont été nécessaires pour trouver le Cémantix du jour ?",
         "Similarité sémantique et solveur Cémantix"
+      ]
+    },
+    {
+      "identifier": "urn:air:cemantix.cyril-randon.fr:skills:cemantix-indices",
+      "displayName": "Compétences Cémantix Solver (mode d'emploi agent)",
+      "type": "text/markdown; profile=\"urn:air:agent-skills\"",
+      "url": "https://cemantix.cyril-randon.fr/agent-skills.md",
+      "description": "Protocole d'usage pour un agent autonome : les trois requêtes autorisées (indices du jour, archive datée, état du service), la conduite à tenir en cas de 404 et l'interdiction de révéler ou de reconstituer le mot secret.",
+      "representativeQueries": [
+        "Comment interroger le solveur Cémantix ?",
+        "Solution et indices du Cémantix du 26 octobre 2026"
       ]
     }
   ]
 }
+

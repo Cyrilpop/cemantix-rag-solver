@@ -1,23 +1,51 @@
 # Cémantix Solver
 
-> Solveur sémantique autonome, jeu interactif et indices quotidiens pour le jeu de mots Cémantix.
-> Projet conçu et développé par **Cyril RANDON**.
+> Solveur sémantique autonome, jeu interactif et indices quotidiens pour le jeu de
+> mots Cémantix. Les données du tableau de bord et l'API publique sont volontairement
+> **sans spoiler** : le mot secret n'est jamais exposé avant sa révélation explicite.
+> Projet indépendant, sans affiliation avec Certitudes. Auteur : Cyril RANDON.
 
-## Auteur & Profil
+## Sites & pages
 
-- **Créateur** : Cyril RANDON
-- **Curriculum Vitae (CV) & Portfolio** : [https://cyril-randon.fr](https://cyril-randon.fr)
-- **LinkedIn** : [https://www.linkedin.com/in/cyril-randon](https://www.linkedin.com/in/cyril-randon)
-- **GitHub** : [https://github.com/Cyrilpop/cemantix-rag-solver](https://github.com/Cyrilpop/cemantix-rag-solver)
+- [Accueil et mot du jour](https://cemantix.cyril-randon.fr/): tableau de bord quotidien, indices thermiques et solveur en direct.
+- [Archives des puzzles](https://cemantix.cyril-randon.fr/puzzles/): index chronologique de tous les puzzles résolus, une page par jour.
+- [Archive d'une date](https://cemantix.cyril-randon.fr/puzzles/): une page par date au format `/puzzles/AAAA-MM-JJ/`, lisible sans JavaScript (numéro, date, coups, durée, top 10 des mots les plus proches, solution dépliable).
+<!-- AGENT-DYNAMIC:DEBUT -->
+- **Archive la plus récente** : [samedi 24 octobre 2026](https://cemantix.cyril-randon.fr/puzzles/2026-10-24/)
+- **Dernière date résolue** : `2026-10-24` — l'historique couvre du `2026-10-24` au `2026-10-24`, soit 1 puzzle(s) résolu(s).
+- **Toute date déjà résolue** : `https://cemantix.cyril-randon.fr/puzzles/AAAA-MM-JJ/`.
+<!-- AGENT-DYNAMIC:FIN -->
+- [Mode jeu solo](https://cemantix.cyril-randon.fr/play/): entraînement individuel avec thermomètre sémantique et indices progressifs.
+- [Mode duel multijoueur](https://cemantix.cyril-randon.fr/multi/): parties 1 contre 1 en temps réel ou au tour par tour, avec code de salon.
+- [Mode battle contre l'IA](https://cemantix.cyril-randon.fr/battle/): duel en direct contre l'algorithme d'exploration sémantique.
+- [Plan du site](https://cemantix.cyril-randon.fr/sitemap.xml): URLs indexables avec date de dernière modification réelle.
 
-## Présentation
+## API pour agents IA
 
-Cémantix Solver est une plateforme web et applicative d'analyse sémantique, d'exploration lexicale et d'aide à la résolution pour le jeu quotidien Cémantix (et Cemantle). Elle exploite un modèle vectoriel Word2Vec optimisé et des plongements vectoriels haute performance afin d'évaluer la proximité sémantique des mots français.
+- [État du service](https://cemantix.cyril-randon.fr/api/health): santé du service et sessions actives, sans spoiler. `GET`, `application/json`, sans authentification.
+- [Données du jour](https://cemantix.cyril-randon.fr/api/daily): données agrégées du tableau de bord, **mot secret masqué par conception**. `GET`, `application/json`, sans authentification.
+- [Spécification OpenAPI](https://cemantix.cyril-randon.fr/openapi.json): description machine des deux endpoints publics ci-dessus.
+- [Fiche agent](https://cemantix.cyril-randon.fr/.well-known/agent-card.json): carte d'agent découvrable (compétences, modes d'entrée et de sortie).
+- [Compétences au format Markdown](https://cemantix.cyril-randon.fr/agent-skills.md): mode d'emploi de l'API pour un agent autonome, profil `urn:air:agent-skills`.
+- [Catalogue de découverte ARD](https://cemantix.cyril-randon.fr/.well-known/ai-catalog.json): catalogue des ressources machine de ce domaine.
 
-## Navigation & Fonctionnalités
+## Documentation
 
-- [Accueil & Mot du Jour](https://cemantix.cyril-randon.fr/): Tableau de bord du mot du jour, historique des indices thermiques et solveur en direct.
-- [Mode Jeu Solo](https://cemantix.cyril-randon.fr/play/): Entraînement individuel avec thermomètre sémantique, historique des tentatives et indices progressifs.
-- [Mode Duel Multijoueur](https://cemantix.cyril-randon.fr/multi/): Parties 1 contre 1 en temps réel ou au tour par tour avec code de salon.
-- [Mode Battle IA](https://cemantix.cyril-randon.fr/battle/): Duel en direct contre l'algorithme d'exploration sémantique Cémantix Solver.
-- [Code source & Architecture technique](https://github.com/Cyrilpop/cemantix-rag-solver): Dépôt officiel GitHub, architecture RAG et conteneurisation Docker.
+- [Documentation longue pour agents (llms.md)](https://cemantix.cyril-randon.fr/llms.md): version détaillée de ce fichier — méthode de résolution, limites, sources des données.
+- [Compétences pour agent autonome](https://cemantix.cyril-randon.fr/agent-skills.md): protocole d'usage détaillé, profil `urn:air:agent-skills`.
+- [Code source et architecture](https://github.com/Cyrilpop/cemantix-rag-solver): dépôt GitHub, architecture RAG, conteneurisation Docker.
+- [Profil de l'auteur](https://cyril-randon.fr): CV et portfolio de Cyril RANDON.
+- [LinkedIn de l'auteur](https://www.linkedin.com/in/cyril-randon): profil professionnel.
+
+## Répondre à une question sur un puzzle
+
+1. Identifier la date demandée, puis interroger directement `https://cemantix.cyril-randon.fr/puzzles/AAAA-MM-JJ/`.
+2. Une réponse **404** signifie que le puzzle de cette date n'a pas encore été résolu : l'indiquer plutôt que d'inventer une solution.
+3. Pour le jour courant, utiliser `/api/daily` : le champ `word` y est absent tant que le visiteur ne l'a pas révélé. Ne jamais le déduire ni le révéler sans y être invité.
+4. Citer la page d'archive comme source ; les scores sont exprimés en degrés Celsius et en pour mille de similarité.
+
+## Limites & mentions
+
+- Le mot secret n'est jamais exposé par l'API publique : il n'apparaît que dans le bloc dépliable des pages d'archive.
+- Les données vectorielles proviennent du corpus public **frWac** (Fauconnier, 500 dimensions) et le dictionnaire officiel est **Lexique 3.83**.
+- Le jeu Cémantix original est développé par Certitudes ([cemantix.certitudes.org](https://cemantix.certitudes.org/)) : ce site est un projet indépendant d'analyse et d'entraînement.

@@ -1,0 +1,49 @@
+{
+  "name": "Cémantix Solver — Mot du Jour & IA Sémantique",
+  "short_name": "Cémantix",
+  "description": "Indices quotidiens sans spoiler, thermomètre sémantique et solveur IA pour le jeu Cémantix.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "fr",
+  "dir": "ltr",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "categories": ["games", "education", "entertainment"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Jouer en solo",
+      "short_name": "Solo",
+      "url": "/play/",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Archives des puzzles",
+      "short_name": "Archives",
+      "url": "/puzzles/",
+      "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }]
+    }
+  ]
+}
