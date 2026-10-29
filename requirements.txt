@@ -1,4 +1,6 @@
-# Dépendances pour Cémantix RAG Solver
-numpy>=1.24.0,<2.1.0
-chromadb>=0.4.22
-requests>=2.31.0
+# Dépendances pour Cémantix RAG Solver (SEC-12 : versions vérifiées et épinglées)
+numpy==2.0.2
+chromadb==1.5.9
+requests==2.34.2
+psycopg[binary]==3.3.6
+

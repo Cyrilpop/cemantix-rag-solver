@@ -1,0 +1,17 @@
+# Fins de ligne normalisées.
+#
+# Sans ce fichier, un clone dépend de la configuration `core.autocrlf` de chaque
+# poste : sous Windows les scripts `.sh` se retrouvent en CRLF et échouent dans
+# le conteneur Linux (`bash\r: No such file or directory`) — panne rencontrée
+# lors de la mise en place de l'environnement de test.
+* text=auto eol=lf
+
+# Binaires : jamais de conversion.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.bin binary
+*.npy binary
+*.npz binary
+*.pdf binary

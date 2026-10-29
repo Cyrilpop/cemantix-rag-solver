@@ -2,6 +2,72 @@
  * Cémantix Solver — Utilitaires & Formatage
  */
 
+/**
+ * Échappe une valeur pour l'injecter sans risque dans du HTML.
+ *
+ * Toutes les données affichées proviennent de l'API (mots joués, dates, identifiants
+ * de session, mots saisis par un adversaire en multijoueur). Les injecter telles
+ * quelles dans `innerHTML` permet d'exécuter du code arbitraire ; ce helper est donc
+ * obligatoire dès qu'une valeur extérieure rejoint un gabarit.
+ *
+ * @param {*} value Valeur quelconque (null/undefined deviennent une chaîne vide).
+ * @returns {string} Texte sûr pour une position texte ou attribut entre guillemets.
+ */
+export function escapeHtml(value) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Échappe une valeur destinée à un contenu texte (équivalent de escapeHtml, conservé
+ * pour la lisibilité appelante quand le contexte est explicitement textuel).
+ */
+export const escapeText = escapeHtml;
+
+/**
+ * Convertit un score numérique de façon sûre : toute valeur non numérique renvoie
+ * "0" au lieu de propager du contenu arbitraire dans une expression CSS ou un texte.
+ */
+export function safeNumber(value, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+/**
+ * Délégation globale des clics sur les éléments générés dynamiquement.
+ *
+ * Les gabarits construits par concaténation ne doivent plus contenir de
+ * `onclick="copier('${mot}')"` : une apostrophe dans un mot ou un pseudonyme
+ * d'adversaire fermait la chaîne et permettait d'exécuter du code arbitraire.
+ * On place désormais la valeur dans un attribut `data-*` et le gestionnaire est
+ * enregistré une seule fois, sans dépendre du contenu.
+ */
+export function initDelegatedActions() {
+  if (window.__cemantixDelegated) return;
+  window.__cemantixDelegated = true;
+
+  document.addEventListener("click", (event) => {
+    const copyEl = event.target.closest("[data-copy]");
+    if (copyEl) {
+      copyToClipboard(copyEl.getAttribute("data-copy"));
+    }
+  });
+}
+
+// Activé dès que le module est chargé, sur toutes les pages.
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initDelegatedActions);
+  } else {
+    initDelegatedActions();
+  }
+}
+
 // Neutralisation des erreurs parasites d'extensions navigateur
 export function initErrorHandling() {
   window.addEventListener("unhandledrejection", (event) => {
@@ -43,8 +109,6 @@ export function copyToClipboard(text) {
   });
 }
 
-// Rendre accessible globalement pour les onclick inline du HTML/table
-window.copyToClipboard = copyToClipboard;
 
 // Formatage Date en Français
 export function formatDateFr(isoDateStr) {
@@ -197,5 +261,3 @@ export function showConfirmDialog({
   });
 }
 
-// Rendre également accessible globalement sur window pour commodité
-window.showConfirmDialog = showConfirmDialog;

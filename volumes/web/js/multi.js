@@ -12,12 +12,14 @@
  */
 
 import {
+  escapeHtml,
   initErrorHandling,
   showToast,
   getTierClass,
   getTierWeatherIcon,
   showConfirmDialog,
 } from "./utils.js";
+import { renderGuessesContainer } from "./render.js";
 
 // Clé de stockage local des duels
 const STORAGE_KEY = "cemantix_multi_sessions";
@@ -34,6 +36,24 @@ const state = {
   isSubmitting: false,
 };
 
+// Rythme de la sonde en salle d'attente : réactive au départ, puis plus douce
+// tant que rien ne bouge, et totalement suspendue quand l'onglet est masqué.
+const WAITING_POLL_MIN_MS = 2000;
+const WAITING_POLL_MAX_MS = 10000;
+
+// Au retour d'onglet, on resonde immédiatement : l'adversaire a pu rejoindre
+// pendant l'absence, et un salon qui met 10 s à réagir paraitrait cassé.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || !state.currentRoomId) return;
+  if (state.pollInterval) {
+    clearTimeout(state.pollInterval);
+    state.pollInterval = null;
+  }
+  if (document.getElementById("view-waiting")?.classList.contains("active")) {
+    startWaitingPoll();
+  }
+});
+
 // --------------------------------------------------------------------------
 // 1. Initialisation & Routage Automatique par URL
 // --------------------------------------------------------------------------
@@ -41,17 +61,69 @@ document.addEventListener("DOMContentLoaded", () => {
   initErrorHandling();
   initLobbyEvents();
   initArenaEvents();
+  initRoomActions();
   renderRecentGames();
 
-  // Détection des paramètres d'URL (?r=DUEL-XXXX&k=J2-YYYY)
+  // Détection des paramètres d'URL (?r=DUEL-XXXXXXXX&k=J2-XXXXXXXX)
   const params = new URLSearchParams(window.location.search);
   const urlRoom = params.get("r") || params.get("room_id");
   const urlKey = params.get("k") || params.get("player_key");
 
   if (urlRoom) {
-    autoJoinFromUrl(urlRoom.trim().toUpperCase(), urlKey ? urlKey.trim().toUpperCase() : null);
+    const room = urlRoom.trim().toUpperCase();
+    // On efface la clé de l'URL **avant** la requête : si la connexion échoue
+    // ou traîne, le secret ne reste pas affiché dans la barre d'adresse.
+    if (urlKey) stripKeyFromUrl(room);
+    autoJoinFromUrl(room, urlKey ? urlKey.trim().toUpperCase() : null);
   }
 });
+
+/**
+ * Efface la clé de salon de l'URL une fois qu'elle est en mémoire.
+ *
+ * Le lien d'invitation doit contenir la clé — c'est ce qui permet au second
+ * joueur d'entrer. Mais rien ne justifie qu'elle **reste** dans la barre
+ * d'adresse : la page est déjà chargée, la clé est en mémoire et dans
+ * `sessionStorage`. Sans ce nettoyage, la clé survivrait dans l'historique du
+ * navigateur, dans le champ d'adresse et dans toute capture d'écran, et
+ * resterait cliquable des heures plus tard — notamment sur un ordinateur
+ * partagé.
+ *
+ * Le `room_id` seul est conservé : il n'autorise aucune action (toute requête
+ * exige une clé valide) et il permet de recharger la page sur le bon salon.
+ */
+function stripKeyFromUrl(roomId) {
+  if (!window.history?.replaceState) return;
+  const clean = roomId ? `/multi/?r=${encodeURIComponent(roomId)}` : "/multi/";
+  if (window.location.pathname + window.location.search === clean) return;
+  window.history.replaceState({}, "", clean);
+}
+
+/**
+ * Actions des cartes de duel enregistrées localement (reprendre / oublier).
+ *
+ * La délégation remplace les gestionnaires `onclick="…"` construits par
+ * concaténation de chaînes : ces derniers permettaient d'exécuter du code en
+ * injectant une apostrophe dans un identifiant de salon. Le copier-coller des
+ * mots, lui, est géré globalement par `initDelegatedActions` de utils.js.
+ */
+function initRoomActions() {
+  document.addEventListener("click", (event) => {
+    const deleteEl = event.target.closest("[data-delete-room]");
+    if (deleteEl) {
+      multiDeleteGame(deleteEl.getAttribute("data-delete-room"));
+      return;
+    }
+
+    const resumeEl = event.target.closest("[data-resume-room]");
+    if (resumeEl) {
+      multiResumeGame(
+        resumeEl.getAttribute("data-resume-room"),
+        resumeEl.getAttribute("data-player-key")
+      );
+    }
+  });
+}
 
 // --------------------------------------------------------------------------
 // 2. Gestion du LocalStorage (Historique des Duels)
@@ -118,28 +190,28 @@ function renderRecentGames() {
     return `
       <div class="active-game-card">
         <div class="active-game-header">
-          <span class="active-game-room">${g.room_id}</span>
-          <span class="active-game-date">${dateStr}</span>
+          <span class="active-game-room">${escapeHtml(g.room_id)}</span>
+          <span class="active-game-date">${escapeHtml(dateStr)}</span>
         </div>
         <div style="font-size: 0.88rem; color: var(--text-secondary, #8b949e);">
           <div>Variante : <strong>${modeLabel}</strong></div>
-          <div>Adversaire : <strong>${g.opponent_name || "En attente"}</strong></div>
+          <div>Adversaire : <strong>${escapeHtml(g.opponent_name || "En attente")}</strong></div>
           <div>Votre rôle : <strong style="color: #79c0ff;">${g.role === "p1" ? "Joueur 1 (Hôte)" : "Joueur 2 (Invité)"}</strong></div>
         </div>
         <div class="active-game-footer">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.multiDeleteGame('${g.room_id}')">Supprimer</button>
-          <button type="button" class="btn btn-primary btn-sm" onclick="window.multiResumeGame('${g.room_id}', '${g.player_key}')">Reprendre</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-delete-room="${escapeHtml(g.room_id)}">Supprimer</button>
+          <button type="button" class="btn btn-primary btn-sm" data-resume-room="${escapeHtml(g.room_id)}" data-player-key="${escapeHtml(g.player_key)}">Reprendre</button>
         </div>
       </div>
     `;
   }).join("");
 }
 
-window.multiResumeGame = function (roomId, playerKey) {
+function multiResumeGame(roomId, playerKey) {
   connectToRoom(roomId, playerKey);
-};
+}
 
-window.multiDeleteGame = async function (roomId) {
+async function multiDeleteGame(roomId) {
   const confirmed = await showConfirmDialog({
     title: "Oublier ce duel ?",
     message: `Voulez-vous retirer le salon ${roomId} de cet appareil ? (La partie restera active sur le serveur).`,
@@ -315,8 +387,9 @@ async function handleCreateGame() {
       difficulty: state.selectedDiff,
     });
 
-    // Mise à jour de l'URL sans recharger
-    window.history.replaceState({}, "", `/multi/?r=${data.room_id}&k=${data.player_key}`);
+    // L'URL ne garde que le code de salon : la clé reste en mémoire (voir
+    // stripKeyFromUrl) et ne s'installe pas dans l'historique du navigateur.
+    stripKeyFromUrl(data.room_id);
 
     openWaitingRoom(data);
   } catch (err) {
@@ -380,8 +453,8 @@ async function connectToRoom(roomId, playerKey = "", playerName = "") {
       difficulty: data.session?.difficulty || "moyen",
     });
 
-    // Met à jour l'URL propre du joueur
-    window.history.replaceState({}, "", `/multi/?r=${data.room_id}&k=${data.player_key}`);
+    // Idem : le code de salon seul reste visible, la clé disparaît de l'URL.
+    stripKeyFromUrl(data.room_id);
 
     // Si on a besoin de choisir un mot en mode Mots Choisis
     if (data.session.state === "waiting_words" && data.session.i_need_to_set_word) {
@@ -709,7 +782,17 @@ function startPolling() {
     }
 
     try {
-      const res = await fetch(`/api/multi/status?r=${state.currentRoomId}&k=${state.currentPlayerKey}`);
+      // La cle du joueur voyage dans le corps de la requete, pas dans l'URL :
+      // un GET mettrait le secret dans la ligne de requete, donc dans les logs
+      // du proxy et dans l'historique. Le POST /api/multi/status est equivalent.
+      const res = await fetch("/api/multi/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_id: state.currentRoomId,
+          player_key: state.currentPlayerKey,
+        }),
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.valid) {
@@ -751,15 +834,37 @@ function stopPolling() {
 
 function startWaitingPoll() {
   stopPolling();
-  state.pollInterval = setInterval(async () => {
+  // Sonde adaptative : la salle d'attente peut rester ouverte longtemps (le temps
+  // que l'ami rejoigne). Un intervalle fixe de 2 s générait ~1800 requêtes/heure
+  // d'onglet ouvert, y compris en arrière-plan. On part sur 2 s pour une détection
+  // réactive, on remonte progressivement à 10 s si rien ne bouge, et on met tout en
+  // pause dès que l'onglet est masqué — le `visibilitychange` relance une sonde
+  // immédiate au retour pour ne pas donner l'impression d'un salon figé.
+  let delay = WAITING_POLL_MIN_MS;
+
+  const tick = async () => {
     if (!state.currentRoomId || !state.currentPlayerKey) return;
+    if (document.hidden) return;
     try {
-      const res = await fetch(`/api/multi/status?r=${state.currentRoomId}&k=${state.currentPlayerKey}`);
+      // La cle du joueur voyage dans le corps de la requete, pas dans l'URL :
+      // un GET mettrait le secret dans la ligne de requete, donc dans les logs
+      // du proxy et dans l'historique. Le POST /api/multi/status est equivalent.
+      const res = await fetch("/api/multi/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_id: state.currentRoomId,
+          player_key: state.currentPlayerKey,
+        }),
+      });
       if (!res.ok) return;
       const data = await res.json();
       if (!data.valid) return;
 
+      const progressed = data.state !== state.sessionData?.state;
       state.sessionData = data;
+      if (progressed) delay = WAITING_POLL_MIN_MS;
+      else delay = Math.min(delay * 1.6, WAITING_POLL_MAX_MS);
 
       // Si l'adversaire a rejoint et que la partie est prête
       if (data.state === "in_progress") {
@@ -770,11 +875,15 @@ function startWaitingPoll() {
         if (!data.is_my_turn) {
           startPolling();
         }
+        return;
       }
     } catch {
       // Silence
     }
-  }, 2000);
+    state.pollInterval = setTimeout(tick, delay);
+  };
+
+  state.pollInterval = setTimeout(tick, delay);
 }
 
 // --------------------------------------------------------------------------
@@ -902,57 +1011,7 @@ function renderGuessesList(containerId, countId, mobileCountId, guesses, isMaske
   if (countEl && countEl.textContent !== countStr) countEl.textContent = countStr;
   if (mobileCountEl && mobileCountEl.textContent !== countStr) mobileCountEl.textContent = countStr;
 
-  // Calcul d'une clé de cache pour éviter de reconstruire le DOM si les données n'ont pas changé
-  const cacheKey = JSON.stringify({
-    isMasked,
-    items: (guesses || []).map((g) => [g.word, g.score, g.permille, g.order, g.is_hint]),
-  });
-
-  if (container._lastRenderCache === cacheKey) {
-    return; // Aucune modification, on préserve le DOM existant sans scintillement
-  }
-  container._lastRenderCache = cacheKey;
-
-  if (!guesses || guesses.length === 0) {
-    container.innerHTML = `
-      <div class="clues-empty">
-        <span>${isPlayer ? "Saisissez votre premier mot pour débuter le duel." : "En attente des premiers coups de votre adversaire."}</span>
-      </div>
-    `;
-    return;
-  }
-
-  const html = guesses.map((g, idx) => {
-    const tierCls = getTierClass(g.score);
-    const isWinner = g.permille === 1000 || g.score >= 100.0;
-    const scoreStr = `${Number(g.score).toFixed(2)}°C`;
-    const permilleStr = g.permille ? `${g.permille} ‰` : "";
-    const hintBadge = g.is_hint
-      ? `<span class="badge-hint" title="Mot obtenu via un indice">💡 Indice</span>`
-      : "";
-    const weatherIcon = getTierWeatherIcon(g.score, g.permille);
-
-    const wordDisplay = isMasked
-      ? `<span class="masked-word-pill">••••••••</span>`
-      : `<span style="cursor: pointer;" onclick="copyToClipboard('${g.word}')" title="Cliquer pour copier">${g.word.toUpperCase()}</span>`;
-
-    return `
-      <div class="guess-row ${isWinner ? "is-winner" : ""}">
-        <div class="guess-left">
-          <span class="guess-order">#${g.order || idx + 1}</span>
-          <span class="guess-word">${wordDisplay}</span>
-          ${hintBadge}
-        </div>
-        <div class="guess-right">
-          <span class="guess-weather">${weatherIcon}</span>
-          <span class="guess-temp ${tierCls}">${g.score >= 0 ? "+" : ""}${scoreStr}</span>
-          <span class="guess-permille">${permilleStr}</span>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  container.innerHTML = html;
+  renderGuessesContainer(container, guesses, { isMasked, isPlayer });
 }
 
 function renderGameOverBanner(data) {
@@ -985,16 +1044,16 @@ function renderGameOverBanner(data) {
     if (data.mode === "same_word") {
       secretsBox.innerHTML = `
         <div class="secret-reveal-badge">
-          <span>Mot secret commun :</span> <strong style="color: #3fb950; font-size: 1.1rem;">${(data.me?.target || data.opponent?.target || "INCONNU").toUpperCase()}</strong>
+          <span>Mot secret commun :</span> <strong style="color: #3fb950; font-size: 1.1rem;">${escapeHtml((data.me?.target || data.opponent?.target || "INCONNU").toUpperCase())}</strong>
         </div>
       `;
     } else {
       secretsBox.innerHTML = `
         <div class="secret-reveal-badge">
-          <span>Votre cible :</span> <strong style="color: #79c0ff; font-size: 1.1rem;">${(data.me?.target || "INCONNU").toUpperCase()}</strong>
+          <span>Votre cible :</span> <strong style="color: #79c0ff; font-size: 1.1rem;">${escapeHtml((data.me?.target || "INCONNU").toUpperCase())}</strong>
         </div>
         <div class="secret-reveal-badge">
-          <span>Cible adverse :</span> <strong style="color: #a371f7; font-size: 1.1rem;">${(data.opponent?.target || "INCONNU").toUpperCase()}</strong>
+          <span>Cible adverse :</span> <strong style="color: #a371f7; font-size: 1.1rem;">${escapeHtml((data.opponent?.target || "INCONNU").toUpperCase())}</strong>
         </div>
       `;
     }

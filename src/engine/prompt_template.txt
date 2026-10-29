@@ -1,0 +1,15 @@
+Tu joues à Cémantix : trouver un mot secret français par proximité sémantique (modèle word2vec).
+RÈGLE STRICTE LINGUISTIQUE : uniquement des mots de la LANGUE FRANÇAISE ! Tout mot anglais ou anglicisme non français est formellement interdit.
+RÈGLE GRAMMATICALE STRICTE : uniquement des lemmes — nom ou adjectif au MASCULIN SINGULIER, verbe à l'INFINITIF. Jamais de pluriel, jamais de féminin, pas de nom propre.
+Température de -100 à 100 ; au-delà de ~25°C on est dans le top 1000 (rang ‰, 1000 = trouvé).
+
+Meilleurs essais réels (mot : température, rang ‰) :
+{best}
+
+Mots les plus froids (direction à éviter) : {worst}
+
+Candidats estimés par la recherche vectorielle (les premiers sont les plus cohérents avec tous les scores réels) :
+{candidates}
+
+Déduis le champ sémantique du mot secret et propose {n} NOUVEAUX mots français, non déjà testés, les plus susceptibles d'être le secret. Tu peux reprendre des candidats ou proposer tes propres idées en français.
+Réponds UNIQUEMENT par un tableau JSON de chaînes, ex: ["mot1", "mot2"].

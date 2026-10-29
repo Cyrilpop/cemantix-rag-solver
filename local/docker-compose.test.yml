@@ -1,0 +1,157 @@
+# =============================================================================
+# Cémantix Solver — Empilement de test LOCAL (WSL + nginx), hors git
+# -----------------------------------------------------------------------------
+# Ce fichier n'est PAS destiné à la production et n'est pas versionné
+# (ignoré par /.gitignore -> /local/).
+#
+# Il ajoute à docker-compose.yml un nginx minimal qui :
+#   - sert le webroot volumes/web (les 4 pages statiques) ;
+#   - proxifie /api/ vers cemantix_web:8000 ;
+#   - applique les en-têtes de sécurité du plan (SEC-08) en mode Report-Only,
+#     ce qui permet de LES TESTER avant de les écrire dans le Caddyfile de prod.
+#
+# Lancement :
+#   docker compose -f docker-compose.yml -f local/docker-compose.test.yml up -d
+# URL locale (relais automatique WSL2 -> Windows) :
+#   http://localhost:8090/
+# =============================================================================
+
+services:
+  # -------------------------------------------------------------------------
+  # Postgres : DONNÉES DÉPLACÉES HORS DE /mnt/c
+  # Constat de déploiement : avec le bind mount ./volumes/db/data du compose de
+  # prod, initdb échoue en boucle sur WSL —
+  #   "initdb: error: could not change permissions of directory
+  #    /var/lib/postgresql/data: Operation not permitted"
+  # car /mnt/c est un montage drvfs/9p sans gestion des permissions POSIX.
+  # -> volume nommé (disque ext4 de la distribution), uniquement pour le test.
+  # -------------------------------------------------------------------------
+  cemantix_db:
+    volumes:
+      - cemantix_pgdata:/var/lib/postgresql/data
+
+  # -------------------------------------------------------------------------
+  # Neutralisation du proxy au RUNTIME pour les conteneurs du réseau interne.
+  # Constat de déploiement : les "proxies.default" de ~/.docker/config.json sont
+  # injectés par Docker AUSSI au démarrage de chaque conteneur (pas seulement au
+  # build), et ils ne sont pas anodins :
+  #   - cemantix_web  partait télécharger le modèle frWac via 127.0.0.1:3129
+  #     (son propre loopback) -> ProxyError / [Errno 111] Connection refused ;
+  #   - le healthcheck nginx (busybox wget respecte http_proxy) se connectait au
+  #     proxy plutôt qu'à nginx -> "can't connect to remote host (127.0.0.1)"
+  #     alors que nginx répondait bien en 0.0.0.0:8080 : conteneur déclaré
+  #     « unhealthy » à tort.
+  # Ni le web ni nginx n'ont besoin d'un accès sortant : on vide les variables.
+  # -------------------------------------------------------------------------
+  cemantix_web:
+    environment:
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - http_proxy=
+      - https_proxy=
+      - NO_PROXY=*
+
+  cemantix_nginx:
+    # Image non-root officielle : le master tourne déjà en uid 101 et écoute sur
+    # 8080. Constat de déploiement : avec nginx:1.27-alpine + cap_drop ALL, le
+    # master root échouait sur  chown("/var/cache/nginx/client_temp")  car
+    # CAP_CHOWN est retiré. Plutôt que de rendre CHOWN/SETUID/SETGID/FOWNER/
+    # DAC_OVERRIDE (soit 5 capabilities de plus), on supprime le besoin :
+    # aucun cap_add nécessaire, et on teste le comportement d'un serveur non-root.
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    container_name: cemantix_nginx
+    restart: unless-stopped
+    environment:
+      # Voir le bloc « Neutralisation du proxy au RUNTIME » plus haut.
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - http_proxy=
+      - https_proxy=
+      - NO_PROXY=*
+    depends_on:
+      - cemantix_web
+    ports:
+      - "8090:8080"                     # http://localhost:8090 depuis Windows
+    volumes:
+      # Les chemins relatifs d'un fichier -f de substitution sont résolus par
+      # rapport au PREMIER fichier compose (la racine du dépôt), d'où ./volumes
+      # et ./local/nginx et non ../ ou ./.
+      - ./volumes/web:/usr/share/nginx/html:ro
+      - ./local/nginx/cemantix.local.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - web-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+      # uid/gid 101 = l'utilisateur nginx de l'image unprivileged : un tmpfs
+      # monté avec les options par défaut appartient à root et bloque le serveur.
+      - /var/cache/nginx:uid=101,gid=101,mode=1777
+      # PAS de tmpfs sur /var/log/nginx : l'y monter détruirait les symlinks
+      # access.log -> /dev/stdout et error.log -> /dev/stderr de l'image, et le
+      # serveur devrait alors créer de vrais fichiers (refusé en rootfs ro).
+
+  # -------------------------------------------------------------------------
+  # Relais d'egress : cntlm n'écoute que sur 127.0.0.1:3129, donc inaccessible
+  # depuis un conteneur en bridge. socat tourne en network_mode: host, écoute sur
+  # 0.0.0.0:3130 et renvoie vers cntlm. Le worker cible alors
+  # http://host.docker.internal:3130 (hôte déjà déclaré docker-compose.yml:70-71).
+  # -------------------------------------------------------------------------
+  cemantix_egress:
+    image: alpine/socat:latest
+    container_name: cemantix_egress
+    restart: unless-stopped
+    network_mode: "host"
+    command: ["TCP-LISTEN:3130,fork,reuseaddr", "TCP:127.0.0.1:3129"]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # -------------------------------------------------------------------------
+  # Le worker est le SEUL service à avoir besoin d'internet (il interroge
+  # cemantix.certitudes.org chaque nuit). On lui donne le proxy via le relais.
+  # -------------------------------------------------------------------------
+  cemantix_worker:
+    depends_on:
+      cemantix_db:
+        condition: service_healthy
+      cemantix_egress:
+        condition: service_started
+    environment:
+      # Les DEUX casse sont obligatoires. Le démon Docker injecte les variables
+      # minuscules depuis ~/.docker/config.json (constat QUAL-11) et `requests`,
+      # via urllib.getproxies(), **préfère la minuscule** sous POSIX. Ne définir
+      # que HTTP_PROXY laissait donc partir le worker sur 127.0.0.1:3129 — son
+      # propre loopback — d'où « Unable to connect to proxy ».
+      - HTTP_PROXY=http://host.docker.internal:3130
+      - HTTPS_PROXY=http://host.docker.internal:3130
+      - http_proxy=http://host.docker.internal:3130
+      - https_proxy=http://host.docker.internal:3130
+      - NO_PROXY=localhost,127.0.0.1,cemantix_db
+      - no_proxy=localhost,127.0.0.1,cemantix_db
+
+
+# Volume nomme (disque ext4 WSL) — remplace ./volumes/db/data uniquement pour le test local.
+volumes:
+  cemantix_pgdata:
+    name: cemantix_pgdata_local_test

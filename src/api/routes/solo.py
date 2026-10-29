@@ -71,7 +71,7 @@ def handle_solo_post(manager: GameManager, path: str, data: dict) -> tuple[dict,
             return {"error": "Le mot contient des caractères non autorisés."}, 400
 
         result = session.record_guess(cleaned)
-        manager._save_sessions()
+        manager.save_solo_session(session)
         return result, 200
 
     # 3. Demande d'indice (+1 coup officiel au compteur)
@@ -82,7 +82,7 @@ def handle_solo_post(manager: GameManager, path: str, data: dict) -> tuple[dict,
             return {"error": "Session de jeu introuvable ou expirée. Relancez une partie.", "expired": True}, 404
 
         result = session.request_hint()
-        manager._save_sessions()
+        manager.save_solo_session(session)
         status_code = 400 if "error" in result and not result.get("valid") else 200
         return result, status_code
 

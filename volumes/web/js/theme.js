@@ -39,31 +39,23 @@ export function toggleTheme() {
 }
 
 export function initSpoiler() {
-  themeState.isSpoiled = themeState.globalSpoiler;
   updateSpoilerState();
-
   const spoilerToggle = document.getElementById("global-spoiler-toggle");
   if (spoilerToggle) {
-    spoilerToggle.addEventListener("click", toggleGlobalSpoiler);
+    spoilerToggle.addEventListener("click", () => toggleGlobalSpoiler());
   }
 }
 
 export function updateSpoilerState() {
-  const secretWordCard = document.getElementById("secret-word-card");
-  if (secretWordCard) {
-    if (themeState.isSpoiled) {
-      secretWordCard.classList.add("is-spoiled");
-    } else {
-      secretWordCard.classList.remove("is-spoiled");
-    }
-  }
-
   const spoilerToggle = document.getElementById("global-spoiler-toggle");
   if (spoilerToggle) {
     const icon = spoilerToggle.querySelector(".spoiler-icon");
     if (icon) {
       icon.textContent = themeState.globalSpoiler ? "🛡️" : "👁️";
     }
+    spoilerToggle.title = themeState.globalSpoiler
+      ? "Mode anti-spoiler actif (cliquer pour tout révéler)"
+      : "Mode anti-spoiler inactif (cliquer pour masquer)";
   }
 }
 
@@ -72,8 +64,13 @@ export function toggleGlobalSpoiler(onSpoilerChangeCallback) {
   localStorage.setItem("cemantix_spoiler", themeState.globalSpoiler);
   themeState.isSpoiled = themeState.globalSpoiler;
   updateSpoilerState();
+
+  window.dispatchEvent(new CustomEvent("cemantix:spoiler-change", {
+    detail: { globalSpoiler: themeState.globalSpoiler }
+  }));
+
   if (typeof onSpoilerChangeCallback === "function") {
     onSpoilerChangeCallback();
   }
-  showToast(themeState.globalSpoiler ? "Mode anti-spoiler activé" : "Mode anti-spoiler désactivé");
+  showToast(themeState.globalSpoiler ? "Mode anti-spoiler activé (masqué)" : "Mode anti-spoiler désactivé (tout révélé)");
 }

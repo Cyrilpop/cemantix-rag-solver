@@ -1,0 +1,97 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Cémantix Solver API",
+    "description": "API publique de statut, santé et résolution sémantique du jeu Cémantix.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Cyril Randon",
+      "url": "https://cyril-randon.fr"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://cemantix.cyril-randon.fr",
+      "description": "Serveur de production"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Vérification de l'état de santé du service",
+        "description": "Retourne le statut de l'API web, de la base de données et les métriques de base.",
+        "responses": {
+          "200": {
+            "description": "Service opérationnel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/daily": {
+      "get": {
+        "summary": "Données du mot du jour et historique des résolutions",
+        "description": "Retourne la trajectoire d'exploration, les indices thermiques et l'état du solveur. Le mot secret reste masqué sans révélation explicite.",
+        "responses": {
+          "200": {
+            "description": "Données du puzzle du jour",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DailyResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Contenu inchangé (ETag identique)"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "db": {
+            "type": "string",
+            "example": "connected"
+          },
+          "timestamp": {
+            "type": "number",
+            "example": 1729987200.0
+          }
+        }
+      },
+      "DailyResponse": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "object"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "summary": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

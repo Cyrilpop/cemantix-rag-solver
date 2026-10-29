@@ -1,7 +1,7 @@
 /**
  * Cémantix Solver — Moteur de Jeu Interactif (Défi du Jour & Mode Illimité)
  */
-import { getTierClass, showToast, showConfirmDialog } from "./utils.js";
+import { escapeHtml, getTierClass, showToast, showConfirmDialog } from "./utils.js";
 
 const GAME_STORAGE_KEY = "cemantix_game_state_v2";
 
@@ -192,7 +192,7 @@ function restoreGameUI() {
       winTitle.style.color = "var(--success)";
     }
     if (winDesc) {
-      winDesc.innerHTML = `Bravo ! Vous avez démasqué le mot <strong style="color: var(--success);">${(gameState.secret || "???").toUpperCase()}</strong> en <strong>${gameState.tries}</strong> coups.`;
+      winDesc.innerHTML = `Bravo ! Vous avez démasqué le mot <strong style="color: var(--success);">${escapeHtml((gameState.secret || "???").toUpperCase())}</strong> en <strong>${gameState.tries}</strong> coups.`;
     }
     if (gameWinBanner) gameWinBanner.style.display = "block";
     if (gameStatusText) gameStatusText.textContent = `🏆 Victoire en ${gameState.tries} coups !`;
@@ -206,7 +206,7 @@ function restoreGameUI() {
       winTitle.style.color = "var(--text-muted)";
     }
     if (winDesc) {
-      winDesc.innerHTML = `Le mot secret était <strong style="color: var(--accent);">${(gameState.secret || "???").toUpperCase()}</strong> après <strong>${gameState.tries}</strong> essais.`;
+      winDesc.innerHTML = `Le mot secret était <strong style="color: var(--accent);">${escapeHtml((gameState.secret || "???").toUpperCase())}</strong> après <strong>${gameState.tries}</strong> essais.`;
     }
     if (gameWinBanner) gameWinBanner.style.display = "block";
     if (gameStatusText) {
@@ -550,7 +550,7 @@ async function giveUpGame() {
         winTitle.style.color = "var(--text-muted)";
       }
       if (winDesc) {
-        winDesc.innerHTML = `Le mot secret était <strong style="color: var(--accent);">${json.secret.toUpperCase()}</strong> après <strong>${gameState.tries}</strong> essais.`;
+        winDesc.innerHTML = `Le mot secret était <strong style="color: var(--accent);">${escapeHtml(json.secret.toUpperCase())}</strong> après <strong>${gameState.tries}</strong> essais.`;
       }
       if (gameWinBanner) gameWinBanner.style.display = "block";
       saveGameState();
@@ -579,7 +579,7 @@ function handleGameWin(secretWord, tries) {
     winTitle.style.color = "var(--success)";
   }
   if (winDesc) {
-    winDesc.innerHTML = `Bravo ! Vous avez démasqué le mot <strong style="color: var(--success);">${secretWord.toUpperCase()}</strong> en <strong>${tries}</strong> coups.`;
+    winDesc.innerHTML = `Bravo ! Vous avez démasqué le mot <strong style="color: var(--success);">${escapeHtml(secretWord.toUpperCase())}</strong> en <strong>${tries}</strong> coups.`;
   }
   if (gameWinBanner) gameWinBanner.style.display = "block";
   if (gameStatusText) gameStatusText.textContent = `🏆 Victoire en ${tries} coups !`;
@@ -655,7 +655,7 @@ function renderGameLists() {
           <div class="guess-row ${isWinner ? "is-winner" : ""}">
             <div class="guess-left">
               <span class="guess-order">#${idx + 1}</span>
-              <span class="guess-word">${g.word.toUpperCase()}${hintBadge}</span>
+              <span class="guess-word">${escapeHtml(g.word.toUpperCase())}${hintBadge}</span>
             </div>
             <div class="guess-right">
               <span class="guess-weather">${g.weather ? g.weather.split(" ")[0] : ""}</span>
@@ -680,7 +680,7 @@ function renderGameLists() {
           <div class="guess-row ${isWinner ? "is-winner" : ""}">
             <div class="guess-left">
               <span class="guess-order">[${g.order}]</span>
-              <span class="guess-word">${g.word.toUpperCase()}${hintBadge}</span>
+              <span class="guess-word">${escapeHtml(g.word.toUpperCase())}${hintBadge}</span>
             </div>
             <div class="guess-right">
               <span class="guess-weather">${g.weather ? g.weather.split(" ")[0] : ""}</span>

@@ -18,7 +18,7 @@ import numpy as np
 import requests
 
 from ..config import (
-    LM_API, LLM_MODEL, PROMPT, DISCIPLINES, STOPWORDS, ENGLISH_WORDS,
+    LM_API, LLM_MODEL, LLM_TIMEOUT, PROMPT, DISCIPLINES, STOPWORDS, ENGLISH_WORDS,
     SEED_WORDS, SEEDS_FACILE, SEEDS_MOYEN, SEEDS_EXPERT, log
 )
 from .vocab import VocabStore
@@ -84,12 +84,23 @@ def ask_llm(best, worst, candidates_info, n: int, verbose: bool = False) -> list
         for rank, (w, temp, err) in enumerate(candidates_info[:15], 1):
             log(f"      {rank:>2}. {w:<20} est. ≈ {temp:+6.2f}°C    (cohérence err = {err:.4f})")
         log("")
+    r = None
+    for attempt in range(1, 3):
+        try:
+            r = requests.post(f"{LM_API}/chat/completions", json={
+                "model": LLM_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7, "max_tokens": 3000,
+            }, timeout=LLM_TIMEOUT)
+            if r.status_code == 200:
+                break
+        except requests.RequestException as e:
+            if attempt == 2:
+                raise e
+            time.sleep(1)
+    if not r:
+        return []
     try:
-        r = requests.post(f"{LM_API}/chat/completions", json={
-            "model": LLM_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7, "max_tokens": 3000,
-        }, timeout=300)
         msg = r.json()["choices"][0]["message"]
         reasoning = msg.get("reasoning_content") or ""
         content = msg.get("content") or ""

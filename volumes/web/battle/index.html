@@ -11,14 +11,17 @@
        SEO & Référencement Naturel Google
        ====================================================================== -->
   <title>Cémantix Battle : Défiez l'IA en Duel Tour par Tour | Cémantix Solver</title>
-  <meta name="title" content="Cémantix Battle : Défiez l'IA en Duel Tour par Tour | Cémantix Solver">
   <meta name="description" content="Défiez notre IA sémantique en direct dans le Mode Battle Cémantix ! Duel tour par tour, 3 niveaux de difficulté (Facile, Moyen, Expert) et 3 indices tactiques. Qui trouvera le mot secret en premier ?">
-  <meta name="keywords" content="duel cemantix, battle cemantix, jouer contre ia, cemantix tour par tour, bot cemantix, defi semantique, semantix duel, jeu cemantix versus, cemantix combat, intelligence artificielle cemantix">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Cyril Randon">
   <meta name="publisher" content="Cyril Randon">
   <link rel="canonical" href="https://cemantix.cyril-randon.fr/battle/">
-  <meta name="theme-color" content="#0d1117">
+  <link rel="alternate" hreflang="fr" href="https://cemantix.cyril-randon.fr/battle/">
+  <link rel="alternate" hreflang="x-default" href="https://cemantix.cyril-randon.fr/battle/">
+  <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 
   <!-- Open Graph / Facebook / LinkedIn -->
   <meta property="og:type" content="website">
@@ -38,15 +41,15 @@
   <meta name="twitter:title" content="Cémantix Battle : Défiez l'IA en Duel Tour par Tour">
   <meta name="twitter:description" content="Qui devinera son mot secret en premier ? Vous ou le bot IA ? Relevez le défi Cémantix Battle !">
   <meta name="twitter:image" content="https://cemantix.cyril-randon.fr/og-image.jpg">
+  <meta name="twitter:image:alt" content="Cémantix Battle — Duel contre l'IA Sémantique">
+  <meta name="twitter:creator" content="@cyril_randon">
 
   <!-- Favicon & Feuilles de style atomiques -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚔️</text></svg>">
-  <link rel="stylesheet" href="../css/variables.css">
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/layout.css">
-  <link rel="stylesheet" href="../css/game.css">
-  <link rel="stylesheet" href="../css/modal.css">
-  <link rel="stylesheet" href="../css/battle.css">
+  <link rel="stylesheet" href="../css/dist/battle.css">
+  <link rel="modulepreload" href="../js/battle.js">
+  <link rel="modulepreload" href="../js/render.js">
+  <link rel="modulepreload" href="../js/utils.js">
 
   <!-- Données Structurées JSON-LD (Schema.org / GameApplication, Fil d'Ariane & FAQ) -->
   <script type="application/ld+json">
@@ -63,7 +66,10 @@
         "genre": "Jeu de réflexion et duel sémantique",
         "operatingSystem": "All",
         "inLanguage": "fr-FR",
-        "image": "https://cemantix.cyril-randon.fr/og-image.jpg",
+        "isPartOf": {
+          "@type": "WebSite",
+          "@id": "https://cemantix.cyril-randon.fr/#website"
+        },
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -72,7 +78,11 @@
         "author": {
           "@type": "Person",
           "name": "Cyril Randon",
-          "url": "https://cyril-randon.fr"
+          "url": "https://cyril-randon.fr",
+          "sameAs": [
+            "https://github.com/Cyrilpop/cemantix-rag-solver",
+            "https://www.linkedin.com/in/cyril-randon"
+          ]
         }
       },
       {
@@ -177,10 +187,21 @@
         <span>Mode Multijoueur</span>
         <span class="tab-badge">1v1 Ami</span>
       </a>
+      <a href="../puzzles/" id="tab-archives" class="nav-tab">
+        <span class="tab-icon">📚</span>
+        <span>Archives</span>
+      </a>
     </nav>
 
     <!-- Zone de Jeu Interactive : Mode Battle -->
     <div id="view-battle" class="view-content active">
+      <noscript>
+        <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent, #6366f1); padding: 1rem;">
+          <h2 style="font-size: 1.1rem; margin-top: 0;">ℹ️ JavaScript requis pour le Mode Battle</h2>
+          <p>Le duel au tour par tour contre l'intelligence artificielle nécessite l'exécution de JavaScript pour coordonner les tours, soumettre vos coups et afficher le radar thermique. Retrouvez les solutions et historiques complets dans les <a href="../puzzles/">archives des énigmes</a>.</p>
+        </div>
+      </noscript>
+
       <!-- Barre de Contrôles & Paramètres de Match -->
       <section class="card game-control-card battle-control-card" aria-label="Contrôles du duel">
         <div class="game-control-header">

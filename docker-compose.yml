@@ -1,33 +1,200 @@
 services:
-  cemantix:
+  # -------------------------------------------------------------------------
+  # 1. Base de données relationnelle PostgreSQL (PostgreSQL 16 Alpine)
+  # -------------------------------------------------------------------------
+  cemantix_db:
+    image: postgres:16-alpine
+    container_name: cemantix_db
+    restart: always
+    environment:
+      - POSTGRES_DB=${DB_NAME:?DB_NAME est requis}
+      - POSTGRES_USER=${DB_USER:?DB_USER est requis}
+      - POSTGRES_PASSWORD=${DB_PASS:?DB_PASS est requis}
+      - PGCLIENTENCODING=UTF8
+    volumes:
+      - ./volumes/db/data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - cemantix-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # -------------------------------------------------------------------------
+  # 2. Worker : Démon 24h/24 et solveur RAG quotidien autonome (00h00 Paris)
+  # -------------------------------------------------------------------------
+  cemantix_worker:
+    image: cemantix:latest
+    pull_policy: never
     build: .
-    container_name: cemantix_solver
-    restart: unless-stopped
-    command: ["--daemon", "--rag-only"]
+    container_name: cemantix_worker
+    restart: always
+    user: "1000:1000"
+    command: ["--daemon", "--no-api", "--rag-only"]
+    depends_on:
+      cemantix_db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS:?DB_PASS est requis}
+      - TZ=${TZ:-Europe/Paris}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED:-1}
+      - LM_API=${LM_API:-http://host.docker.internal:1234/v1}
+      - LLM_MODEL=${LLM_MODEL:-qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2}
+    volumes:
+      - ./cemantix_data:/app/cemantix_data:rw
+      - ./volumes/web:/app/volumes/web:rw
+    networks:
+      - cemantix-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "python", "cemantix_rag.py", "--healthcheck"]
       interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  # -------------------------------------------------------------------------
+  # 3. Web : API REST HTTP pour le Frontend (Solo, Battle, Multi, Mot du Jour)
+  # -------------------------------------------------------------------------
+  cemantix_web:
+    depends_on:
+      cemantix_db:
+        condition: service_healthy
+    image: cemantix:latest
+    pull_policy: never
+    build: .
+    container_name: cemantix_web
+    restart: always
+    user: "1000:1000"
+    command: ["--api", "--api-host", "0.0.0.0", "--api-port", "8000"]
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS:?DB_PASS est requis}
+      # Console d'exploitation : vide = fonctionnalité désactivée (routes en 403).
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ADMIN_API_PATH=${ADMIN_API_PATH:-/api/snap-9x}
+      - TZ=${TZ:-Europe/Paris}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED:-1}
+    volumes:
+      - ./cemantix_data:/app/cemantix_data:rw
+      - ./volumes/web:/app/volumes/web:rw
+      # Lecture seule du socket Docker : indispensable pour relire et suivre les
+      # journaux des conteneurs depuis la console. Sans lui, la console reste
+      # utilisable mais se limite aux journaux de l'application en mémoire.
+      # Retirer cette ligne si tu estimes que exposer l'API Docker au conteneur
+      # web est un risque trop élevé (le socket donne en réalité un accès total
+      # au démon ; la console, elle, n'y fait que des GET de logs).
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # L'utilisateur du conteneur (cemantix, uid 1000) n'est pas membre du groupe
+    # `docker` de l'hôte : sans ce groupe supplémentaire, la lecture du socket est
+    # refusée (EACCES) et la console affiche simplement « logs indisponibles ».
+    # `stat -c %g /var/run/docker.sock` donne le GID de ton hôte (120 en général) ;
+    # la variable DOCKER_GID permet de l'ajuster sans toucher ce fichier.
+    group_add:
+      - "${DOCKER_GID:-120}"
+    networks:
+      - web-net
+      - cemantix-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/health || exit 1"]
+      interval: 20s
       timeout: 5s
       retries: 3
-      start_period: 30s
-    volumes:
-      # Montage du cache local pour conserver les vecteurs et index ChromaDB (téléchargés 1 seule fois)
-      - ./cemantix_data:/app/cemantix_data
-      # Publication automatique des données vers la page web servie par Caddy
-      - ./volumes/web:/app/volumes/web
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  # -------------------------------------------------------------------------
+  # 4. Service CLI & Exécution locale / interactive / tests
+  # -------------------------------------------------------------------------
+  cemantix:
+    image: cemantix:latest
+    build: .
+    container_name: cemantix_cli
+    user: "1000:1000"
     environment:
-      - TZ=Europe/Paris
-      - PYTHONUNBUFFERED=1
-      - LM_API=http://host.docker.internal:1234/v1
-      - LLM_MODEL=qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2
+      - DB_HOST=${DB_HOST:-cemantix_db}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-cemantix}
+      - DB_USER=${DB_USER:-cemantix_user}
+      - DB_PASS=${DB_PASS}
+      - TZ=${TZ:-Europe/Paris}
+      - PYTHONUNBUFFERED=${PYTHONUNBUFFERED:-1}
+      - LM_API=${LM_API:-http://host.docker.internal:1234/v1}
+      - LLM_MODEL=${LLM_MODEL:-qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2}
+    volumes:
+      - ./cemantix_data:/app/cemantix_data
+      - ./volumes/web:/app/volumes/web
     extra_hosts:
-      # Permet au conteneur de communiquer avec LM Studio tournant sur l'hôte
       - "host.docker.internal:host-gateway"
     networks:
-      - default
+      - cemantix-net
       - web-net
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    profiles:
+      - cli
 
 networks:
-  default:
   web-net:
     external: true
+  cemantix-net:
+    driver: bridge
