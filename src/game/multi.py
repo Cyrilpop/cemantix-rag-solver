@@ -9,6 +9,7 @@ Moteur de jeu pour les duels multijoueurs humains (1 contre 1) :
 - Tour par tour strict avec décompte des indices (3 max par joueur)
 """
 import re
+import secrets
 import time
 import uuid
 from typing import Optional
@@ -53,8 +54,12 @@ class MultiplayerSession:
         self.difficulty = difficulty.lower() if difficulty in ("facile", "moyen", "expert") else "moyen"
         self.store = store
 
-        self.key_p1 = key_p1.strip().upper() if key_p1 else f"J1-{uuid.uuid4().hex[:4].upper()}"
-        self.key_p2 = key_p2.strip().upper() if key_p2 else f"J2-{uuid.uuid4().hex[:4].upper()}"
+        # Clés cryptographiques générées avec secrets (SEC-05) :
+        # Au format J1-<hex> / J2-<hex> avec au moins 24 hex (96-128 bits d'entropie)
+        # pour empêcher toute énumération ou usurpation de tour. Les anciennes clés
+        # plus courtes sont toujours acceptées pour la compatibilité des salons actifs.
+        self.key_p1 = key_p1.strip().upper() if key_p1 else f"J1-{secrets.token_hex(12).upper()}"
+        self.key_p2 = key_p2.strip().upper() if key_p2 else f"J2-{secrets.token_hex(12).upper()}"
 
         self.p1_name = p1_name.strip() or "Joueur 1"
         self.p2_name = p2_name.strip() or "Joueur 2"
@@ -109,11 +114,19 @@ class MultiplayerSession:
         if not player_key:
             return None
         k = player_key.strip().upper()
-        if k == self.key_p1.upper():
+        # Clé en mémoire (claire) ou hashée en base (SEC-05b)
+        if self.key_p1 and (k == self.key_p1.upper() or self._verify_key(k, self.key_p1)):
             return "p1"
-        if k == self.key_p2.upper():
+        if self.key_p2 and (k == self.key_p2.upper() or self._verify_key(k, self.key_p2)):
             return "p2"
         return None
+
+    @staticmethod
+    def _verify_key(raw_key: str, stored_key: str) -> bool:
+        if stored_key.startswith("hmac:"):
+            from ..db.multi import verify_player_key
+            return verify_player_key(raw_key, stored_key)
+        return False
 
     def _calc_progress(self, guesses: dict[str, dict]) -> tuple[float, Optional[int], float]:
         if not guesses:
