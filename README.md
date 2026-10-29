@@ -108,7 +108,7 @@ pip install -r requirements.txt
 Le déploiement s'appuie sur une **architecture 3-tiers découplée et durcie** définie dans `docker-compose.yml` :
 - `cemantix_db` : Base de données relationnelle PostgreSQL 16 Alpine pour la persistance transactionnelle ACID (`daily_puzzles`, `solo_sessions`, `multi_rooms`).
 - `cemantix_worker` : Démon planificateur d'arrière-plan 24h/24 (calcul vectoriel lourd ChromaDB, résolution quotidienne à 00h00 heure de Paris et publication SEO).
-- `cemantix_web` : API REST HTTP haute performance (< 200 Mo RAM) servant le frontend web, le jeu Solo, le mode Battle, le Multijoueur 1v1 et le mot du jour.
+- `cemantix_web` : API REST HTTP haute performance (< 200 Mo RAM) servant le frontend web, le jeu Solo, le mode Battle, le Multijoueur 1v1, le mot du jour et la génération automatique de `sitemap.xml` au démarrage.
 - `cemantix` : Conteneur CLI éphémère (profil `cli`) pour les commandes interactives, les benchmarks et les tests unitaires.
 
 #### 1. Construire les images Docker
@@ -139,6 +139,7 @@ docker compose down
 > [!NOTE]
 > - **Persistance relationnelle & ACID** : Chaque puzzle résolu est persisté de façon transactionnelle dans PostgreSQL (`daily_puzzles`) avec calcul SQL direct des métriques et miroir dans `./cemantix_data/daily_history.json`.
 > - **Rattrapage au démarrage** : Si le mot d'aujourd'hui n'a pas encore été résolu, le worker le trouve dès son lancement avant de se mettre en sommeil jusqu'au prochain minuit.
+> - **Génération automatique de `sitemap.xml` au démarrage** : Non versionnés sous Git (`.gitignore`) pour éviter tout conflit lors d'un `git pull`, `volumes/web/sitemap.xml` et les pages d'archives `/puzzles/` sont régénérés automatiquement et de manière atomique à chaque démarrage de `cemantix_web` et `cemantix_worker` (`ensure_seo_published()`).
 
 #### 3. Lancer une commande ponctuelle, interactive ou les tests
 Sans arrêter les services de production, vous pouvez exécuter le menu interactif ou les suites de tests via le conteneur CLI éphémère :
@@ -328,19 +329,22 @@ volumes/web/
 │   └── index.html    # Page de duel contre l'IA, double jauge et indices
 ├── multi/            # Mode Multijoueur 1v1 Tour par Tour (URL propre : /multi/)
 │   └── index.html    # Page de duel entre amis (Même Mot, Mots Choisis, lien direct)
-├── css/              # Feuilles de style atomiques
+├── css/              # Feuilles de style atomiques et bundles compilés
+│   ├── dist/         # Bundles minifiés par page (dashboard, play, battle, multi, modal, puzzle)
 │   ├── variables.css # Thèmes clair/sombre, tokens de couleurs et dégradés thermiques
-│   ├── base.css      # Reset, boutons, badges, cartes et notifications toast
-│   ├── layout.css    # En-tête, navigation par onglets et pied de page fixe
+│   ├── base.css      # Reset, boutons, badges, cartes, notifications toast et verrouillage mobile
+│   ├── layout.css    # En-tête, navigation par onglets défilante et pied de page
 │   ├── dashboard.css # Styles du tableau de bord, thermomètre et guide SEO
-│   ├── game.css      # Styles de l'interface de jeu, saisie et spotlight
-│   ├── battle.css    # Styles dédiés au duel contre l'IA
-│   ├── multi.css     # Styles dédiés au multijoueur 1v1 et arène de duel
-│   └── modal.css     # Modales de configuration, débriefing et confirmation
+│   ├── game.css      # Styles de l'interface de jeu, saisie mobile et clavier virtuel
+│   ├── battle.css    # Styles dédiés au duel contre l'IA et scoreboard adaptatif
+│   ├── multi.css     # Styles dédiés au multijoueur 1v1, lobby et arène de duel
+│   ├── modal.css     # Modales de configuration, débriefing et confirmation
+│   └── puzzle.css    # Styles responsives complémentaires des pages d'archives
 ├── js/               # Modules JavaScript atomiques (ES Modules)
 │   ├── app.js        # Point d'entrée léger et initialisation ciblée
 │   ├── utils.js      # Formatage, dates, presse-papier, helpers
-│   ├── theme.js      # Gestion du thème clair/sombre et protection anti-spoiler
+│   ├── render.js     # Rendu mutualisé des tuiles de coups (Battle & Multijoueur)
+│   ├── theme.js      # Thème clair/sombre, anti-spoiler, scroll nav et visualViewport mobile
 │   ├── countdown.js  # Horloge décomptant en temps réel le saut de minuit
 │   ├── dashboard.js  # Rendu du mot du jour, des indices et polling temps réel
 │   ├── trajectory.js # Visualisation et filtres de la trajectoire IA
@@ -357,6 +361,8 @@ volumes/web/
 - **Tableau de Bord des Performances (KPIs)** : Nombre total de puzzles résolus, moyenne de coups, durée moyenne de calcul et taux de victoire (100%).
 - **Historique & Recherche Instantanée** : Filtre en temps réel pour explorer les archives des puzzles par date ou mot-clé.
 - **Actualisation Automatique** : La page interroge automatiquement l'API locale `/api/daily` toutes les 30 secondes pour afficher le nouveau mot dès que le démon le trouve à minuit.
+- **Ergonomie Responsive Mobile Native** : Refonte smartphone complète (`≤ 768px` / `≤ 480px`, GP8 Pro, iPhone, 360px) sans aucun impact sur l'affichage Bureau — verrouillage `overflow-x: clip`, saisie empilée `16px` sans auto-zoom, adaptation dynamique à l'ouverture du clavier virtuel (`visualViewport`), navigation défilante auto-centrée, cibles tactiles ≥ `44×44px` et support `safe-area-inset-bottom`.
+- **Performance Mobile PageSpeed (Zéro requête CSS bloquante & Zéro reflow forcé)** : Injection automatique du CSS critique minifié dans `<head>` (`tools/build_css_bundles.py`), chargement différé non bloquant de `modal.css` compatible CSP (`script-src 'self'`), lecture géométrique différée via `requestAnimationFrame` dans `js/theme.js` et manifestes de découverte agentique conformes ARD (`/.well-known/ard.json` et `/.well-known/ai-catalog.json`).
 
 #### Configuration Caddy (Production & Anti-Cache Automatique) :
 Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volumes/web` et appliquez la politique de cache HTTP optimisée.
@@ -475,8 +481,9 @@ volumes/web/
 ├── agent-skills.md                    # Protocole d'usage pour agent autonome (urn:air:agent-skills)
 ├── manifest.webmanifest               # PWA installable (shortcuts Solo & Archives)
 └── .well-known/
-    ├── ai-catalog.json                # Catalogue ARD (types de médias autorisés uniquement)
-    └── agent-card.json                # Carte d'agent (compétences et modes d'échange)
+    ├── ard.json                       # Manifeste ARD v0.91+ (auto-régénéré au démarrage)
+    ├── ai-catalog.json                # Manifeste ARD 1.0 compatible Lighthouse (auto-régénéré)
+    └── agent-card.json                # Carte d'agent A2A (auto-régénérée au démarrage)
 ```
 
 ### Ce que contient une page `/puzzles/AAAA-MM-JJ/`
@@ -493,13 +500,14 @@ Les pages sont **auto-suffisantes** : les tokens de style sont extraits de
 `css/variables.css` et injectés dans une balise `<style>`, donc aucune requête CSS
 supplémentaire et un rendu correct même sans JS.
 
-### Régénérer uniquement le SEO
+### Régénération automatique au démarrage & option `--publish-seo`
+`volumes/web/sitemap.xml` et le dossier `volumes/web/puzzles/` sont volontairement exclus de Git (`.gitignore`) afin d'éviter tout conflit lors d'un `git pull` en production. En complément, les manifestes de découverte IA `volumes/web/.well-known/{ai-catalog,ard,agent-card}.json` sont eux aussi **générés et vérifiés automatiquement de manière atomique** (garantissant un schéma ARD toujours valide même après écrasement ou déploiement vierge) :
+1. **À chaque démarrage de conteneur** (`cemantix_web` via `start_api_server()` et `cemantix_worker` via `run_daemon_loop()`), y compris sur une base vierge ou momentanément indisponible ;
+2. **Après chaque résolution quotidienne de minuit** et lors d'un `--export-web` (même si l'écriture de `data.json` échoue) ;
+3. **À la demande** via la commande dédiée :
 ```bash
 docker compose run --rm cemantix --publish-seo
 ```
-La publication est aussi déclenchée automatiquement par `--export-web` et par le démon
-après chaque résolution de minuit. En cas d'échec, le log signale l'erreur sans bloquer
-l'export de `data.json`.
 
 ### Cache HTTP : cohérence avec la politique « no-cache »
 Le projet applique `Cache-Control: "no-cache, must-revalidate"` sur le code applicatif
@@ -537,18 +545,15 @@ Deux points de vigilance propres aux pages d'archives :
 > invisibles pendant des heures sans benefit mesurable (les pages pèsent 13 ko).
 
 ### Feuilles de style et modules JavaScript
-Chaque page ne charge **qu'une seule** feuille CSS, générée à partir des fichiers
-sources de `css/` :
+Pour éliminer toute requête CSS bloquante au premier rendu mobile (LCP/FCP), chaque page embarque directement son **CSS critique minifié** dans `<style id="critical-css">` et charge `css/dist/modal.css` de façon différée (`media="print"` activé en JS, conforme `script-src 'self'`) :
 
 ```bash
-python tools/build_css_bundles.py     # régénère volumes/web/css/dist/*.css
-python tools/build_css_bundles.py --check   # échoue si les bundles sont périmés
+python tools/build_css_bundles.py     # régénère css/dist/*.css et synchronise <style id="critical-css">
+python tools/build_css_bundles.py --check   # échoue si un bundle ou un bloc inline est périmé
 ```
 
 À faire **après chaque modification d'un fichier de `css/`**, avant de déployer.
-Les sources (`variables.css`, `base.css`, …) restent dans le dépôt : `src/services/seo.py`
-lit `variables.css` pour injecter les tokens dans les pages d'archives, qui n'emploient
-aucun lien CSS.
+Les sources (`variables.css`, `base.css`, …) et les bundles `css/dist/*.css` restent dans le dépôt : `src/services/seo.py` injecte également les tokens et `css/dist/puzzle.css` dans les pages d'archives `/puzzles/*`, qui n'emploient aucun lien CSS externe.
 
 Côté JavaScript, `js/app.js` charge `dashboard.js` et `game.js` en `import()` dynamique :
 un module n'est téléchargé et évalué que si la vue correspondante est présente dans le
@@ -571,10 +576,10 @@ python tools/generate_icons.py
 ### Outillage de Contrôle Automatisé (`tools/`)
 Le dossier `tools/` fournit des scripts de contrôle qualité autonomes, branchés dans la pipeline CI GitHub Actions :
 - `tools/check_docs.py` : Contrôle la cohérence des documents (absence de liens relatifs cassés, validité des tableaux markdown et alignement des compteurs de la roadmap).
-- `tools/check_seo.py` : Valide la présence et la conformité des balises SEO indispensables sur toutes les pages (`<title>`, meta description, canonical absolu, Open Graph, JSON-LD).
+- `tools/check_seo.py` : Valide la présence et la conformité des balises SEO indispensables sur toutes les pages (`<title>`, meta description, canonical absolu, Open Graph, JSON-LD) ainsi que le schéma ARD des manifestes `.well-known/{ai-catalog,ard}.json`.
 - `tools/check_og_image.py` : Vérifie que `og-image.jpg` respecte le gabarit 1200×630 et le plafond de 200 ko.
 - `tools/check_headers.sh` : Analyse les 6 en-têtes de sécurité HTTP sur le serveur web en production.
-- `tools/build_css_bundles.py` : Regroupe et minifie prudemment les feuilles de style par page dans `css/dist/*.css` (avec mode `--check` bloquant en cas de bundle obsolète).
+- `tools/build_css_bundles.py` : Regroupe et minifie prudemment les feuilles de style dans `css/dist/*.css` et synchronise les blocs `<style id="critical-css">` des 4 pages HTML (avec mode `--check` bloquant en CI).
 
 ## 🔐 Sécurité
 
@@ -697,8 +702,8 @@ curl -sI https://cemantix.cyril-randon.fr/ | grep -iE 'content-security|strict-t
 | :--- | :---: | :---: | :--- |
 | `--daemon` | Flag | `False` | Lance le mode démon 24h/24 : reste en veille et résout le mot du jour chaque nuit à 00h00 (Europe/Paris). |
 | `--no-run-on-start` | Flag | `False` | En mode démon, ne résout pas immédiatement si non résolu, attend le cycle de 00h00. |
-| `--export-web` | Flag | `False` | Exporte `data.json` pour le serveur web et régénère les pages d'archives SEO + `sitemap.xml`. |
-| `--publish-seo` | Flag | `False` | Régénère uniquement les pages `/puzzles/<date>/`, l'index paginé et `sitemap.xml` depuis l'historique. |
+| `--export-web` | Flag | `False` | Exporte `data.json` pour le serveur web et régénère les pages d'archives SEO, `sitemap.xml` et `.well-known/*.json`. |
+| `--publish-seo` | Flag | `False` | Régénère uniquement les pages `/puzzles/<date>/`, l'index paginé, `sitemap.xml` et `.well-known/*.json` depuis l'historique. |
 | `--duel` | Flag | `False` | Lance le mode duel croisé interactif (Humain vs IA RAG). |
 | `--difficulty`, `-d` | Choix (`facile`, `moyen`, `expert`) | `moyen` | Règle le niveau d'agressivité de l'IA en mode duel. |
 | `--play`, `--game` | Flag | `False` | Active le mode jeu interactif solo dans le terminal. |
@@ -791,8 +796,9 @@ cemantix-rag-solver/
 │       │   └── index.html   # Page Multijoueur (Même Mot, Mots Choisis, lien direct)
 │       ├── css/             # Styles atomiques et bundles optimisés par page (dist/)
 │       ├── js/              # Modules JavaScript atomiques (app, utils, render, game, battle, multi...)
+│       ├── .well-known/     # Manifestes ARD et A2A auto-régénérés (ard.json, ai-catalog.json, agent-card.json)
 │       ├── robots.txt       # Directives d'exploration pour les moteurs de recherche
-│       └── sitemap.xml      # Plan de site XML officiel avec lastmod dynamiques
+│       └── sitemap.xml      # Plan de site XML généré automatiquement au démarrage des conteneurs (hors Git)
 ├── cemantix_data/           # Cache local (lexique_fr.txt, modèles w2v, ChromaDB)
 │   ├── lexique_fr.txt       # Dictionnaire de référence (46 272 lemmes officiels)
 │   └── daily_history.json   # Historique persistant des résolutions quotidiennes (miroir)
@@ -837,7 +843,7 @@ cemantix-rag-solver/
         ├── __init__.py      # Point d'entrée des services
         ├── daemon.py        # Démon planificateur 24h/24 (veille, heartbeat threadé et résolution quotidienne)
         ├── web.py           # Générateur et exportateur de données web avec masquage anti-spoiler
-        └── seo.py           # Génération des pages d'archives quotidiennes et sitemap.xml dynamique
+        └── seo.py           # Génération atomique des archives /puzzles/, sitemap.xml et manifestes ARD .well-known/
 ```
 
 ---
