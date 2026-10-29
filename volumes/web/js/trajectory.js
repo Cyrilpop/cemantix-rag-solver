@@ -1,7 +1,7 @@
 /**
  * Cémantix Solver — Modal de Trajectoire et Débriefing IA
  */
-import { getTierClass, getTierWeatherIcon, showToast } from "./utils.js";
+import { escapeHtml, getTierClass, getTierWeatherIcon, showToast } from "./utils.js";
 
 let activeTrajectoryEntry = null;
 let activeTrajectoryFilter = "all";
@@ -35,7 +35,21 @@ export function initTrajectoryModal() {
 
   if (secretWordEl) {
     secretWordEl.addEventListener("click", () => {
-      secretWordEl.classList.toggle("is-hidden");
+      if (secretWordEl.textContent === "MOT DU JOUR") {
+        fetch("/api/daily/reveal", { method: "POST" })
+          .then((res) => res.json())
+          .then((json) => {
+            if (json.word) {
+              secretWordEl.textContent = json.word.toUpperCase();
+              secretWordEl.classList.remove("is-hidden");
+            }
+          })
+          .catch(() => {
+            secretWordEl.classList.toggle("is-hidden");
+          });
+      } else {
+        secretWordEl.classList.toggle("is-hidden");
+      }
     });
   }
 
@@ -49,7 +63,7 @@ export function initTrajectoryModal() {
   });
 }
 
-export function openTrajectoryModal(puzzleId, data) {
+export function openTrajectoryModal(puzzleId, data, secretWordOverride = null) {
   if (!data) return;
   const puzzleStr = String(puzzleId);
   let entry = (data.history || []).find((h) => String(h.puzzle) === puzzleStr);
@@ -63,6 +77,11 @@ export function openTrajectoryModal(puzzleId, data) {
 
   activeTrajectoryEntry = entry;
   activeTrajectoryFilter = "all";
+
+  const isToday =
+    entry.word_hidden ||
+    (data.current && (entry.date === data.current.date || String(entry.puzzle) === String(data.current.puzzle)));
+  const resolvedWord = entry.word || secretWordOverride || (isToday ? data.current?.word : null);
 
   const modalPuzzleBadge = document.getElementById("modal-puzzle-badge");
   const modalDateBadge = document.getElementById("modal-date-badge");
@@ -87,7 +106,13 @@ export function openTrajectoryModal(puzzleId, data) {
     modalWinBadge.textContent = isWinner ? "🏆 Trouvé avec succès" : "⏳ Non résolu";
   }
   if (modalSecretWord) {
-    modalSecretWord.textContent = (entry.word || "inconnu").toUpperCase();
+    if (resolvedWord) {
+      modalSecretWord.textContent = resolvedWord.toUpperCase();
+    } else if (entry.win !== false) {
+      modalSecretWord.textContent = "MOT DU JOUR";
+    } else {
+      modalSecretWord.textContent = "NON TROUVÉ";
+    }
     modalSecretWord.classList.add("is-hidden");
   }
 
@@ -195,8 +220,8 @@ function renderTrajectoryList() {
         <div class="step-left">
           <span class="step-num">#${item.step}</span>
           <span class="step-source-badge ${sourceClass}">${sourceLabel}</span>
-          <strong class="step-word" onclick="copyToClipboard('${item.word}')" title="Cliquer pour copier le mot">
-            ${item.word}
+          <strong class="step-word copyable-word" data-copy="${escapeHtml(item.word)}" title="Cliquer pour copier le mot">
+            ${escapeHtml(item.word)}
           </strong>
           ${isRecord ? '<span class="step-record-star" title="Nouveau record thermique du bot !">⭐ Record</span>' : ""}
           ${isWin ? '<span class="badge badge-success" style="font-size: 0.65rem; padding: 1px 6px;">🏆 Cible</span>' : ""}
