@@ -1,0 +1,59 @@
+# =============================================================================
+# Cémantix Solver — contexte de build Docker
+# -----------------------------------------------------------------------------
+# Sans ce fichier, `docker build` envoie ~2,7 Go au démon alors que l'image n'en
+# consomme que ~400 ko : le Dockerfile ne copie que `requirements.txt`,
+# `cemantix_rag.py`, `src/`, `scripts/` et `cemantix_data/lexique_fr.txt`.
+#
+# Les données lourdes (modèle de mots, index ChromaDB, base SQLite, data.json)
+# sont ré-injectées à l'exécution par bind mount — jamais embarquées dans l'image.
+# =============================================================================
+
+# --- Données & modèles (2,7 Go) ----------------------------------------------
+# La négation est OBLIGATOIRE : le Dockerfile fait
+# `COPY cemantix_data/lexique_fr.txt`, le build échouerait sans cette ligne.
+cemantix_data/*
+!cemantix_data/lexique_fr.txt
+
+# --- Front servi par Caddy, environnement local, documentation ---------------
+volumes/
+local/
+docs/
+tests/
+
+# --- Secrets -----------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# --- Dépôt & éditeurs --------------------------------------------------------
+.git/
+.gitignore
+.idea/
+.vscode/
+.github/
+*.swp
+Thumbs.db
+.DS_Store
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Fichiers non consommés par l'image --------------------------------------
+README.md
+CHANGELOG.md
+docker-compose*.yml
+Dockerfile
+*.md

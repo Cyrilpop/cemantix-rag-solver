@@ -7,16 +7,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
 
+# Création d'un utilisateur non-root dédié (SEC-13)
+RUN groupadd -g 1000 cemantix && \
+    useradd -u 1000 -g cemantix -m -s /bin/sh cemantix
+
 WORKDIR /app
 
 # Installation des dépendances Python
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --root-user-action=ignore -r requirements.txt
 
-# Copie du code source
-COPY cemantix_rag.py .
-COPY src/ ./src/
-COPY cemantix_data/lexique_fr.txt ./cemantix_data/lexique_fr.txt
+# Copie du code source avec permissions pour l'utilisateur cemantix
+COPY --chown=cemantix:cemantix cemantix_rag.py .
+COPY --chown=cemantix:cemantix src/ ./src/
+COPY --chown=cemantix:cemantix scripts/ ./scripts/
+COPY --chown=cemantix:cemantix cemantix_data/lexique_fr.txt ./cemantix_data/lexique_fr.txt
+
+USER cemantix
 
 # Variables d'environnement configurables
 ENV PYTHONUNBUFFERED=1
