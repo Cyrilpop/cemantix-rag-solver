@@ -10,9 +10,11 @@
 
 ```
 http://localhost:8090            # accueil + tableau de bord du mot du jour
+http://localhost:8090/puzzles/   # archives quotidiennes indexables (générées au démarrage)
 http://localhost:8090/play/      # mode solo
 http://localhost:8090/battle/    # duel contre l'IA
 http://localhost:8090/multi/     # multijoueur 1v1
+http://localhost:8090/sitemap.xml# sitemap XML généré automatiquement au démarrage du conteneur
 http://localhost:8090/api/health # API (via le même nginx que les pages)
 ```
 

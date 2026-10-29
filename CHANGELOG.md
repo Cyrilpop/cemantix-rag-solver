@@ -4,6 +4,29 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-29 · Refonte Responsive Mobile, PageSpeed 100/100 & Résilience SEO/ARD
+
+### Ajouté
+- **Génération automatique et atomique de `sitemap.xml` et `.well-known/` au démarrage des conteneurs** :
+  - Nouvelles fonctions `ensure_seo_published()` et `publish_ard_manifests()` dans `src/services/seo.py`, invoquées automatiquement au démarrage de `cemantix_web` (`start_api_server()`) et en secours au démarrage de `cemantix_worker` (`run_daemon_loop()`), garantissant la recréation immédiate de `volumes/web/sitemap.xml`, `volumes/web/.well-known/{ai-catalog,ard,agent-card}.json` et `/puzzles/` après un `git pull`, une suppression accidentelle ou sur une base vierge.
+  - Écriture atomique multi-conteneurs (`_write_file` via fichier temporaire aléatoire + `chmod 0644` + `replace`) éliminant tout risque de troncature ou d'erreur `EACCES` entre `cemantix_web` et `cemantix_worker`.
+  - Exécution garantie de la publication SEO dans `export_web_data()` (`finally`) même en cas d'erreur de permission sur `cemantix_data/data.json`, couverte par `tests/test_seo_startup.py`.
+- **Feuille de route & Suite de tests Responsive Mobile (`docs/roadmap/2026-10-responsive-mobile/`, `tests/test_responsive.py`)** :
+  - 12 chantiers (`RESP-01` à `RESP-12`) qualifiés sur GP8 Pro (`412×915`), Gboard ouvert (`412×420`), iPhone (`393×852`) et Compact (`360×740`) avec sanctuarisation stricte de l'affichage Bureau (`> 768px`).
+
+### Corrigé & Optimisé
+- **Disposition Responsive Smartphone (`RESP-01` à `RESP-12`)** :
+  - Verrouillage du débordement horizontal (`overflow-x: clip`, `min-width: 0`), en-tête condensé sur 1 ligne et cibles tactiles portées à `44×44px` minimum.
+  - Barre `.nav-tabs` défilante sans rognage gauche (`justify-content: flex-start`) avec centrage automatique de l'onglet actif (`initMobileNavScroll()`).
+  - Empilement vertical de la zone de saisie solo/battle/multi (`font-size: 16px` sans zoom forcé), hauteur dynamique des listes (`max-height: min(260px, 38dvh)`) et mode compact à l'ouverture du clavier virtuel (`visualViewport`).
+  - Grille adaptative `2 + 1` des métriques du mot du jour, pastilles thermiques empilées sur 2 lignes, sous-onglets du lobby multijoueur sans chevauchement, scoreboard Battle symétrique sur 3 colonnes et prise en compte de `env(safe-area-inset-bottom)`.
+- **Optimisation PageSpeed Insights Mobile & Conformité ARD (Lighthouse 13.5+)** :
+  - Suppression de l'ajustement forcé de mise en page (`103 ms` sur `/js/theme.js:63:13`) et de la tâche longue associée : écriture conditionnelle de `data-theme`, court-circuit immédiat sur le premier onglet actif et lecture géométrique différée dans `requestAnimationFrame`.
+  - Élimination des requêtes CSS bloquantes (`530 ms` d'économie LCP/FCP mobile, chaîne critique réduite à 1 saut) : injection du CSS critique minifié en `<style id="critical-css">` dans les 4 pages principales et dans `src/services/seo.py` (`/puzzles/*`), couplée au chargement différé de `css/dist/modal.css` (`media="print"` + activation JS respectant `script-src 'self'`).
+  - Mise en conformité du schéma ARD (`volumes/web/.well-known/ai-catalog.json` avec objet `host.displayName` valide + miroir `volumes/web/.well-known/ard.json` pour ARD v0.91+) faisant passer l'audit « Navigation agentique » de `3/4` à `4/4`.
+
+---
+
 ## [Non publié] - 2026-10-27 · Roadmap Sécurité, SEO, Performance & Qualité
 
 ### Ajouté

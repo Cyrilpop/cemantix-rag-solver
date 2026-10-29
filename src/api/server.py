@@ -368,10 +368,20 @@ def start_api_server(
     host: str = "0.0.0.0",
     port: int = 8000,
     persist: bool = True,
+    publish_seo: Optional[bool] = None,
 ) -> BoundedHTTPServer:
-    """Initialise et lance le serveur HTTP multi-threadé."""
+    """Initialise et lance le serveur HTTP multi-threadé.
+
+    Lorsque `publish_seo` est actif (par défaut identique à `persist`), le démarrage
+    du conteneur `cemantix_web` régénère automatiquement `sitemap.xml` et les pages
+    d'archives SEO afin de garantir leur présence immédiate après un `git pull`.
+    """
     global _manager
     _manager = GameManager(store, persist=persist)
+    should_publish_seo = persist if publish_seo is None else publish_seo
+    if should_publish_seo:
+        from ..services.seo import ensure_seo_published
+        ensure_seo_published()
     max_workers = int(os.getenv("API_MAX_WORKERS", "64"))
     server = BoundedHTTPServer((host, port), GameAPIHandler, max_workers=max_workers)
     log(f"🌐  [API JEU] Serveur HTTP opérationnel sur http://{host}:{port}/api ({max_workers} workers max)")
@@ -383,9 +393,16 @@ def start_api_thread(
     host: str = "0.0.0.0",
     port: int = 8000,
     persist: bool = True,
+    publish_seo: Optional[bool] = None,
 ) -> threading.Thread:
     """Démarre le serveur d'API dans un thread d'arrière-plan sécurisé."""
-    server = start_api_server(store, host=host, port=port, persist=persist)
+    server = start_api_server(
+        store,
+        host=host,
+        port=port,
+        persist=persist,
+        publish_seo=publish_seo,
+    )
     thread = threading.Thread(target=server.serve_forever, daemon=True, name="CemantixAPIThread")
     thread.start()
     return thread

@@ -1,6 +1,10 @@
 {
   "specVersion": "1.0",
-  "host": "cemantix.cyril-randon.fr",
+  "host": {
+    "displayName": "Cémantix Solver",
+    "identifier": "did:web:cemantix.cyril-randon.fr",
+    "documentationUrl": "https://cemantix.cyril-randon.fr/llms.txt"
+  },
   "entries": [
     {
       "identifier": "urn:air:cemantix.cyril-randon.fr:agent:cemantix-solver",
@@ -27,4 +31,3 @@
     }
   ]
 }
-

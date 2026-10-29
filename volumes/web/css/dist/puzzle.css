@@ -6,3 +6,9 @@
 .puzzle-link:hover{color:#a5d6ff;text-shadow:0 0 12px var(--accent-glow);}
 .puzzle-link:hover::after{width:100%;}
 [data-theme="light"] .puzzle-link:hover{color:#0550ae;text-shadow:0 0 8px rgba(9,105,218,0.25);}
+@media (max-width:768px){html,body{overflow-x:hidden;overflow-x:clip;}
+body{padding-bottom:max(2rem,calc(env(safe-area-inset-bottom,0px) + 1.5rem));}
+.card{padding:1rem 0.85rem;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.reveal-word{font-size:clamp(1.2rem,6vw,1.6rem);overflow-wrap:anywhere;}
+.pager a,.pager .current{min-height:40px;display:inline-flex;align-items:center;justify-content:center;}
+}

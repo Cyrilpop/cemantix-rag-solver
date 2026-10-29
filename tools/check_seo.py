@@ -66,8 +66,17 @@ def check_page(path: Path) -> list[str]:
 
 LLMS_TXT = RACINE / "volumes" / "web" / "llms.txt"
 AI_CATALOG = RACINE / "volumes" / "web" / ".well-known" / "ai-catalog.json"
+ARD_MANIFEST = RACINE / "volumes" / "web" / ".well-known" / "ard.json"
 AGENT_CARD = RACINE / "volumes" / "web" / ".well-known" / "agent-card.json"
 AGENT_SKILLS = RACINE / "volumes" / "web" / "agent-skills.md"
+
+ARD_HOST_ALLOWED_KEYS = {
+    "displayName",
+    "identifier",
+    "documentationUrl",
+    "logoUrl",
+    "trustManifest",
+}
 
 # Types de médias acceptés par le schéma ARD pour une entrée de catalogue. Le
 # validateur externe rejette toute autre valeur (openapi+json, text/html, ...).
@@ -87,11 +96,12 @@ ARD_MEDIA_TYPES = (
 def check_agentique() -> list[str]:
     """Valide les fichiers de découverte par les agents IA (llms.txt + ARD).
 
-    Règles reprises telles quelles de l'audit « SEO agentique » :
+    Règles conformes au validateur ARD de Google Lighthouse (ard-schema) :
     - `llms.txt` doit exister, commencer par un en-tête H1 et contenir des liens ;
-    - `ai-catalog.json` ne doit porter aucune propriété interdite (dont un objet
-      `host` détaillé) et ses entrées doivent toutes déclarer un type de média
-      parmi ceux autorisés par la spécification.
+    - `ai-catalog.json` et `ard.json` doivent être synchronisés, porter uniquement
+      les clés autorisées (`specVersion`, `host`, `entries`), un objet `host` avec
+      `displayName` requis (sans propriété additionnelle), et des types de médias
+      reconnus par la spécification ARD.
     """
     errors: list[str] = []
 
@@ -105,7 +115,7 @@ def check_agentique() -> list[str]:
         if not re.search(r"\[[^\]]+\]\(https?://[^)]+\)", LLMS_TXT.read_text(encoding="utf-8")):
             errors.append("volumes/web/llms.txt : aucune liste de liens Markdown détectée")
 
-    # --- ai-catalog.json : schéma ARD -------------------------------------- #
+    # --- ai-catalog.json & ard.json : schéma ARD officiel ----------------- #
     if not AI_CATALOG.exists():
         errors.append("volumes/web/.well-known/ai-catalog.json manquant")
     else:
@@ -115,12 +125,30 @@ def check_agentique() -> list[str]:
             errors.append(f"volumes/web/.well-known/ai-catalog.json : JSON invalide ({e})")
             catalogue = None
 
+        if not ARD_MANIFEST.exists():
+            errors.append("volumes/web/.well-known/ard.json manquant (requis par ARD v0.91+ / Lighthouse)")
+        elif ARD_MANIFEST.read_bytes() != AI_CATALOG.read_bytes():
+            errors.append("ard.json et ai-catalog.json ne sont pas synchronisés")
+
         if catalogue is not None:
-            if "host" in catalogue and not isinstance(catalogue["host"], str):
-                errors.append(
-                    "ai-catalog.json : 'host' doit être une chaîne simple "
-                    "(un objet déclenche « must NOT have additional properties »)"
-                )
+            extra_root = set(catalogue.keys()) - {"specVersion", "host", "entries"}
+            if extra_root:
+                errors.append(f"ai-catalog.json : propriétés racine interdites : {sorted(extra_root)}")
+            if catalogue.get("specVersion") != "1.0":
+                errors.append("ai-catalog.json : 'specVersion' requis et égal à '1.0'")
+            if "host" in catalogue:
+                host = catalogue["host"]
+                if not isinstance(host, dict):
+                    errors.append(
+                        "ai-catalog.json : 'host' doit être un objet JSON conforme à ai-catalog.schema.json "
+                        "(une chaîne simple échoue l'audit Lighthouse ard-schema)"
+                    )
+                else:
+                    if not isinstance(host.get("displayName"), str) or not host["displayName"].strip():
+                        errors.append("ai-catalog.json : 'host.displayName' requis")
+                    extra_host = set(host.keys()) - ARD_HOST_ALLOWED_KEYS
+                    if extra_host:
+                        errors.append(f"ai-catalog.json : propriétés 'host' non autorisées : {sorted(extra_host)}")
             entrees = catalogue.get("entries", [])
             if not entrees:
                 errors.append("ai-catalog.json : au moins une entrée est requise")
