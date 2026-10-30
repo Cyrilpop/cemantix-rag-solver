@@ -4,6 +4,28 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-30 · Quick Win SEO : « Solution Cémantix du lundi 26 octobre 2026 »
+
+### Ajouté
+- **Libellé d'archive orienté mot-clé (`SEO-13`, `SEO-14`, évolution `docs/roadmap/2026-10-seo-titres-archives/`)** :
+  - Nouvelle constante `ARCHIVE_TITLE_PREFIX` et nouvelle fonction `archive_title()` dans `src/services/seo.py` : chaque page `/puzzles/AAAA-MM-JJ/` est désormais titrée **« Solution Cémantix du lundi 26 octobre 2026 »** (date française longue, 42 caractères contre 85 auparavant) et non plus « Cémantix du … : indices, solution et trajectoire du solveur IA ».
+  - Le même libellé porte le `<title>`, le `<h1>`, `og:title`, `twitter:title`, le `headline` JSON-LD et la `meta description`, qui **commence** par le mot-clé puis enchaîne sur le mot secret, les mots les plus proches, le nombre de coups, la méthode et le numéro de puzzle (≤ 175 caractères).
+  - Index `/puzzles/` (`SEO-14`) : titre « Solution Cémantix : archives de tous les puzzles résolus par l'IA », `<h1>` aligné, `name` du `CollectionPage` JSON-LD et **textes d'ancre** reprenant le titre complet de chaque archive — plus de date nue dans le maillage interne. Pagination, URLs et `rel="prev"/"next"` inchangés (aucune redirection à prévoir).
+- **Suite de tests `tests/test_seo_archives.py` (15 tests)** : contrat du titre (date française, absence de date ISO, longueur SERP), propagation `<title>`/`<h1>`/Open Graph/JSON-LD/fil d'Ariane, `noindex` conservé sur les archives non résolues, ancres de l'index, et **contrat ISO du sitemap**.
+
+### Modifié & Optimisé
+- **Fil d'Ariane des archives en français** : le dernier maillon, visible et dans le `BreadcrumbList` JSON-LD, affiche « lundi 26 octobre 2026 » au lieu de `2026-10-26` ; `datePublished` et l'URL restent en ISO, seuls formats valides.
+- **Contrat `sitemap.xml` verrouillé (`SEO-15`)** : le générateur reste volontairement inchangé — `<loc>` en `/puzzles/AAAA-MM-JJ/` et `<lastmod>` W3C/ISO, seuls formats acceptés par le protocole sitemaps.org. La date en français long vit dans les libellés de la page et de l'index ; un test échoue dès qu'une chaîne française (« octobre », « Solution Cémantix ») apparaît dans le XML.
+- **Découvrabilité pour agents IA (`SEO-16`)** : le bloc `AGENT-DYNAMIC` de `llms.txt` et `agent-skills.md` publie l'archive la plus récente sous son titre complet, la date ISO entre contre-gouttières et le motif « Solution Cémantix du <date en français long> » à citer ; la compétence `dated-archive` de `.well-known/agent-card.json` décrit ce motif (tag `solution`, exemple « Quelle est la solution du Cémantix du 26 octobre 2026 ? ») ; le catalogue ARD gagne la requête représentative « Quelle est la solution du Cémantix du lundi 26 octobre 2026 ? » ; `llms.md` documente le contrat titre français / URL ISO et se débarrasse d'un exemple d'URL daté figé.
+- **Manifestes versionnés régénérés** : `volumes/web/.well-known/{ai-catalog,ard,agent-card}.json`, `llms.txt`, `llms.md` et `agent-skills.md` régénérés par `publish_ard_manifests()` et `refresh_agent_docs()`, et vérifiés identiques à leur générateur.
+
+### Vérifications
+- `tests/test_seo_archives.py` : **15 tests verts** ; suite conjointe avec `tests/test_docs_agent.py` : **22 tests verts**.
+- `python tools/check_seo.py` : `[OK] Audit SEO reussi sur 4 pages principales` + `[OK] Audit agentique reussi` ; `python tools/check_docs.py` : `=== OK ===`.
+- `grep -c "octobre" volumes/web/sitemap.xml` → `0` ; `<loc>` d'archives toujours en `/puzzles/AAAA-MM-JJ/`.
+
+---
+
 ## [Non publié] - 2026-10-29 · Refonte Responsive Mobile, PageSpeed 100/100 & Résilience SEO/ARD
 
 ### Ajouté
