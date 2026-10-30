@@ -4,6 +4,19 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-30 · Jalon M2 : Modularisation et Découplage Sécurisé du Solveur
+
+### Modifié & Optimisé
+- **Découplage modulaire de `src/engine/solvers.py` (M2)** : scission du fichier monolithique de 588 lignes en modules spécialisés et hautement cohésifs :
+  - `src/engine/ranking.py` : fonctions mathématiques pures (Ridge `estimate_secret`, rerank multicritère `rerank`, météo officielle `weather_for_score`). Couverture unitaire : 100 %.
+  - `src/engine/llm.py` : intégration du client OpenAI ChatCompletions local (`ask_llm`) et formatage strict du prompt avec candidats RAG.
+  - `src/engine/duel.py` : joueur IA autonome `RagDuelPlayer` pour le mode Duel/Battle.
+  - `src/engine/solvers.py` : orchestrateur autonome `Solver` (allégé à 397 lignes, -32,5 %) conservant la trajectoire, l'échantillonnage FPS et la boucle de convergence.
+- **Rétrocompatibilité ascendante stricte** : tous les symboles historiques sont ré-exportés via `src.engine.solvers`, `src.engine` et `src`. Préservation validée par `tests/test_solver_backward_compat.py` (identité stricte `assertIs`, monkeypatching effectif, absence d'imports circulaires).
+- **Validation** : 204 tests unitaires passés avec succès sous conteneur Docker Python 3.12 (0 échec).
+
+---
+
 ## [Non publié] - 2026-10-30 · Évolution « Défier le bot IA » (docs/roadmap/2026-10-06-defier-le-bot)
 
 ### Ajouté

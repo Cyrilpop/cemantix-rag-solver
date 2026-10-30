@@ -1,6 +1,6 @@
 # Project Memory — Cémantix RAG Solver
 
-**Dernière mise à jour :** 30 octobre 2026 (Milestone M1 — Harnais Déterministe)  
+**Dernière mise à jour :** 30 octobre 2026 (Milestone M2 — Modularisation Sécurisée du Solveur)  
 **Dépôt :** `Cyrilpop/cemantix-rag-solver`  
 **Statut du Projet :** Production active / Maintenance & Modernisation incrémentale  
 
@@ -55,7 +55,10 @@ L'architecture s'organise en 3 tiers orchestrés par Docker Compose :
 - [src/config.py](src/config.py) : Constantes système, styles ANSI, chemins de données, validation d'environnement.
 - [src/engine/](src/engine/) : Cœur algorithmique RAG :
   - `vocab.py` : `VocabStore` (gestion du lexique, word2vec, embeddings ChromaDB).
-  - `solvers.py` : Algorithmes Ridge (`estimate_secret`), Rerank, `CemantixSolver`, `RagDuelPlayer`.
+  - `ranking.py` : Fonctions pures Ridge (`estimate_secret`), rerank quadratique et météo (`weather_for_score`).
+  - `llm.py` : Intégration HTTP prompt/ChatCompletions du LLM local (`ask_llm`).
+  - `duel.py` : Agent bot tour par tour (`RagDuelPlayer`) avec heuristiques adaptatives.
+  - `solvers.py` : Orchestration du solveur autonome (`Solver`, `CemantixSolver`) et ré-exports rétrocompatibles.
   - `clients.py` : `CemantixClient` (site officiel) et `MockClient` (simulation déterministe).
 - [src/game/](src/game/) : Modèle de domaine et règles métier :
   - `common.py` : Calculs thermiques officiels (icônes météo, pour mille, paliers de score).

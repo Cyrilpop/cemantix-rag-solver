@@ -67,7 +67,7 @@ python tools/agent_find.py --summary src/engine/solvers.py  # Affiche les repèr
 
 | Besoin | Fichier à Inspecter | Plage Typique |
 |---|---|---|
-| Algorithme RAG & Ridge | [src/engine/solvers.py](src/engine/solvers.py) | L48-L120 (`estimate_secret`, `rerank`) |
+| Algorithme RAG & Ridge | [src/engine/ranking.py](src/engine/ranking.py) | L15-L65 (`estimate_secret`, `rerank`, `weather`) |
 | Client Certitudes & Simulation Mock | [src/engine/clients.py](src/engine/clients.py) | L20-L80 (`CemantixClient`, `MockClient`) |
 | Gestionnaire des Sessions de Jeu | [src/game/manager.py](src/game/manager.py) | L230-L360 (`new_game`, `new_battle`) |
 | Serveur HTTP REST & CORS | [src/api/server.py](src/api/server.py) | L65-L160 (`GameAPIHandler`) |
@@ -84,7 +84,7 @@ python tools/agent_find.py --summary src/engine/solvers.py  # Affiche les repèr
 Avant de soumettre toute modification, exécutez ces 4 contrôles :
 
 ```bash
-# 1. Suite de tests unitaires (197 tests attendus, 0 échec)
+# 1. Suite de tests unitaires (204 tests attendus, 0 échec)
 docker run --rm -v $(pwd):/app -w /app python:3.12-slim sh -c \
   "pip install --no-cache-dir -r requirements.txt && python -m unittest discover -s tests -v"
 

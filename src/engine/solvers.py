@@ -9,117 +9,17 @@ Composants mathématiques et logiques pour la résolution autonome et assistée 
 - Joueur IA pour le mode duel (RagDuelPlayer)
 - Conversion météo sémantique officielle (weather_for_score)
 """
-import json
-import re
 import time
 from pathlib import Path
 
 import numpy as np
-import requests
 
-from ..config import (
-    LM_API, LLM_MODEL, LLM_TIMEOUT, PROMPT, DISCIPLINES, STOPWORDS, ENGLISH_WORDS,
-    SEED_WORDS, SEEDS_FACILE, SEEDS_MOYEN, SEEDS_EXPERT, log
-)
+from ..config import LLM_MODEL, DISCIPLINES, ENGLISH_WORDS, SEED_WORDS, log
 from .vocab import VocabStore
 from .clients import CemantixClient, MockClient
-
-
-def weather_for_score(s: float, p: int | None) -> tuple[str, str]:
-    """Retourne l'icône et le libellé météo officiel selon le score et le permille."""
-    if p == 1000:
-        return "🥳", "GAGNÉ"
-    elif p and p >= 999:
-        return "😱", "BRÛL."
-    elif p and p >= 990:
-        return "🔥", "CHAUD"
-    elif p and p >= 900:
-        return "🥵", "CHAUD"
-    elif p and p >= 1:
-        return "😎", "TIÈDE"
-    elif s >= 0.15:
-        return "🥶", "FRAIS"
-    elif s >= 0:
-        return "🥶", "FROID"
-    else:
-        return "🧊", "GLAC."
-
-
-# --------------------------------------------------------------------------- #
-# Couche 3 : Retrieval + Rerank
-# --------------------------------------------------------------------------- #
-def estimate_secret(G: np.ndarray, s: np.ndarray, lam: float = 0.1) -> np.ndarray:
-    """Ridge : q = Gᵀ (G Gᵀ + λI)⁻¹ s  -> direction telle que G q ≈ s."""
-    q = G.T @ np.linalg.solve(G @ G.T + lam * np.eye(len(s)), s)
-    return q / np.linalg.norm(q)
-
-
-def rerank(store: VocabStore, cands: list, G: np.ndarray, s: np.ndarray, q_est: np.ndarray) -> list:
-    """Reranking multicritère : combine la température estimée et la cohérence
-    quadratique pondérée vers les essais chauds."""
-    if not cands:
-        return []
-    C = np.vstack([store.vec(w) for w in cands])
-    weights = np.exp((s - s.max()) / 0.1)
-    err = (((C @ G.T) - s) ** 2 * weights).sum(axis=1) / weights.sum()
-    pred_temp = (C @ q_est) * 100.0
-    # Score d'excellence : favorise les candidats chauds tout en pénalisant l'incohérence
-    rank_score = pred_temp - 120.0 * np.sqrt(err)
-    order = np.argsort(rank_score)[::-1]
-    return [(cands[i], float(pred_temp[i]), float(err[i])) for i in order]
-
-
-# --------------------------------------------------------------------------- #
-# Couche 4 : Génération (LLM local — PROMPT défini dans config.py)
-# --------------------------------------------------------------------------- #
-def ask_llm(best, worst, candidates_info, n: int, verbose: bool = False) -> list:
-    fmt_guess = lambda g: f"- {g[0]} : {g[1] * 100:.2f}°C" + (f", {g[2]} ‰" if g[2] else "")
-    fmt_cand = lambda c: f"- {c[0]} (temp. estimée : {c[1]:+.2f}°C)"
-    cands_str = "\n".join(fmt_cand(c) for c in candidates_info[:25])
-    prompt = PROMPT.format(best="\n".join(map(fmt_guess, best)),
-                           worst=", ".join(g[0] for g in worst) or "-",
-                           candidates=cands_str or "-", n=n)
-    if verbose:
-        log("\n  🔍  [VERBOSE CANDIDATS RAG INJECTÉS DANS LE PROMPT (Top 15)]")
-        for rank, (w, temp, err) in enumerate(candidates_info[:15], 1):
-            log(f"      {rank:>2}. {w:<20} est. ≈ {temp:+6.2f}°C    (cohérence err = {err:.4f})")
-        log("")
-    r = None
-    for attempt in range(1, 3):
-        try:
-            r = requests.post(f"{LM_API}/chat/completions", json={
-                "model": LLM_MODEL,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7, "max_tokens": 3000,
-            }, timeout=LLM_TIMEOUT)
-            if r.status_code == 200:
-                break
-        except requests.RequestException as e:
-            if attempt == 2:
-                raise e
-            time.sleep(1)
-    if not r:
-        return []
-    try:
-        msg = r.json()["choices"][0]["message"]
-        reasoning = msg.get("reasoning_content") or ""
-        content = msg.get("content") or ""
-        if verbose and reasoning:
-            log("\n  🔍  [VERBOSE LLM REASONING]")
-            non_empty_lines = [l.strip() for l in reasoning.strip().splitlines() if l.strip()]
-            for line in non_empty_lines[:8]:
-                log(f"     | {line}")
-            if len(non_empty_lines) > 8:
-                log("     | ... (suite du raisonnement masquée)")
-        text = re.sub(r"<think>.*?</think>", "", content, flags=re.S)
-        arrays = re.findall(r"\[[^\[\]]*\]", text)
-        words = [str(w).strip().lower() for w in json.loads(arrays[-1])] if arrays else []
-        if verbose:
-            log(f"  🔍  [VERBOSE LLM OUTPUT BRUT] : {words}")
-        return words
-    except Exception as exc:
-        log(f"   ⚠  LLM : {exc}")
-        return []
+from .ranking import weather_for_score, estimate_secret, rerank
+from .llm import ask_llm
+from .duel import RagDuelPlayer
 
 
 # --------------------------------------------------------------------------- #
@@ -487,102 +387,12 @@ class Solver:
 CemantixSolver = Solver
 
 
-# --------------------------------------------------------------------------- #
-# Joueur IA pour le mode Duel (tour par tour adapté au niveau)
-# --------------------------------------------------------------------------- #
-class RagDuelPlayer:
-    """Agent RAG mathématique jouant un coup par tour pour le mode Duel."""
-    def __init__(self, store: VocabStore, game: MockClient, difficulty: str = "moyen"):
-        self.store = store
-        self.game = game
-        self.difficulty = difficulty.lower() if difficulty else "moyen"
-        if self.difficulty not in ("facile", "moyen", "expert"):
-            self.difficulty = "moyen"
-        self.tried = set()
-        self.guesses = {}   # norm -> (s, p, num, w_icon, w_lbl)
-
-        if self.difficulty == "facile":
-            self.seeds = list(SEEDS_FACILE)
-            self.min_seeds = 6
-        elif self.difficulty == "expert":
-            self.seeds = list(SEEDS_EXPERT)
-            self.min_seeds = 2
-        else:  # moyen
-            self.seeds = list(SEEDS_MOYEN)
-            self.min_seeds = 4
-        self.seed_idx = 0
-
-    def play_turn(self, turn_no: int) -> tuple[str, float, int | None, str, str]:
-        word_to_play = None
-        known = [(w, s) for w, (s, p, *_) in self.guesses.items() if w in self.store]
-        best_score = max([s for w, s in known], default=-1.0)
-
-        # 1. Amorçage initial selon niveau
-        warm_threshold = 0.22 if self.difficulty == "facile" else (0.12 if self.difficulty == "expert" else 0.15)
-        if (len(known) < self.min_seeds or best_score < warm_threshold) and self.seed_idx < len(self.seeds):
-            while self.seed_idx < len(self.seeds):
-                candidate_seed = self.store.normalize(self.seeds[self.seed_idx])
-                self.seed_idx += 1
-                if candidate_seed not in self.tried and candidate_seed in self.store:
-                    word_to_play = candidate_seed
-                    break
-
-        # 2. Régression Ridge + k-NN + Rerank
-        if not word_to_play and len(known) >= 2:
-            G = np.vstack([self.store.vec(w) for w, s in known])
-            s = np.array([s for w, s in known], dtype=np.float32)
-            q_est = estimate_secret(G, s)
-            k_knn = 150 if self.difficulty == "expert" else (100 if self.difficulty == "moyen" else 60)
-            raw_pool = self.store.knn(q_est, k_knn)
-
-            # Ajoute les voisins des meilleurs coups
-            sorted_known = sorted(known, key=lambda x: x[1], reverse=True)
-            k_best = 3 if self.difficulty == "expert" else 2
-            for w, _ in sorted_known[:k_best]:
-                raw_pool += self.store.knn(self.store.vec(w), 50)
-
-            cands = []
-            for raw_w in raw_pool:
-                w = self.store.normalize(raw_w)
-                if (w not in self.tried
-                        and w not in cands
-                        and len(w) >= 4
-                        and w not in STOPWORDS
-                        and self.store.is_valid_french(w)):
-                    cands.append(w)
-                    if len(cands) >= 60:
-                        break
-
-            if cands:
-                reranked = rerank(self.store, cands, G, s, q_est)
-                if reranked:
-                    if self.difficulty == "expert":
-                        # Expert : joue toujours le top 1 absolu
-                        word_to_play = reranked[0][0]
-                    elif self.difficulty == "facile":
-                        # Facile : sélectionne parmi le pool (rangs 3 à 8) pour ne pas converger trop vite
-                        cand_pool = [c[0] for c in reranked[min(2, len(reranked)-1):min(8, len(reranked))]]
-                        word_to_play = str(np.random.choice(cand_pool)) if cand_pool else reranked[0][0]
-                    else:
-                        # Moyen : équilibré, choisit dans le top 2
-                        cand_pool = [c[0] for c in reranked[:min(2, len(reranked))]]
-                        word_to_play = str(np.random.choice(cand_pool))
-
-        # 3. Fallback sécurité
-        if not word_to_play:
-            for seed in SEED_WORDS:
-                s_norm = self.store.normalize(seed)
-                if s_norm not in self.tried and s_norm in self.store:
-                    word_to_play = s_norm
-                    break
-
-        if not word_to_play:
-            word_to_play = "science"
-
-        self.tried.add(word_to_play)
-        res = self.game.score(word_to_play)
-        s, p = res if res else (0.0, None)
-        w_icon, w_lbl = weather_for_score(s, p)
-
-        self.guesses[word_to_play] = (s, p, turn_no, w_icon, w_lbl)
-        return word_to_play, s, p, w_icon, w_lbl
+__all__ = [
+    "Solver",
+    "CemantixSolver",
+    "RagDuelPlayer",
+    "estimate_secret",
+    "rerank",
+    "ask_llm",
+    "weather_for_score",
+]

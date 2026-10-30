@@ -4,7 +4,10 @@ Cémantix Solver — Cœur Algorithmique & Moteur IA (src.engine)
 Sous-paquet regroupant l'intelligence artificielle et l'espace sémantique :
 - vocab   : VocabStore, lemmes officiels Lexique 3.83, index vectoriel ChromaDB
 - clients : CemantixClient (API officielle) & MockClient (simulateur haute performance)
-- solvers : Régression Ridge, reranking sémantique, solveur autonome & bot RagDuelPlayer
+- ranking : Régression Ridge, cohérence quadratique pondérée & conversion météo
+- llm     : Interface de prompt et client OpenAI ChatCompletions local
+- duel    : Agent autonome RagDuelPlayer pour les duels tour par tour
+- solvers : Orchestration autonome Cémantix (Solver / CemantixSolver)
 """
 from .clients import CemantixClient, MockClient
 from .solvers import (
