@@ -436,11 +436,24 @@ cemantix.cyril-randon.fr {
     @html path *.html
     header @html Cache-Control "no-cache, must-revalidate"
 
-    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/*
+    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/* /defi /defi/*
     header @pages Cache-Control "no-cache, must-revalidate"
 
     @sitemap path /sitemap.xml /robots.txt /llms.txt /llms.md /agent-skills.md /.well-known/*
     header @sitemap Cache-Control "no-cache, must-revalidate"
+
+    # Flux « Défier le bot » en direct (SSE) — DÉCLARÉ AVANT /api/* et OBLIGATOIRE.
+    # Un défi peut rester silencieux le temps que le worker le prenne : sans
+    # flush_interval -1, Caddy met le flux en tampon et le navigateur ne reçoit
+    # jamais les coups (le serveur émet pourtant un battement toutes les 10 s).
+    @defistream path_regexp "^/api/challenge/[0-9a-f]{32}/stream$"
+    handle @defistream {
+        header Cache-Control "no-store"
+        reverse_proxy cemantix_web:8000 {
+            flush_interval -1
+            read_timeout 900s
+        }
+    }
 
     # API du Solveur (prioritaire et exclusive)
     handle /api/* {

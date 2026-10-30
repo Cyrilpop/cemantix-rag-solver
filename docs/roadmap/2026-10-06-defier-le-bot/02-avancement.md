@@ -86,6 +86,7 @@ Mesuré le 29/10/2026 :
 | 30/10 | QUAL-21 | Documentation : `openapi.json` (3 routes), README (section « Défier le Bot IA »), CHANGELOG, 11 variables `.env.example`, suivi présent — commit `f8ec1f7` | `tools/check_docs.py` vert ; `tools/check_seo.py` vert (5 pages) |
 | 30/10 | QUAL-22 (partiel) | Recette backend **contre la PostgreSQL de production** : conteneur temporaire `cemantix:latest` sur `cemantix-net`, `src/` de la branche monté en ro — empilement, claim atomique, résolution RAG pur réelle | logs : `MOTEUR: postgres` → `CLAIM atomique OK` → `STATUT: solved \| coups: 5 \| durée: 0.19 \| trajectoire: 5` ; `docker stats` : `cemantix_web CPU=0.02 %` pendant la résolution ; trace nettoyée en fin de recette |
 | 30/10 | — | Branche `feat/bot_defy` poussée (7 commits de développement, `b06a2be..f8ec1f7`), iso `origin/feat/bot_defy` ; suite complète verte : **151 tests OK** | `git push` OK, `python -m unittest discover -s tests` dans l'image de production |
+| 30/10 | DEFI-06 (correctif) | **Défi lancé depuis la production : rien ne s'affichait et le flux mourait en `net::ERR_CONNECTION_CLOSED`.** Trois causes distinctes, toutes corrigées : (1) *le worker ne consommait pas la file* — le code est **cuit dans l'image** (`./src` n'est pas monté, seuls `cemantix_data` et `volumes/web` le sont), donc un conteneur non reconstruit ignore tout de `DEFI-09` ; (2) *le SSE restait silencieux* pendant l'attente — tout intermédiaire (`proxy_read_timeout 30s` du `location /api/` local, Caddy sans `flush_interval -1`) ferme une connexion muette : le producteur émet désormais un **event `status` immédiat** puis un **battement toutes les 10 s** ; (3) *le front tuait l'`EventSource` au premier incident* et le repli polling n'affichait jamais les mots — la coupure déclenche maintenant une **reconnexion** (3 essais, puis repli), et le polling relit les coups via `GET …?detail=1`. Côté proxy : `location ~ ^/api/challenge/[0-9a-f]+/stream$` (`proxy_buffering off`, `proxy_read_timeout 900s`) et son équivalent Caddy `flush_interval -1` documenté dans le README. NB : pas de `{32}` dans un regex nginx — l'accolade est un délimiteur de bloc (`unknown directive "32}/stream$"`) | `nginx -t` OK + reload ; **recette bout-en-bout à travers nginx** : `+24 ms status queued` → `+10 058 ms ping` → `+20 091 ms ping` → 23 coups reçus en direct → `done solved` ; suite **155 tests OK** (dont 4 nouveaux sur ce défaut) |
 | 30/10 | DEFI-14 (correctif) | Console navigateur signalait `Pattern attribute value … is not a valid regular expression` : l'attribut `pattern` de `/defi/` était compilé en mode **`v`** (Unicode-sets) par le navigateur, où `[a-zA-Zà-ÿ-]` est ambigu (hyphen final + littéraux accentués). Attribut réécrit en échappements ASCII `pattern="[a-zA-Z\u00E0-\u00FF][a-zA-Z\u00E0-\u00FF]{2,23}"`, valable en modes `u` **et** `v` ; le tiret retiré aligne en plus le contrôle client sur le serveur (`WORD_RE` n'accepte pas le tiret). L'autre message console (`content.js:1 … tabs:outgoing.message.ready`) provient d'une **extension de navigateur**, d'aucune façon du site : aucun `content.js` dans `volumes/web` | `grep -n 'pattern=' volumes/web/defi/index.html` = forme échappée ; `tools/check_seo.py` vert sur 5 pages |
 
 ---
@@ -156,11 +157,16 @@ Mesuré le 29/10/2026 :
 
 ## 6. Prochaines actions
 
-1. **QUAL-22 (seule action restante)** : courir la recette en conditions réelles sur
+1. **Déploiement (bloquant pour l'utilisateur)** : le code est **cuit dans l'image**, il faut
+   donc `docker compose build` puis redémarrer **`cemantix_web` ET `cemantix_worker`** — un web
+   seul reconstruit enfile des défis que personne ne résout. Appliquer aussi la règle proxy du
+   flux direct (`flush_interval -1` côté Caddy, cf. README ; `proxy_buffering off` +
+   `proxy_read_timeout 900s` côté nginx, cf. `local/nginx/cemantix.local.conf`).
+2. **QUAL-22 (seule action restante)** : courir la recette en conditions réelles sur
    `docker compose up` — défi gagné affiché en direct (< 1 s de latence par coup), 11ᵉ défi de
    l'heure → `429`, `docker stats` ≈ 0 % CPU sur `cemantix_web` pendant une résolution, défi
    lancé à 23h59 sans déranger la résolution de minuit, page consultable au clavier.
-2. Poser `CHALLENGE_IP_SALT` (secret d'exploitation dédié) dans le `.env` de production, à
+3. Poser `CHALLENGE_IP_SALT` (secret d'exploitation dédié) dans le `.env` de production, à
    défaut le sel derive de `DB_PASS`.
-3. À la fusion : `main` → redéploiement ; le rollback reste « image précédente +
+4. À la fusion : `main` → redéploiement ; le rollback reste « image précédente +
    `DROP TABLE bot_challenges` » (fonctionnalité purement additive).
