@@ -176,7 +176,7 @@
           <label for="defi-word" class="control-label" style="margin-right:.5rem">Votre mot secret :</label>
           <input id="defi-word" name="word" class="game-input" type="text" inputmode="latin"
                  minlength="3" maxlength="24" placeholder="ex. chaussette" required
-                 pattern="[a-zA-Zà-ÿ][a-zA-Zà-ÿ-]{2,23}" aria-describedby="defi-status">
+                 pattern="[a-zA-Z\u00E0-\u00FF][a-zA-Z\u00E0-\u00FF]{2,23}" aria-describedby="defi-status">
           <button type="submit" id="defi-submit" class="btn btn-guess">🤖 Lancer le défi</button>
         </form>
         <p id="defi-status" class="game-status-note" role="status" aria-live="polite" style="margin-top:.6rem">
