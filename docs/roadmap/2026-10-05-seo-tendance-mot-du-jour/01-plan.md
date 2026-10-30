@@ -4,17 +4,17 @@
 > **Statut du document :** référence de conception, versionnée.
 > **Avancement :** tenu à jour séparément dans [`02-avancement.md`](02-avancement.md) — ce fichier décrit **quoi faire et comment le vérifier**, sans état d'avancement.
 > **Branche de travail :** `feat/seo-titre-archives-solution` — même branche que l'évolution
-> [Titres « Solution Cémantix du <date> »](../2026-10-seo-titres-archives/01-plan.md), les deux
+> [Titres « Solution Cémantix du <date> »](../2026-10-04-seo-titres-archives/01-plan.md), les deux
 > quick wins SEO visant le même périmètre (`src/services/seo.py` et ses libellés) et devant être
 > fusionnés ensemble pour éviter deux PR qui se marchent dessus.
-> **Base de référence :** `main` @ `384079b` + évolution [Titres « Solution Cémantix du <date> »](../2026-10-seo-titres-archives/01-plan.md)
+> **Base de référence :** `main` @ `384079b` + évolution [Titres « Solution Cémantix du <date> »](../2026-10-04-seo-titres-archives/01-plan.md)
 > **Date de conception :** 30/10/2026
 > **Périmètre exclusif :** libellés et contenu indexable (`src/services/seo.py`, `volumes/web/*.html`, `volumes/web/css/layout.css`, `tools/check_seo.py`). Aucun changement de jeu, d'API, d'URL existante ou de base de données.
 
 **Convention de lecture :** chaque finding porte un identifiant permanent, `SEO-17` à `SEO-21`.
 Les identifiants `SEO-01` à `SEO-16` sont déjà attribués par les évolutions
-[Sécurité, SEO, performance, qualité](../2026-10-securite-seo-performance/01-plan.md) et
-[Titres d'archives](../2026-10-seo-titres-archives/01-plan.md) et ne sont pas réutilisés.
+[Sécurité, SEO, performance, qualité](../2026-10-02-securite-seo-performance/01-plan.md) et
+[Titres d'archives](../2026-10-04-seo-titres-archives/01-plan.md) et ne sont pas réutilisés.
 
 ---
 

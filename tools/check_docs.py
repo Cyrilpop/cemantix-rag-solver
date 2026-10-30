@@ -4,7 +4,8 @@ Trois vérifications, toutes indépendantes du contenu :
   1. chaque lien relatif pointe vers un fichier qui existe ;
   2. chaque tableau a un nombre de colonnes constant (les pipes échappés `\\|`
      et ceux à l'intérieur d'un span `code` ne comptent pas) ;
-  3. les compteurs du tableau de bord correspondent aux lignes de suivi.
+  3. les compteurs du tableau de bord correspondent aux lignes de suivi, pour chaque
+     evolution qui possede un tel tableau.
 
 Usage : python tools/check_docs.py   (sort 1 s'il trouve un problème)
 
@@ -77,10 +78,32 @@ def controle_tables():
 
 
 def controle_compteurs():
-    p = os.path.join(RACINE, "docs", "roadmap",
-                     "2026-10-securite-seo-performance", "02-avancement.md")
+    casse = 0
+    for p in fichiers_suivi():
+        if not controle_un_suivi(p):
+            casse += 1
+    return casse
+
+
+def fichiers_suivi():
+    """Tous les `02-avancement.md` de la roadmap, quel que soit le nom du dossier.
+
+    Le nom des dossiers d'evolution est une convention (`AAAA-MM-NN-slug`) qui a deja
+    change : un controle qui code ce chemin en dur casse au premier renommage et, qui
+    plus est, ne verifiait qu'une seule evolution sur quatre.
+    """
+    racine = os.path.join(RACINE, "docs", "roadmap")
+    for dossier in sorted(os.listdir(racine)):
+        p = os.path.join(racine, dossier, "02-avancement.md")
+        if os.path.isfile(p):
+            yield p
+
+
+def controle_un_suivi(p):
+    """Verifie un tableau de bord : compteurs annonces vs lignes de suivi reelles."""
     texte = open(p, encoding="utf-8").read()
-    lignes = re.findall(r"^\| \*\*((?:SEC|PERF|SEO|QUAL|A11Y|RGPD)-\d+[a-z]?)\*\* \|(.*)$",
+    rel = os.path.relpath(p, RACINE)
+    lignes = re.findall(r"^\| \*\*((?:[A-Z][A-Z0-9]{1,5})-\d+[a-z]?)\*\* \|(.*)$",
                         texte, re.M)
     compte = Counter()
     vus = set()
@@ -90,20 +113,22 @@ def controle_compteurs():
         vus.add(ident)
         compte[next((s for s in STATUTS if s in reste), "inconnu")] += 1
 
-    annonce = dict(re.findall(r"^\| (\w[^\s|]*[^\|]*) \| \*\*(\d+)\*\* \|", texte, re.M))
-    annonce = {k: int(v) for k, v in annonce.items()}
-    print(f"  lignes de suivi : {len(vus)}")
+    total_annonce = re.search(r"Total suivis\*\* \| \*\*(\d+)\*\*", texte)
+    if not total_annonce:
+        return True  # pas de tableau de bord : rien a annoncer, donc rien a verifier
+
+    print(f"  {rel}")
+    annonce = {k: int(v) for k, v in
+               re.findall(r"^\| (\w[^\s|]*[^\|]*) \| \*\*(\d+)\*\* \|", texte, re.M)}
+    print(f"    lignes de suivi : {len(vus)}")
     for s in STATUTS:
         reel = compte.get(s, 0)
-        print(f"  {s:<12} reel={reel:<3}", end="")
+        print(f"    {s:<12} reel={reel:<3}", end="")
         print()
-    total_annonce = re.search(r"Total suivis\*\* \| \*\*(\d+)\*\*", texte)
-    if total_annonce:
-        annonce_total = int(total_annonce.group(1))
-        ok = annonce_total == len(vus)
-        print(f"  total annonce={annonce_total} reel={len(vus)} -> {'OK' if ok else 'FAUX'}")
-        return 0 if ok else 1
-    return 0
+    annonce_total = int(total_annonce.group(1))
+    ok = annonce_total == len(vus)
+    print(f"    total annonce={annonce_total} reel={len(vus)} -> {'OK' if ok else 'FAUX'}")
+    return ok
 
 
 if __name__ == "__main__":

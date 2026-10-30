@@ -9,7 +9,7 @@
 > **le sont depuis** (27/10 dans l'après-midi) : la branche est sauvegardée sur GitHub, il ne reste
 > qu'à la **fusionner**.
 > **Attention :** l'évaluation finding par finding, avec preuve dans le code, est dans
-> [`../2026-10-securite-seo-performance/02-avancement.md`](../2026-10-securite-seo-performance/02-avancement.md)
+> [`../2026-10-02-securite-seo-performance/02-avancement.md`](../2026-10-02-securite-seo-performance/02-avancement.md)
 > — ce document-ci décrit l'intention et le contenu, pas l'état de conformité.
 
 **Branche :** `feat/optimisation-seo` → `main`

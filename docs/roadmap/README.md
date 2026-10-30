@@ -19,21 +19,28 @@ Ce dossier ne contient **aucune** information d'avancement lui-même, hormis l'i
 ```text
 docs/roadmap/
 ├── README.md                          <- ce fichier : index + conventions
-└── 2026-10-securite-seo-performance/  <- une evolution = un dossier
+└── 2026-10-02-securite-seo-performance/  <- une evolution = un dossier
     ├── 01-plan.md                     <- QUOI faire (reference de conception)
     └── 02-avancement.md               <- OU on en est (tableaux de statut)
 ```
 
 ### 1.2 Nom des dossiers
 
-`AAAA-MM-slug` en **minuscules ASCII**, mots séparés par des tirets, sans accent.
+`AAAA-MM-NN-slug` en **minuscules ASCII**, mots séparés par des tirets, sans accent.
+`NN` est le **rang d'ouverture dans le mois**, sur deux chiffres, à partir de `01`.
 
 | Règle | Raison |
 |---|---|
 | Préfixe `AAAA-MM` (mois d'ouverture) | tri chronologique naturel dans l'explorateur, `ls` et GitHub ; évite deux slugs identiques à six mois d'écart |
+| **Rang `NN` dans le mois** | le mois seul ne suffit pas à ordonner : cinq évolutions ouvertes en octobre 2026 se rangeaient **par slug**, donc à l'envers de l'histoire du projet. `NN` fait coïncider ordre alphabétique et ordre chronologique |
 | Slug **thématique**, pas technique | on retrouve une évolution par son intention (« securite-seo-performance »), pas par le nom d'un fichier touché |
-| Jamais de numéro séquentiel seul | `evo-01` ne dit rien ; la date dans le nom suffit à ordonner |
+| Jamais de numéro **seul** | `evo-01` ne dit rien ; `NN` n'a de sens qu'adossé au mois, qui le borne et le rend non ambigu |
 | Nom **figé à l'ouverture** | le dossier devient une référence stable des `CHANGELOG.md` et des messages de commit |
+
+Renommer un dossier reste possible mais coûte cher : il faut reprendre l'index §3, les
+renvois croisés entre plans et le `CHANGELOG.md` — 32 références pour le passage à `NN`.
+L'outillage, lui, n'en dépend plus : `tools/check_docs.py` découvre les suivis via
+`docs/roadmap/*/02-avancement.md` et non par un nom écrit en dur.
 
 ### 1.3 Nom des fichiers
 
@@ -68,12 +75,12 @@ et dans l'ordre de lecture : `03-maquette.md`, `04-recette.md`, `05-post-mortem.
 ## 2. Ouvrir une nouvelle évolution
 
 ```bash
-# 1. Creer le dossier au nom de l'evolution (AAAA-MM-slug)
-mkdir docs/roadmap/2026-12-slug-de-levaluation
+# 1. Creer le dossier au nom de l'evolution (AAAA-MM-NN-slug, NN = rang d'ouverture dans le mois)
+mkdir docs/roadmap/2026-12-01-slug-de-levaluation
 
 # 2. Reprendre la structure du dossier existant comme gabarit de mise en forme
-cp docs/roadmap/2026-10-securite-seo-performance/01-plan.md \
-   docs/roadmap/2026-12-slug-de-levaluation/01-plan.md
+cp docs/roadmap/2026-10-02-securite-seo-performance/01-plan.md \
+   docs/roadmap/2026-12-01-slug-de-levaluation/01-plan.md
 # puis vider 01-plan.md de son contenu et relancer la methodologie du §0 du modele
 
 # 3. Declarer l'evolution dans l'index ci-dessous (statut "En cours")
@@ -88,14 +95,14 @@ Le contenu de `01-plan.md` du dossier existant sert de **gabarit de forme** : sa
 
 | Ouverture | Évolution | Périmètre | Statut | Documents |
 |---|---|---|---|---|
-| 2026-10 | [Audit de la partie web](2026-10-audit-web/01-plan.md) | `volumes/web/**`, `src/api/**`, export de données, Docker. Est à l'origine des 43 commits de `feat/optimisation-seo` | **Clôturée** — soldée par les PR #15→#18 et la branche `feat/optimisation-seo` (non fusionnée) | [plan](2026-10-audit-web/01-plan.md) · [avancement](2026-10-audit-web/02-avancement.md) |
-| 2026-10 | [Sécurité, SEO, performance, qualité](2026-10-securite-seo-performance/01-plan.md) | Audit transverse du dépôt : 63 findings sur 6 familles (`SEC` 17 · `PERF` 12 · `SEO` 13 · `QUAL` 14 · `A11Y` 4 · `RGPD` 3), 3,75 j estimés | **Clôturée** — 100% réalisé et fusionné sur `main` (PR #21) | [plan](2026-10-securite-seo-performance/01-plan.md) · [avancement](2026-10-securite-seo-performance/02-avancement.md) |
-| 2026-10 | [Refonte Responsive & Ergonomie Mobile](2026-10-responsive-mobile/01-plan.md) | Refonte affichage smartphone (GP8 Pro, iPhone...), suppression des débordements, saisie mobile, PageSpeed Mobile & Bureau 100/100 + 4/4 ARD, régénération auto SEO/ARD au démarrage. Zéro impact bureau. | **En cours** — 100% réalisé sur `feat/responsive-mobile` (12/12 findings + PageSpeed 100/100 Mobile & Bureau validés, PR #22) | [plan](2026-10-responsive-mobile/01-plan.md) · [avancement](2026-10-responsive-mobile/02-avancement.md) |
-| 2026-10 | [Titres « Solution Cémantix du <date> » & longue traîne datée](2026-10-seo-titres-archives/01-plan.md) | Libellés des pages d'archives `/puzzles/AAAA-MM-JJ/` (`<title>`, `<h1>`, Open Graph, JSON-LD, description), textes d'ancre de l'index `/puzzles/`, contrat ISO de `sitemap.xml`, découvrabilité agents IA (`llms.txt`, `llms.md`, `agent-skills.md`, `.well-known/`). 4 findings (`SEO-13` à `SEO-16`), aucun changement d'URL. | **En cours** — 4/4 réalisé sur `feat/seo-titre-archives-solution` (22 tests SEO/agents verts, `tools/check_seo.py` vert) | [plan](2026-10-seo-titres-archives/01-plan.md) · [avancement](2026-10-seo-titres-archives/02-avancement.md) |
+| 2026-10 | [Audit de la partie web](2026-10-01-audit-web/01-plan.md) | `volumes/web/**`, `src/api/**`, export de données, Docker. Est à l'origine des 43 commits de `feat/optimisation-seo` | **Clôturée** — soldée par les PR #15→#18 et la branche `feat/optimisation-seo` (non fusionnée) | [plan](2026-10-01-audit-web/01-plan.md) · [avancement](2026-10-01-audit-web/02-avancement.md) |
+| 2026-10 | [Sécurité, SEO, performance, qualité](2026-10-02-securite-seo-performance/01-plan.md) | Audit transverse du dépôt : 63 findings sur 6 familles (`SEC` 17 · `PERF` 12 · `SEO` 13 · `QUAL` 14 · `A11Y` 4 · `RGPD` 3), 3,75 j estimés | **Clôturée** — 100% réalisé et fusionné sur `main` (PR #21) | [plan](2026-10-02-securite-seo-performance/01-plan.md) · [avancement](2026-10-02-securite-seo-performance/02-avancement.md) |
+| 2026-10 | [Refonte Responsive & Ergonomie Mobile](2026-10-03-responsive-mobile/01-plan.md) | Refonte affichage smartphone (GP8 Pro, iPhone...), suppression des débordements, saisie mobile, PageSpeed Mobile & Bureau 100/100 + 4/4 ARD, régénération auto SEO/ARD au démarrage. Zéro impact bureau. | **En cours** — 100% réalisé sur `feat/responsive-mobile` (12/12 findings + PageSpeed 100/100 Mobile & Bureau validés, PR #22) | [plan](2026-10-03-responsive-mobile/01-plan.md) · [avancement](2026-10-03-responsive-mobile/02-avancement.md) |
+| 2026-10 | [Titres « Solution Cémantix du <date> » & longue traîne datée](2026-10-04-seo-titres-archives/01-plan.md) | Libellés des pages d'archives `/puzzles/AAAA-MM-JJ/` (`<title>`, `<h1>`, Open Graph, JSON-LD, description), textes d'ancre de l'index `/puzzles/`, contrat ISO de `sitemap.xml`, découvrabilité agents IA (`llms.txt`, `llms.md`, `agent-skills.md`, `.well-known/`). 4 findings (`SEO-13` à `SEO-16`), aucun changement d'URL. | **En cours** — 4/4 réalisé sur `feat/seo-titre-archives-solution` (22 tests SEO/agents verts, `tools/check_seo.py` vert) | [plan](2026-10-04-seo-titres-archives/01-plan.md) · [avancement](2026-10-04-seo-titres-archives/02-avancement.md) |
 
-| 2026-10 | [Percée sur la tendance Google : « mot du jour », « indice », « synonyme »](2026-10-seo-tendance-mot-du-jour/01-plan.md) | Pages hub générées `/mot-du-jour/` et `/methode/`, recentrage du hub `/puzzles/`, un `<h1>` descriptif par page applicative, FAQ et maillage interne alignés sur la tendance Google (10 requêtes liées, `mot du jour` dans 5 d'entre elles). Trouve `SEO-17` à `SEO-21`, aucune URL existante modifiée. | **En cours** — 5/5 réalisé sur `feat/seo-titre-archives-solution` (branche commune avec l'évolution « Titres d'archives », un seul PR à ouvrir pour les deux) : 46 tests SEO/agents verts, `tools/check_seo.py` et `tools/build_css_bundles.py --check` verts | [plan](2026-10-seo-tendance-mot-du-jour/01-plan.md) · [avancement](2026-10-seo-tendance-mot-du-jour/02-avancement.md) |
+| 2026-10 | [Percée sur la tendance Google : « mot du jour », « indice », « synonyme »](2026-10-05-seo-tendance-mot-du-jour/01-plan.md) | Pages hub générées `/mot-du-jour/` et `/methode/`, recentrage du hub `/puzzles/`, un `<h1>` descriptif par page applicative, FAQ et maillage interne alignés sur la tendance Google (10 requêtes liées, `mot du jour` dans 5 d'entre elles). Trouve `SEO-17` à `SEO-21`, aucune URL existante modifiée. | **En cours** — 5/5 réalisé sur `feat/seo-titre-archives-solution` (branche commune avec l'évolution « Titres d'archives », un seul PR à ouvrir pour les deux) : 46 tests SEO/agents verts, `tools/check_seo.py` et `tools/build_css_bundles.py --check` verts | [plan](2026-10-05-seo-tendance-mot-du-jour/01-plan.md) · [avancement](2026-10-05-seo-tendance-mot-du-jour/02-avancement.md) |
 
 Les deux évolutions se croisent sans s'opposer : la première a produit les correctifs web, la seconde
 a **re-vérifié dans le code** ce qu'elles annonçaient et en a repris l'évaluation. Là où elles
-divergent, c'est `2026-10-securite-seo-performance/02-avancement.md` qui fait foi, parce que chaque
+divergent, c'est `2026-10-02-securite-seo-performance/02-avancement.md` qui fait foi, parce que chaque
 statut y est appuyé par une preuve mesurée (`git ls-tree`, `grep` sur la branche, sortie de commande).

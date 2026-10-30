@@ -4,10 +4,24 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-30 · Roadmap : ordre chronologique des évolutions et contrôleur de documents durci
+
+### Modifié & Optimisé
+- **Dossiers d'évolution numérotés (`docs/roadmap/`)** : le préfixe `AAAA-MM` étant commun aux cinq évolutions ouvertes en octobre, l'ordre alphabétique (explorateur VS Code, GitHub, `ls`) les rangeait **par slug**, donc à l'envers de l'histoire du projet. Passage au motif `AAAA-MM-NN-slug`, `NN` étant le rang d'ouverture dans le mois : `2026-10-01-audit-web`, `2026-10-02-securite-seo-performance`, `2026-10-03-responsive-mobile`, `2026-10-04-seo-titres-archives`, `2026-10-05-seo-tendance-mot-du-jour`. Renommages purs (`git mv`, 10 fichiers, `+0/−0`), **aucune URL ni aucun contenu modifié**.
+- **Contrôleur `tools/check_docs.py` rendu indépendant du nom des dossiers** : `controle_compteurs()` codait en dur `docs/roadmap/2026-10-securite-seo-performance/02-avancement.md` et plantait donc d'un `FileNotFoundError` au premier renommage. Il parcourt désormais tous les `docs/roadmap/*/02-avancement.md` et saute ceux qui n'ont pas de tableau de bord. Deux effets de bord utiles : il **couvre maintenant les quatre** évolutions dotées d'un tableau de bord au lieu d'une seule (66, 12, 4 et 5 findings, tous justes), et son motif d'identifiant générique `[A-Z][A-Z0-9]{1,5}-NN[a-z]` reconnaît enfin `A11Y-*` et `RESP-01` à `RESP-12`, que la liste `SEC|PERF|SEO|QUAL|A11Y|RGPD` écrite en dur ratait.
+- **32 références reprises** sur les nouveaux noms : index §3 et exemples du `docs/roadmap/README.md` (18), renvois croisés entre plans et suivis (10), chemins cités dans le présent fichier (3), docstring de `tests/test_responsive.py` (1, cosmétique).
+- **Convention documentée dans `docs/roadmap/README.md`** : le §1.2, qui prescrivait `AAAA-MM-slug` et proscrivait le numéro séquentiel « parce que la date suffit à ordonner », est corrigé — la règle devient « jamais de numéro **seul** », et une ligne explique pourquoi le mois seul ne suffit pas dès la deuxième évolution du mois.
+
+### Vérifications
+- `python tools/check_docs.py` : `=== OK ===`, **0 lien relatif cassé**, 0 tableau mal formé, 4 tableaux de bord justes.
+- `grep -rE '2026-10-[a-z]'` sur les fichiers versionnés : plus aucune forme ancienne.
+
+---
+
 ## [Non publié] - 2026-10-30 · Percée SEO sur la tendance Google : « mot du jour », « indice », « synonyme »
 
 ### Ajouté
-- **Pages hub générées côté serveur (`SEO-17`, `SEO-18`, évolution `docs/roadmap/2026-10-seo-tendance-mot-du-jour/`)** — la tendance Google Cémantix place « mot du jour » dans 5 des 10 requêtes en hausse (+30 %), « indice » aux 1ʳᵉ et 2ᵉ places et « synonyme » en hausse ; aucune page du site ne les ciblait :
+- **Pages hub générées côté serveur (`SEO-17`, `SEO-18`, évolution `docs/roadmap/2026-10-05-seo-tendance-mot-du-jour/`)** — la tendance Google Cémantix place « mot du jour » dans 5 des 10 requêtes en hausse (+30 %), « indice » aux 1ʳᵉ et 2ᵉ places et « synonyme » en hausse ; aucune page du site ne les ciblait :
   - Nouvelle fonction `build_mot_du_jour_page()` → `volumes/web/mot-du-jour/index.html`, titrée **« Mot du jour Cémantix du lundi 26 octobre 2026 : indices et solution »** : résumé du jour, table des dix indices mesurés (degrés Celsius + pour mille), solution derrière un `<details>` (le mot secret n'apparaît qu'une fois dans le document), FAQ `FAQPage` de 4 questions et archives récentes. Publiée **même sur historique vide** (état d'attente qui maille vers les archives), `priority 0.95` / `changefreq daily` dans le sitemap.
   - Nouvelle fonction `build_methode_page()` → `volumes/web/methode/index.html`, **« Indice Cémantix : lire le thermomètre, les scores et les synonymes »** : guide de 1 000 mots (paliers du thermomètre, pour mille, synonymes / antonymes / champs lexicaux) avec `HowTo` de 5 étapes et `FAQPage` de 4 questions, chaque étape structurée étant aussi lisible en clair. `priority 0.9` / `changefreq monthly`.
   - Les deux pages sont rendues avec le gabarit `render_page()` des archives (**zéro JavaScript**, style injecté), écrites en atomique, **ignorées par git** comme `/puzzles/` et `sitemap.xml`, et recréées par `ensure_seo_published()` au démarrage des conteneurs.
@@ -34,7 +48,7 @@ Une tendance Google ne donne que des variations relatives, sans volume absolu ni
 ## [Non publié] - 2026-10-30 · Quick Win SEO : « Solution Cémantix du lundi 26 octobre 2026 »
 
 ### Ajouté
-- **Libellé d'archive orienté mot-clé (`SEO-13`, `SEO-14`, évolution `docs/roadmap/2026-10-seo-titres-archives/`)** :
+- **Libellé d'archive orienté mot-clé (`SEO-13`, `SEO-14`, évolution `docs/roadmap/2026-10-04-seo-titres-archives/`)** :
   - Nouvelle constante `ARCHIVE_TITLE_PREFIX` et nouvelle fonction `archive_title()` dans `src/services/seo.py` : chaque page `/puzzles/AAAA-MM-JJ/` est désormais titrée **« Solution Cémantix du lundi 26 octobre 2026 »** (date française longue, 42 caractères contre 85 auparavant) et non plus « Cémantix du … : indices, solution et trajectoire du solveur IA ».
   - Le même libellé porte le `<title>`, le `<h1>`, `og:title`, `twitter:title`, le `headline` JSON-LD et la `meta description`, qui **commence** par le mot-clé puis enchaîne sur le mot secret, les mots les plus proches, le nombre de coups, la méthode et le numéro de puzzle (≤ 175 caractères).
   - Index `/puzzles/` (`SEO-14`) : titre « Solution Cémantix : archives de tous les puzzles résolus par l'IA », `<h1>` aligné, `name` du `CollectionPage` JSON-LD et **textes d'ancre** reprenant le titre complet de chaque archive — plus de date nue dans le maillage interne. Pagination, URLs et `rel="prev"/"next"` inchangés (aucune redirection à prévoir).
@@ -60,7 +74,7 @@ Une tendance Google ne donne que des variations relatives, sans volume absolu ni
   - Nouvelles fonctions `ensure_seo_published()` et `publish_ard_manifests()` dans `src/services/seo.py`, invoquées automatiquement au démarrage de `cemantix_web` (`start_api_server()`) et en secours au démarrage de `cemantix_worker` (`run_daemon_loop()`), garantissant la recréation immédiate de `volumes/web/sitemap.xml`, `volumes/web/.well-known/{ai-catalog,ard,agent-card}.json` et `/puzzles/` après un `git pull`, une suppression accidentelle ou sur une base vierge.
   - Écriture atomique multi-conteneurs (`_write_file` via fichier temporaire aléatoire + `chmod 0644` + `replace`) éliminant tout risque de troncature ou d'erreur `EACCES` entre `cemantix_web` et `cemantix_worker`.
   - Exécution garantie de la publication SEO dans `export_web_data()` (`finally`) même en cas d'erreur de permission sur `cemantix_data/data.json`, couverte par `tests/test_seo_startup.py`.
-- **Feuille de route & Suite de tests Responsive Mobile (`docs/roadmap/2026-10-responsive-mobile/`, `tests/test_responsive.py`)** :
+- **Feuille de route & Suite de tests Responsive Mobile (`docs/roadmap/2026-10-03-responsive-mobile/`, `tests/test_responsive.py`)** :
   - 12 chantiers (`RESP-01` à `RESP-12`) qualifiés sur GP8 Pro (`412×915`), Gboard ouvert (`412×420`), iPhone (`393×852`) et Compact (`360×740`) avec sanctuarisation stricte de l'affichage Bureau (`> 768px`).
 
 ### Corrigé & Optimisé

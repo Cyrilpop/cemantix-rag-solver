@@ -170,7 +170,7 @@ class TestSanctuarisationDesktop(unittest.TestCase):
 
 
 class TestInvariantsResponsiveMobile(unittest.TestCase):
-    """Vérifie les 12 constats de la feuille de route 2026-10-responsive-mobile."""
+    """Vérifie les 12 constats de la feuille de route 2026-10-03-responsive-mobile."""
 
     def _mobile_css(self, filename: str) -> str:
         blocks = _extract_media_blocks((CSS_DIR / filename).read_text(encoding="utf-8"))
