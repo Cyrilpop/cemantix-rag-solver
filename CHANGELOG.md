@@ -4,6 +4,20 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-30 · Roadmap : ordre chronologique des évolutions et contrôleur de documents durci
+
+### Modifié & Optimisé
+- **Dossiers d'évolution numérotés (`docs/roadmap/`)** : le préfixe `AAAA-MM` étant commun aux cinq évolutions ouvertes en octobre, l'ordre alphabétique (explorateur VS Code, GitHub, `ls`) les rangeait **par slug**, donc à l'envers de l'histoire du projet. Passage au motif `AAAA-MM-NN-slug`, `NN` étant le rang d'ouverture dans le mois : `2026-10-01-audit-web`, `2026-10-02-securite-seo-performance`, `2026-10-03-responsive-mobile`, `2026-10-04-seo-titres-archives`, `2026-10-05-seo-tendance-mot-du-jour`. Renommages purs (`git mv`, 10 fichiers, `+0/−0`), **aucune URL ni aucun contenu modifié**.
+- **Contrôleur `tools/check_docs.py` rendu indépendant du nom des dossiers** : `controle_compteurs()` codait en dur `docs/roadmap/2026-10-securite-seo-performance/02-avancement.md` et plantait donc d'un `FileNotFoundError` au premier renommage. Il parcourt désormais tous les `docs/roadmap/*/02-avancement.md` et saute ceux qui n'ont pas de tableau de bord. Deux effets de bord utiles : il **couvre maintenant les quatre** évolutions dotées d'un tableau de bord au lieu d'une seule (66, 12, 4 et 5 findings, tous justes), et son motif d'identifiant générique `[A-Z][A-Z0-9]{1,5}-NN[a-z]` reconnaît enfin `A11Y-*` et `RESP-01` à `RESP-12`, que la liste `SEC|PERF|SEO|QUAL|A11Y|RGPD` écrite en dur ratait.
+- **32 références reprises** sur les nouveaux noms : index §3 et exemples du `docs/roadmap/README.md` (18), renvois croisés entre plans et suivis (10), chemins cités dans le présent fichier (3), docstring de `tests/test_responsive.py` (1, cosmétique).
+- **Convention documentée dans `docs/roadmap/README.md`** : le §1.2, qui prescrivait `AAAA-MM-slug` et proscrivait le numéro séquentiel « parce que la date suffit à ordonner », est corrigé — la règle devient « jamais de numéro **seul** », et une ligne explique pourquoi le mois seul ne suffit pas dès la deuxième évolution du mois.
+
+### Vérifications
+- `python tools/check_docs.py` : `=== OK ===`, **0 lien relatif cassé**, 0 tableau mal formé, 4 tableaux de bord justes.
+- `grep -rE '2026-10-[a-z]'` sur les fichiers versionnés : plus aucune forme ancienne.
+
+---
+
 ## [Non publié] - 2026-10-30 · Percée SEO sur la tendance Google : « mot du jour », « indice », « synonyme »
 
 ### Ajouté
