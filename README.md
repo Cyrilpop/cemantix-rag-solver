@@ -364,6 +364,15 @@ volumes/web/
 - **Ergonomie Responsive Mobile Native** : Refonte smartphone complète (`≤ 768px` / `≤ 480px`, GP8 Pro, iPhone, 360px) sans aucun impact sur l'affichage Bureau — verrouillage `overflow-x: clip`, saisie empilée `16px` sans auto-zoom, adaptation dynamique à l'ouverture du clavier virtuel (`visualViewport`), navigation défilante auto-centrée, cibles tactiles ≥ `44×44px` et support `safe-area-inset-bottom`.
 - **Performance Mobile PageSpeed (Zéro requête CSS bloquante & Zéro reflow forcé)** : Injection automatique du CSS critique minifié dans `<head>` (`tools/build_css_bundles.py`), chargement différé non bloquant de `modal.css` compatible CSP (`script-src 'self'`), lecture géométrique différée via `requestAnimationFrame` dans `js/theme.js` et manifestes de découverte agentique conformes ARD (`/.well-known/ard.json` et `/.well-known/ai-catalog.json`).
 
+#### 🤖 Défier le Bot IA (`/defi/`) :
+Le visiteur propose **un mot secret** ; le solveur RAG du site doit le retrouver, coup par coup, **en direct**. L'architecture tri-partite reste stricte :
+
+1. **`cemantix_web` enfile, ne calcule jamais** — `POST /api/challenge` valide le mot (regex + lexique du site, message unique « Mot non reconnu »), vérifie la whitelist d'exemption, l'anti-rafale mémoire, le **quota de 10 défis/heure persisté en base** (insensible aux redémarrages) et la file bornée, puis écrit une ligne dans `bot_challenges`. Le module de route n'importe ni solveur ni démon (`grep -n "solvers\|daemon" src/api/routes/challenge.py` est vide).
+2. **`cemantix_worker` résout** — dans sa boucle de veille, toutes les 3 s : recyclage des orphelins, claim atomique, résolution par le moteur existant (`Solver` + `MockClient(secret=…)` de l'option `--secret` du CLI) **en 100 % RAG pur, zéro LLM**, trajectoire publiée toutes les 2 s. La résolution nocturne de minuit garde la priorité ; `CHALLENGE_ENABLED=0` coupe tout sans redéploiement.
+3. **Le front affiche** — `js/defi.js` ouvre un `EventSource` sur `/api/challenge/<id>/stream` (repli polling automatique si le flux tombe) et rend chaque coup au gabarit exact de la trajectoire du mot du jour ; le bot peut **perdre** (statut `lost`), c'est une issue affichée.
+
+Sécurité : IP hachée (HMAC-SHA256 salé, /24), purge automatique à 30 jours, identifiants de défis aléatoires 128 bits, `Cache-Control: no-store`, mot jamais révélé avant le statut terminal (et seulement si le bot a gagné), anti-XSS en trois couches, plafond de 16 flux SSE simultanés. Les IP exemptées se gèrent dans la console d'exploitation (onglet Actions).
+
 #### Configuration Caddy (Production & Anti-Cache Automatique) :
 Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volumes/web` et appliquez la politique de cache HTTP optimisée.
 
