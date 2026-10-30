@@ -48,13 +48,15 @@
     {
       "id": "dated-archive",
       "name": "Archive d'une date précise",
-      "description": "Interroge la page statique /puzzles/AAAA-MM-JJ/ d'un puzzle résolu. Un statut 404 signifie que la date n'a pas encore été résolue.",
+      "description": "Interroge la page statique /puzzles/AAAA-MM-JJ/ d'un puzzle résolu. Chaque page est titrée « Solution Cémantix du lundi 26 octobre 2026 » (date en français long), l'URL restant en ISO AAAA-MM-JJ. Un statut 404 signifie que la date n'a pas encore été résolue.",
       "tags": [
         "cemantix",
         "archive",
-        "date"
+        "date",
+        "solution"
       ],
       "examples": [
+        "Quelle est la solution du Cémantix du 26 octobre 2026 ?",
         "Donne les indices du Cémantix du 26 octobre 2026",
         "Quand le puzzle du 23 octobre 2026 a-t-il été résolu ?"
       ],

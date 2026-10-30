@@ -6,8 +6,9 @@ de recherche**, sans dépendre de l'exécution JavaScript côté navigateur.
 
 Trois livrables produits à chaque export (`--export-web`, démon de minuit) :
 - `volumes/web/puzzles/index.html`           : index paginé de toutes les archives ;
-- `volumes/web/puzzles/AAAA-MM-JJ/index.html`: page dédiée par puzzle (longue traîne
-  « cemantix du 26 octobre 2026 »), solution placée derrière un `<details>` ;
+- `volumes/web/puzzles/AAAA-MM-JJ/index.html`: page dédiée par puzzle, titrée
+  « Solution Cémantix du lundi 26 octobre 2026 » (longue traîne « solution cemantix du
+  <date> »), solution placée derrière un `<details>` ;
 - `volumes/web/sitemap.xml`                  : `lastmod` réel + URLs des archives.
 
 Les pages sont auto-suffisantes : les tokens de style sont extraits de
@@ -34,6 +35,11 @@ ARCHIVES_DIRNAME = "puzzles"
 ARCHIVES_PAGE_SIZE = 60
 ARCHIVES_MAX_PAGES = 500
 SITEMAP_MAX_URLS = 45000
+# Mot-clé visé par les pages d'archive : « Solution Cémantix du lundi 26 octobre 2026 ».
+# La date y figure en français long (jour de semaine compris) : c'est la forme tapée
+# par un chercheur, alors que l'URL et le <lastmod> du sitemap restent au format ISO
+# `AAAA-MM-JJ` exigé par le protocole sitemaps.org.
+ARCHIVE_TITLE_PREFIX = "Solution Cémantix du"
 
 _MONTHS_FR = {
     1: "janvier", 2: "février", 3: "mars", 4: "avril", 5: "mai", 6: "juin",
@@ -82,6 +88,16 @@ def format_date_fr(value) -> str:
         f"{_WEEKDAYS_FR[parsed.weekday()]} {parsed.day} "
         f"{_MONTHS_FR[parsed.month]} {parsed.year}"
     )
+
+
+def archive_title(value) -> str:
+    """Titre SEO d'une archive : « Solution Cémantix du lundi 26 octobre 2026 ».
+
+    Le même libellé sert de `<title>`, de `<h1>`, de texte d'ancre dans l'index des
+    archives et de `headline` JSON-LD : un seul motif, répété, qui cible la requête
+    « solution cemantix du <date> » sans dupliquer de contenu.
+    """
+    return f"{ARCHIVE_TITLE_PREFIX} {format_date_fr(value)}"
 
 
 def format_duration_fr(seconds) -> str:
@@ -377,18 +393,17 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
     source_label = "Hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
 
     puzzle_label = f"Puzzle #{puzzle}" if puzzle else "Puzzle du jour"
-    title = f"Cémantix du {date_fr} : indices, solution et trajectoire du solveur IA"
+    title = archive_title(date_str)
     description = (
-        f"Indices du Cémantix du {date_fr} ({puzzle_label}) : les {min(len(guesses), 10)} mots "
-        f"les plus proches avec leur score sémantique, résolu en {tries or '--'} coups "
-        f"par le solveur {source_label}."
+        f"{title} : le mot secret et les {min(len(guesses), 10)} mots les plus proches, "
+        f"trouvés en {tries or '--'} coups par le solveur {source_label} ({puzzle_label})."
     )
     canonical = archive_url(date_str)
 
     breadcrumbs = (
         f'<a href="{escape(_rel(""), quote=True)}">Accueil</a> › '
         f'<a href="{escape(_rel("puzzles/"), quote=True)}">Archives</a> › '
-        f"<span>{escape(date_str)}</span>"
+        f"<span>{escape(date_fr)}</span>"
     )
 
     json_ld = _json_ld_block({
@@ -430,7 +445,7 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
                 "itemListElement": [
                     {"@type": "ListItem", "position": 1, "name": "Accueil", "item": f"{SITE_ORIGIN}/"},
                     {"@type": "ListItem", "position": 2, "name": "Archives", "item": f"{SITE_ORIGIN}/puzzles/"},
-                    {"@type": "ListItem", "position": 3, "name": date_str},
+                    {"@type": "ListItem", "position": 3, "name": date_fr},
                 ],
             },
         ],
@@ -500,7 +515,7 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
 """
 
 
-    body = f"""      <h1>Cémantix du {escape(date_fr)}</h1>
+    body = f"""      <h1>{escape(title)}</h1>
       <p>{win_badge}</p>
       <div class="card">
         <ul class="meta-list">
@@ -545,12 +560,13 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
     newest_fr = format_date_fr(newest.get("date")) if newest else ""
 
     if page == 1:
-        title = "Archives des puzzles Cémantix : tous les mots du jour résolus par l'IA"
+        title = "Solution Cémantix : archives de tous les puzzles résolus par l'IA"
     else:
-        title = f"Archives des puzzles Cémantix — page {page}"
+        title = f"Solution Cémantix — archives des puzzles, page {page}"
     description = (
-        f"Archive complète des puzzles Cémantix résolus ({len(entries)} jours indexés). "
-        f"Dernier puzzle disponible : {newest_fr}. Indices, scores et solution par date."
+        f"Toutes les solutions Cémantix par date ({len(entries)} puzzles résolus) : "
+        f"indices thermiques, coups et mot secret dépliable. "
+        f"Dernière archive : {newest_fr}."
     )
     canonical = (
         f"{SITE_ORIGIN}/puzzles/" if page == 1 else f"{SITE_ORIGIN}/puzzles/page/{page}/"
@@ -561,7 +577,7 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "@id": f"{canonical}#collection",
-        "name": "Archives des puzzles Cémantix",
+        "name": "Solution Cémantix — archives des puzzles résolus",
         "description": description,
         "inLanguage": "fr-FR",
         "isPartOf": {"@type": "WebSite", "name": "Cémantix Solver", "url": f"{SITE_ORIGIN}/"},
@@ -575,7 +591,7 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
         suffix = f"{tries} coups" if tries else "non résolu"
         items.append(
             f'          <li><a href="{escape(_rel_index(f"puzzles/{date_str}/"), quote=True)}">'
-            f"<span>{escape(format_date_fr(date_str))}</span>"
+            f"<span>{escape(archive_title(date_str))}</span>"
             f"<span>{escape(suffix)}</span></a></li>"
         )
     listing = "\n".join(items) or (
@@ -596,10 +612,11 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
             links.append(f'<a href="{escape(href, quote=True)}"{rel}>{candidate}</a>')
     pager = "\n        ".join(links)
 
-    body = f"""      <h1>Archives des puzzles Cémantix</h1>
+    body = f"""      <h1>Solution Cémantix : archives des puzzles résolus</h1>
       <p>Chaque jour à minuit (heure de Paris), le solveur résout le mot secret de
-      Cémantix et publie ici la page correspondante : numéro de puzzle, nombre de coups,
-      durée de calcul, top des mots les plus proches et solution dépliable.</p>
+      Cémantix et publie une page « {escape(ARCHIVE_TITLE_PREFIX)} … » datée : numéro de
+      puzzle, nombre de coups, durée de calcul, top des mots les plus proches et solution
+      dépliable.</p>
       <div class="card">
         <h2>{len(entries)} puzzles indexés — page {page} sur {total_pages}</h2>
         <ul class="archive-list">
@@ -844,13 +861,19 @@ def _agent_dynamic_block(entries: list) -> str:
             "- **Dernière date résolue** : inconnue. N'invente pas de date.\n"
         )
     latest, oldest = resolus[0], resolus[-1]
-    date_fr = escape(format_date_fr(latest.get("date")))
+    latest_fr = escape(archive_title(latest.get("date")))
     return (
-        f"- **Archive la plus récente** : [{date_fr}]({archive_url(latest.get('date'))})\n"
-        f"- **Dernière date résolue** : `{latest.get('date')}` — "
-        f"l'historique couvre du `{oldest.get('date')}` au `{latest.get('date')}`, "
+        f"- **Archive la plus récente** : [{latest_fr}]({archive_url(latest.get('date'))})\n"
+        f"- **Dernière date résolue** : `{latest.get('date')}` "
+        f"({escape(format_date_fr(latest.get('date')))}) — "
+        f"l'historique couvre du `{oldest.get('date')}` "
+        f"({escape(format_date_fr(oldest.get('date')))}) au `{latest.get('date')}`, "
         f"soit {len(resolus)} puzzle(s) résolu(s).\n"
-        f"- **Toute date déjà résolue** : `{SITE_ORIGIN}/puzzles/AAAA-MM-JJ/`.\n"
+        f"- **Toute date déjà résolue** : `{SITE_ORIGIN}/puzzles/AAAA-MM-JJ/`. "
+        f"Chaque page d'archive est titrée « {ARCHIVE_TITLE_PREFIX} <date en français long> » "
+        f"(exemple réel : « {latest_fr} ») : reprends ce libellé quand tu cites la source. "
+        f"L'URL et le `<lastmod>` du sitemap restent au format ISO `AAAA-MM-JJ` imposé par "
+        f"le protocole sitemaps.org.\n"
     )
 
 
@@ -941,6 +964,7 @@ def build_ard_manifest(origin: str = SITE_ORIGIN) -> str:
                 "representativeQueries": [
                     "Comment interroger le solveur Cémantix ?",
                     "Solution et indices du Cémantix du 26 octobre 2026",
+                    "Quelle est la solution du Cémantix du lundi 26 octobre 2026 ?",
                 ],
             },
         ],
@@ -998,10 +1022,13 @@ def build_agent_card(origin: str = SITE_ORIGIN) -> str:
                 "name": "Archive d'une date précise",
                 "description": (
                     "Interroge la page statique /puzzles/AAAA-MM-JJ/ d'un puzzle résolu. "
+                    "Chaque page est titrée « Solution Cémantix du lundi 26 octobre 2026 » "
+                    "(date en français long), l'URL restant en ISO AAAA-MM-JJ. "
                     "Un statut 404 signifie que la date n'a pas encore été résolue."
                 ),
-                "tags": ["cemantix", "archive", "date"],
+                "tags": ["cemantix", "archive", "date", "solution"],
                 "examples": [
+                    "Quelle est la solution du Cémantix du 26 octobre 2026 ?",
                     "Donne les indices du Cémantix du 26 octobre 2026",
                     "Quand le puzzle du 23 octobre 2026 a-t-il été résolu ?",
                 ],

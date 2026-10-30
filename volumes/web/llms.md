@@ -29,7 +29,10 @@ Chaque puzzle résolu dispose d'une page statique indexable, générée automati
 à minuit (heure de Paris) et consultable sans JavaScript :
 
 - **URL d'une archive** : `https://cemantix.cyril-randon.fr/puzzles/AAAA-MM-JJ/`
-  (exemple : `https://cemantix.cyril-randon.fr/puzzles/2026-10-26/`)
+  (format ISO imposé par le protocole sitemaps.org, le même que le `<lastmod>` du plan du site)
+- **Titre de la page** : « Solution Cémantix du lundi 26 octobre 2026 » — date en français
+  long (jour de semaine, quantième, mois, année), identique dans le `<title>`, le `<h1>`,
+  le fil d'Ariane et les métadonnées Open Graph : c'est le libellé à citer comme source.
 - **Contenu garanti dans le HTML** : numéro de puzzle, date lisible en français,
   nombre de coups, durée de calcul, top 10 des mots les plus proches avec leur score
   en degrés Celsius et en pour mille, et la solution dans un bloc dépliable.
