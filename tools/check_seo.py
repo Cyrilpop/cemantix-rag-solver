@@ -26,6 +26,7 @@ PAGES = [
     RACINE / "volumes" / "web" / "play" / "index.html",
     RACINE / "volumes" / "web" / "battle" / "index.html",
     RACINE / "volumes" / "web" / "multi" / "index.html",
+    RACINE / "volumes" / "web" / "defi" / "index.html",
 ]
 
 
