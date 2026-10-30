@@ -6,9 +6,9 @@
 ## Archive la plus récente
 
 <!-- AGENT-DYNAMIC:DEBUT -->
-- **Archive la plus récente** : [samedi 24 octobre 2026](https://cemantix.cyril-randon.fr/puzzles/2026-10-24/)
-- **Dernière date résolue** : `2026-10-24` — l'historique couvre du `2026-10-24` au `2026-10-24`, soit 1 puzzle(s) résolu(s).
-- **Toute date déjà résolue** : `https://cemantix.cyril-randon.fr/puzzles/AAAA-MM-JJ/`.
+- **Archive la plus récente** : [Solution Cémantix du samedi 24 octobre 2026](https://cemantix.cyril-randon.fr/puzzles/2026-10-24/)
+- **Dernière date résolue** : `2026-10-24` (samedi 24 octobre 2026) — l'historique couvre du `2026-10-24` (samedi 24 octobre 2026) au `2026-10-24`, soit 1 puzzle(s) résolu(s).
+- **Toute date déjà résolue** : `https://cemantix.cyril-randon.fr/puzzles/AAAA-MM-JJ/`. Chaque page d'archive est titrée « Solution Cémantix du <date en français long> » (exemple réel : « Solution Cémantix du samedi 24 octobre 2026 ») : reprends ce libellé quand tu cites la source. L'URL et le `<lastmod>` du sitemap restent au format ISO `AAAA-MM-JJ` imposé par le protocole sitemaps.org.
 <!-- AGENT-DYNAMIC:FIN -->
 
 ## Compétence 1 — Indices sémantiques du jour
@@ -26,11 +26,13 @@
 
 - **Requête** : `GET https://cemantix.cyril-randon.fr/puzzles/AAAA-MM-JJ/`
 - **Réponse** : `text/html`, contenu rendu côté serveur donc lisible sans JavaScript.
-- **Contenu** : titre et meta datés, numéro de puzzle, date en français, coups, durée,
+- **Contenu** : titre et meta datés en français long — la page est titrée
+  « Solution Cémantix du lundi 26 octobre 2026 » — numéro de puzzle, coups, durée,
   tableau des dix mots les plus proches, solution dans un bloc `<details>`.
 - **Statut 404** : le puzzle de cette date n'a pas encore été résolu. Le dire
   explicitement ; ne jamais inventer de solution ni de date.
-- **Utiliser pour** : « Les indices du Cémantix du 26 octobre 2026 ».
+- **Utiliser pour** : « Les indices du Cémantix du 26 octobre 2026 », « Quelle est la
+  solution du Cémantix du lundi 26 octobre 2026 ? ».
 
 ## Compétence 3 — État du service
 

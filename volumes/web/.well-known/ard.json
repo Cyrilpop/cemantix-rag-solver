@@ -26,7 +26,8 @@
       "description": "Protocole d'usage pour un agent autonome : les trois requêtes autorisées (indices du jour, archive datée, état du service), la conduite à tenir en cas de 404 et l'interdiction de révéler ou de reconstituer le mot secret.",
       "representativeQueries": [
         "Comment interroger le solveur Cémantix ?",
-        "Solution et indices du Cémantix du 26 octobre 2026"
+        "Solution et indices du Cémantix du 26 octobre 2026",
+        "Quelle est la solution du Cémantix du lundi 26 octobre 2026 ?"
       ]
     }
   ]

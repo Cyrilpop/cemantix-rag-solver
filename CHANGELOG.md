@@ -4,6 +4,55 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-30 · Percée SEO sur la tendance Google : « mot du jour », « indice », « synonyme »
+
+### Ajouté
+- **Pages hub générées côté serveur (`SEO-17`, `SEO-18`, évolution `docs/roadmap/2026-10-seo-tendance-mot-du-jour/`)** — la tendance Google Cémantix place « mot du jour » dans 5 des 10 requêtes en hausse (+30 %), « indice » aux 1ʳᵉ et 2ᵉ places et « synonyme » en hausse ; aucune page du site ne les ciblait :
+  - Nouvelle fonction `build_mot_du_jour_page()` → `volumes/web/mot-du-jour/index.html`, titrée **« Mot du jour Cémantix du lundi 26 octobre 2026 : indices et solution »** : résumé du jour, table des dix indices mesurés (degrés Celsius + pour mille), solution derrière un `<details>` (le mot secret n'apparaît qu'une fois dans le document), FAQ `FAQPage` de 4 questions et archives récentes. Publiée **même sur historique vide** (état d'attente qui maille vers les archives), `priority 0.95` / `changefreq daily` dans le sitemap.
+  - Nouvelle fonction `build_methode_page()` → `volumes/web/methode/index.html`, **« Indice Cémantix : lire le thermomètre, les scores et les synonymes »** : guide de 1 000 mots (paliers du thermomètre, pour mille, synonymes / antonymes / champs lexicaux) avec `HowTo` de 5 étapes et `FAQPage` de 4 questions, chaque étape structurée étant aussi lisible en clair. `priority 0.9` / `changefreq monthly`.
+  - Les deux pages sont rendues avec le gabarit `render_page()` des archives (**zéro JavaScript**, style injecté), écrites en atomique, **ignorées par git** comme `/puzzles/` et `sitemap.xml`, et recréées par `ensure_seo_published()` au démarrage des conteneurs.
+- **Suite de tests `tests/test_seo_hubs.py` (22 tests)** : contrat de titre et de `<h1>` des hubs, table des indices lisible sans JavaScript, absence du leurre `••••••••`, longueur et occurrences du guide, cohérence **accordéon ↔ `FAQPage`/`HowTo` JSON-LD mot pour mot**, unicité d'un `<h1>` par page applicative, et **maillage croisé** de chaque page vers les hubs.
+
+### Modifié & Optimisé
+- **Hub `/puzzles/` recentré sur le cluster dominant (`SEO-19`)** : titre « Cémantix du jour : mot du jour, indices et solutions par date », `<h1>` « Archives Cémantix du jour : le mot du jour, ses indices et sa solution », et nouvelles ancres internes via `archive_anchor()` — « Indices et solution du Cémantix du lundi 26 octobre 2026 ». Le titre « Solution Cémantix du <date> » (`SEO-13`) reste la spécialité des pages datées, le cluster « solution » n'étant que dernier de la tendance (+8 %).
+- **Un `<h1>` descriptif par page (`SEO-20`)** : la marque « Cémantix Solver », répétée à l'identique dans le `<h1>` des quatre vues, devient un `<span class="brand-title">` (rendu identique via le sélecteur `.brand-text .brand-title`) ; chaque page reçoit un `<h1 class="page-heading">` unique — accueil « Cémantix du jour : indices, mot du jour et solution », `/play/` « Jouer à Cémantix en ligne : mode illimité et défi du jour », `/battle/` « Cémantix Battle : jouez contre l'IA en duel tour par tour », `/multi/` « Cémantix multijoueur : duel 1v1 entre amis au tour par tour » — suivi d'une `p.page-intro` qui maille vers les hubs.
+- **FAQ et libellés d'accueil alignés sur la tendance (`SEO-21`)** : `<title>`, Open Graph et Twitter recentrés sur « Mot du Jour », trois questions ajoutées à la FAQ (5 → **8 questions**, texte identique en accordéon et en JSON-LD) sur le mot du jour, la lecture des indices et les synonymes.
+- **Maillage interne croisé** : archives → hubs, hubs → archives et jeu, accueil → hubs via le pré-rendu quotidien (`resume-title`, `resume-link`) ; `llms.txt` déclare les deux nouvelles pages aux agents IA et oriente les questions de méthode vers `/methode/`.
+- **CSS et bundles régénérés** : règles `.brand-text .brand-title`, `.page-heading` et `.page-intro` dans `volumes/web/css/layout.css` (variante `clamp()` sous 768 px), bundles `css/dist/*.css` et `<style id="critical-css">` des quatre pages reconstruits par `tools/build_css_bundles.py`.
+- **Audit élargi (`tools/check_seo.py`)** : le contrôle audite désormais les gabarits hub **rendus en mémoire** (titre, description, canonical, Open Graph, JSON-LD, `<h1>`, absence du leurre) — ces pages n'étant jamais versionnées, seul un rendu protège la CI ; l'audit s'annonce et s'efface proprement (`[i] Pages générées non auditées`) quand les dépendances ne sont pas installées.
+
+### Vérifications
+- `tests/test_seo_archives.py` (17) + `tests/test_seo_hubs.py` (22) + `tests/test_docs_agent.py` (7) : **46 tests verts**.
+- `python tools/check_seo.py` : `[OK]` sur 4 pages principales + `[OK]` sur les pages hub + `[OK]` audit agentique ; `python tools/check_docs.py` : `=== OK ===` ; `python tools/build_css_bundles.py --check` : 6 bundles et 4 CSS critiques à jour.
+- Un `<h1>` par page et quatre `<h1>` uniques sur les pages applicatives ; `/mot-du-jour/` et `/methode/` présentes dans `sitemap.xml` et dans `llms.txt`.
+
+### Limite
+Une tendance Google ne donne que des variations relatives, sans volume absolu ni difficulté SERP. Le pari éditorial — viser les **formes combinées** (`mot du jour cemantix`, `mot cemantix du jour`) et le contenu **informationnel** (`indice cemantix`, `synonyme`) plutôt que `mot du jour` sec — se valide par la Search Console, 4 à 8 semaines après mise en ligne.
+
+---
+
+## [Non publié] - 2026-10-30 · Quick Win SEO : « Solution Cémantix du lundi 26 octobre 2026 »
+
+### Ajouté
+- **Libellé d'archive orienté mot-clé (`SEO-13`, `SEO-14`, évolution `docs/roadmap/2026-10-seo-titres-archives/`)** :
+  - Nouvelle constante `ARCHIVE_TITLE_PREFIX` et nouvelle fonction `archive_title()` dans `src/services/seo.py` : chaque page `/puzzles/AAAA-MM-JJ/` est désormais titrée **« Solution Cémantix du lundi 26 octobre 2026 »** (date française longue, 42 caractères contre 85 auparavant) et non plus « Cémantix du … : indices, solution et trajectoire du solveur IA ».
+  - Le même libellé porte le `<title>`, le `<h1>`, `og:title`, `twitter:title`, le `headline` JSON-LD et la `meta description`, qui **commence** par le mot-clé puis enchaîne sur le mot secret, les mots les plus proches, le nombre de coups, la méthode et le numéro de puzzle (≤ 175 caractères).
+  - Index `/puzzles/` (`SEO-14`) : titre « Solution Cémantix : archives de tous les puzzles résolus par l'IA », `<h1>` aligné, `name` du `CollectionPage` JSON-LD et **textes d'ancre** reprenant le titre complet de chaque archive — plus de date nue dans le maillage interne. Pagination, URLs et `rel="prev"/"next"` inchangés (aucune redirection à prévoir).
+- **Suite de tests `tests/test_seo_archives.py` (15 tests)** : contrat du titre (date française, absence de date ISO, longueur SERP), propagation `<title>`/`<h1>`/Open Graph/JSON-LD/fil d'Ariane, `noindex` conservé sur les archives non résolues, ancres de l'index, et **contrat ISO du sitemap**.
+
+### Modifié & Optimisé
+- **Fil d'Ariane des archives en français** : le dernier maillon, visible et dans le `BreadcrumbList` JSON-LD, affiche « lundi 26 octobre 2026 » au lieu de `2026-10-26` ; `datePublished` et l'URL restent en ISO, seuls formats valides.
+- **Contrat `sitemap.xml` verrouillé (`SEO-15`)** : le générateur reste volontairement inchangé — `<loc>` en `/puzzles/AAAA-MM-JJ/` et `<lastmod>` W3C/ISO, seuls formats acceptés par le protocole sitemaps.org. La date en français long vit dans les libellés de la page et de l'index ; un test échoue dès qu'une chaîne française (« octobre », « Solution Cémantix ») apparaît dans le XML.
+- **Découvrabilité pour agents IA (`SEO-16`)** : le bloc `AGENT-DYNAMIC` de `llms.txt` et `agent-skills.md` publie l'archive la plus récente sous son titre complet, la date ISO entre contre-gouttières et le motif « Solution Cémantix du <date en français long> » à citer ; la compétence `dated-archive` de `.well-known/agent-card.json` décrit ce motif (tag `solution`, exemple « Quelle est la solution du Cémantix du 26 octobre 2026 ? ») ; le catalogue ARD gagne la requête représentative « Quelle est la solution du Cémantix du lundi 26 octobre 2026 ? » ; `llms.md` documente le contrat titre français / URL ISO et se débarrasse d'un exemple d'URL daté figé.
+- **Manifestes versionnés régénérés** : `volumes/web/.well-known/{ai-catalog,ard,agent-card}.json`, `llms.txt`, `llms.md` et `agent-skills.md` régénérés par `publish_ard_manifests()` et `refresh_agent_docs()`, et vérifiés identiques à leur générateur.
+
+### Vérifications
+- `tests/test_seo_archives.py` : **15 tests verts** ; suite conjointe avec `tests/test_docs_agent.py` : **22 tests verts**.
+- `python tools/check_seo.py` : `[OK] Audit SEO reussi sur 4 pages principales` + `[OK] Audit agentique reussi` ; `python tools/check_docs.py` : `=== OK ===`.
+- `grep -c "octobre" volumes/web/sitemap.xml` → `0` ; `<loc>` d'archives toujours en `/puzzles/AAAA-MM-JJ/`.
+
+---
+
 ## [Non publié] - 2026-10-29 · Refonte Responsive Mobile, PageSpeed 100/100 & Résilience SEO/ARD
 
 ### Ajouté
