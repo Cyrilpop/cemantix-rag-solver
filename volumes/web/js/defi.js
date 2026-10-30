@@ -160,8 +160,9 @@ function openStream(id) {
     startPolling(id);
     return;
   }
-  stream = new EventSource(`${API}/${id}/stream`);
-  stream.onmessage = (evt) => {
+  const source = new EventSource(`${API}/${id}/stream`);
+  stream = source;
+  source.onmessage = (evt) => {
     let payload;
     try {
       payload = JSON.parse(evt.data);
@@ -172,32 +173,52 @@ function openStream(id) {
       mergeSteps([payload.step]);
       setStatus(`Le bot joue… ${steps.length} coup(s).`);
     } else if (payload.event === "done") {
+      stream = null;
+      source.close();
       showResult(payload);
+    } else if (payload.event === "status" || payload.event === "ping") {
+      // Battement du serveur : le flux est vivant. Rien à dessiner, mais c'est
+      // lui qui empêche un proxy intermédiaire de fermer une attente silencieuse.
+      if (!steps.length) {
+        setStatus(payload.status === "queued"
+          ? "Défi reçu — le bot va s'en saisir."
+          : `Le bot cherche… ${payload.tries_count || 0} coup(s) joué(s).`);
+      }
     } else if (payload.event === "gone" || payload.event === "timeout") {
-      closeStream();
+      stream = null;
+      source.close();
       startPolling(id);
     }
   };
-  stream.onerror = () => {
-    // Repli polling (DEFI-15) : l'EventSource est fermé, on relit l'état borné.
-    closeStream();
+  source.onerror = () => {
+    // Un flux coupé (proxy, veille de réseau, redémarrage du web) n'est pas une
+    // fin de défi : on le rouvre, avec repli polling seulement après épuisement.
+    if (stream !== source) return;  // une réouverture est déjà en cours
+    stream = null;
+    source.close();
     if (reconnects < MAX_RECONNECTS) {
       reconnects += 1;
-      setStatus("Suivi direct interrompu — bascule en rafraîchissement simple.");
-      startPolling(id);
+      setStatus("Suivi direct interrompu — reconnexion…");
+      setTimeout(() => {
+        if (currentId === id && !pollTimer) openStream(id);
+      }, 1000 * reconnects);
     } else {
-      setStatus("Suivi indisponible. Rechargez la page pour reprendre le suivi.");
+      setStatus("Suivi direct indisponible — rafraîchissement simple.");
+      startPolling(id);
     }
   };
 }
 
 function startPolling(id) {
   if (pollTimer) return;
-  pollTimer = setInterval(() => {
-    fetch(`${API}/${id}`, { headers: { Accept: "application/json" } })
+  const read = () => {
+    fetch(`${API}/${id}?detail=1`, { headers: { Accept: "application/json" } })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!data) return;
+        if (Array.isArray(data.trajectory) && data.trajectory.length) {
+          mergeSteps(data.trajectory);
+        }
         if (["solved", "lost", "error"].includes(data.status)) {
           showResult({
             status: data.status,
@@ -211,7 +232,9 @@ function startPolling(id) {
         }
       })
       .catch(() => {});
-  }, POLL_MS);
+  };
+  read();
+  pollTimer = setInterval(read, POLL_MS);
 }
 
 async function submitChallenge(word) {

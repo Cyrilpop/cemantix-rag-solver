@@ -276,7 +276,7 @@ class GameAPIHandler(BaseHTTPRequestHandler):
                     send_sse=self._send_sse,
                 )
                 return
-            res, status = handle_challenge_get(_manager, path)
+            res, status = handle_challenge_get(_manager, path, query)
         else:
             res, status = {"error": "Route introuvable"}, 404
 

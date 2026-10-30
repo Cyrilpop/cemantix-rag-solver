@@ -352,6 +352,82 @@ class TestResolutionBoutEnBout(unittest.TestCase):
         self.assertEqual(dao.count_queued(), 1)
 
 
+class TestFluxDirect(unittest.TestCase):
+    """DEFI-06 : le flux ne doit jamais être silencieux (proxy) ni spoiler le mot.
+
+    Le `ERR_CONNECTION_CLOSED` constaté en production venait d'un flux qui
+    n'émettait rien pendant l'attente : un intermédiaire (nginx
+    `proxy_read_timeout`, Caddy sans `flush_interval -1`) l'a fermé. Ces deux
+    tests verrouillent le premier event immédiat et le battement périodique.
+    """
+
+    class _Store:
+        WORDS = {"chaussette", "volcan", "amour"}
+
+        def normalize(self, word):
+            return word
+
+        def is_valid_french(self, word):
+            return word in self.WORDS
+
+    def setUp(self):
+        _clean()
+        from src.api.routes import challenge as routes
+        self.routes = routes
+        self.h = dao.ip_hash("9.9.9.0")
+        self.mgr = types.SimpleNamespace(store=self._Store())
+
+    def _events(self, challenge_id, ping_seconds=10.0, duree=0.05):
+        """Ouvre le flux sur une fenêtre courte : le producteur doit rendre la main.
+
+        Sans plafond de durée patché, un défi qui reste `queued` ferait tourner
+        la boucle jusqu'à `SSE_MAX_DURATION_SECONDS` (15 min) — le test pendrait.
+        """
+        recues = []
+        with mock.patch.object(self.routes, "SSE_PING_SECONDS", ping_seconds), \
+             mock.patch.object(self.routes, "SSE_POLL_SECONDS", 0.01), \
+             mock.patch.object(self.routes, "SSE_MAX_DURATION_SECONDS", duree):
+            self.routes.handle_challenge_stream(
+                f"/api/challenge/{challenge_id}/stream",
+                send_json=lambda payload, status=200: recues.append(("json", status, payload)),
+                send_sse=lambda produce: produce(recues.append),
+            )
+        return [e for e in recues if isinstance(e, str)]
+
+    def test_premier_event_immediat_meme_en_attente(self):
+        cid = dao.create_challenge("amour", self.h)
+        evts = self._events(cid)
+        self.assertTrue(evts, "le flux n'a rien émis : un proxy le couperait")
+        self.assertIn('"event": "status"', evts[0])
+        self.assertIn('"queued"', evts[0])
+
+    def test_battement_pendant_l_attente(self):
+        cid = dao.create_challenge("amour", self.h)
+        evts = self._events(cid, ping_seconds=0.0)
+        self.assertGreaterEqual(sum('"event": "ping"' in e for e in evts), 1)
+
+    def test_detail_affiche_les_coups_sans_le_mot(self):
+        cid = dao.create_challenge("amour", self.h)
+        dao.claim_next_challenge()
+        dao.append_trajectory(cid, [{"step": 1, "word": "amitie", "score": 51.0}], 1)
+        vue, status = self.routes.handle_challenge_get(self.mgr, f"/api/challenge/{cid}", "detail=1")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(vue["trajectory"]), 1)
+        self.assertNotIn("word", vue)  # SEC-26
+        vue_borne, _ = self.routes.handle_challenge_get(self.mgr, f"/api/challenge/{cid}", "")
+        self.assertNotIn("trajectory", vue_borne)  # payload de polling par défaut borné
+
+    def test_termine_par_done_sans_spoiler_intermediaire(self):
+        cid = dao.create_challenge("amour", self.h)
+        dao.claim_next_challenge()
+        dao.append_trajectory(cid, [{"step": 1, "word": "amitie", "score": 51.0}], 1)
+        dao.finish_challenge(cid, "lost", 1, 2.0)
+        evts = self._events(cid)
+        self.assertFalse(any("amour" in e for e in evts[:-1]), "mot révélé avant la fin")
+        self.assertIn('"event": "done"', evts[-1])
+        self.assertNotIn("amour", evts[-1])  # perdu : le mot reste secret
+
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -39,6 +39,7 @@ QUOTA_WINDOW_SECONDS = 3600.0
 SSE_MAX_STREAMS = int(os.getenv("SSE_MAX_STREAMS", "16"))
 SSE_MAX_DURATION_SECONDS = float(os.getenv("SSE_STREAM_MAX_DURATION", "900"))
 SSE_POLL_SECONDS = 0.5
+SSE_PING_SECONDS = 10.0  # battement : aucun proxy ne doit voir un flux silencieux
 TERMINAL_STATUSES = ("solved", "lost", "error")
 
 # DEFI-07 : anti-rafale mémoire, devant la lecture SQL. 6 créneaux, refill 10/min.
@@ -170,15 +171,23 @@ def _parse_challenge_id(path: str) -> tuple[Optional[str], bool]:
     return candidate, is_stream
 
 
-def handle_challenge_get(manager, path: str) -> tuple[dict, int]:
-    """État borné pour le polling : compte de coups, pas la trajectoire."""
+def handle_challenge_get(manager, path: str, query: str = "") -> tuple[dict, int]:
+    """État borné pour le polling : compte de coups, et les coups sur demande.
+
+    `?detail=1` ajoute la trajectoire déjà publiée — les mêmes données que le
+    SSE, donc aucun secret supplémentaire — pour que le repli polling puisse
+    afficher les mots quand un intermédiaire coupe les flux longs.
+    """
     challenge_id, _ = _parse_challenge_id(path)
     if not challenge_id:
         return {"error": "Défi introuvable."}, 404
     challenge = get_challenge(challenge_id)
     if not challenge:
         return {"error": "Défi introuvable."}, 404
-    return _public_view(challenge), 200
+    view = _public_view(challenge)
+    if "detail=1" in (query or ""):
+        view["trajectory"] = challenge["trajectory"]
+    return view, 200
 
 
 # --------------------------------------------------------------------------- #
@@ -199,7 +208,20 @@ def handle_challenge_stream(path: str, send_json, send_sse) -> None:
     def _produce(emit):
         sent = 0
         deadline = time.time() + SSE_MAX_DURATION_SECONDS
+        last_ping = 0.0
         try:
+            # Premier event : l'état d'attente. Sans lui, un défi sagement empilé
+            # ne dirait rien au navigateur — et tout proxy (nginx `proxy_read_timeout`,
+            # Caddy, reverse d'hébergeur) fermerait un flux silencieux au bout de
+            # 30 à 60 s : c'est le `ERR_CONNECTION_CLOSED` constaté en production.
+            first = get_challenge(challenge_id)
+            if not first:
+                emit(json.dumps({"event": "gone"}))
+                return
+            emit(json.dumps({"event": "status", "status": first["status"],
+                             "tries_count": first["tries_count"]}))
+            last_ping = time.time()
+
             while time.time() < deadline:
                 challenge = get_challenge(challenge_id)
                 if not challenge:
@@ -219,6 +241,12 @@ def handle_challenge_stream(path: str, send_json, send_sse) -> None:
                         final["error"] = "Le bot n'a pas pu mener ce défi au bout."
                     emit(json.dumps(final, ensure_ascii=False))
                     return
+                # Battement : au moins un octet toutes les 10 s, même sans coup
+                # nouveau. Le flux reste « vivant » aux yeux des intermédiaires.
+                if time.time() - last_ping >= SSE_PING_SECONDS:
+                    emit(json.dumps({"event": "ping", "status": challenge["status"],
+                                     "tries_count": challenge["tries_count"]}))
+                    last_ping = time.time()
                 time.sleep(SSE_POLL_SECONDS)
             emit(json.dumps({"event": "timeout"}))
         finally:
