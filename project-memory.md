@@ -1,6 +1,6 @@
 # Project Memory — Cémantix RAG Solver
 
-**Dernière mise à jour :** 30 octobre 2026 (Milestone M0)  
+**Dernière mise à jour :** 30 octobre 2026 (Milestone M0.1)  
 **Dépôt :** `Cyrilpop/cemantix-rag-solver`  
 **Statut du Projet :** Production active / Maintenance & Modernisation incrémentale  
 
@@ -109,36 +109,7 @@ L'architecture s'organise en 3 tiers orchestrés par Docker Compose :
 
 ---
 
-## 5. Commandes de Build, Test & Déploiement
-
-### Exécution des Tests Unitaires (Standard & Reproductible)
-```bash
-# Dans le conteneur Python 3.12 (méthode officielle recommandée) :
-docker run --rm -v $(pwd):/app -w /app python:3.12-slim sh -c \
-  "pip install --no-cache-dir -r requirements.txt && python -m unittest discover -s tests -v"
-
-# Sur l'hôte (nécessite Python 3.12 avec les dépendances installées) :
-python -m unittest discover -s tests -v
-```
-
-### Contrôles de Documentation, SEO & Bundles
-```bash
-python tools/check_docs.py          # Cohérence des liens, tables et compteurs
-python tools/check_seo.py           # Balisage SEO, OpenGraph et JSON-LD
-python tools/check_og_image.py      # Format et poids de l'image de partage
-python tools/build_css_bundles.py --check  # Vérifie la synchronisation des bundles CSS
-```
-
-### Déploiement Docker Compose
-```bash
-docker compose up -d                # Démarre DB, Worker et Web
-docker compose logs -f cemantix_worker  # Suivi des logs du solveur
-docker compose logs -f cemantix_web     # Suivi des logs API
-```
-
----
-
-## 6. Décisions Architecturales Clés & Invariants Inviolables
+## 5. Invariants Architecturaux Inviolables
 
 1. **Politique Anti-Spoiler Absolue :**
    - Le mot secret du jour ne doit JAMAIS transiter par l'API publique (`/api/daily` masque le mot tant que le puzzle n'est pas terminé).
@@ -152,20 +123,16 @@ docker compose logs -f cemantix_web     # Suivi des logs API
 
 ---
 
-## 7. Dette Technique & Points d'Attention Connus
+## 6. Dette Technique Connue (Synthèse M0)
 
-- **Sécurité (P1) :** L'adresse IP cliente (`_client_ip()`) se fie au premier segment de `X-Forwarded-For` sans vérifier que la connexion émane d'un reverse proxy de confiance. Risque de contournement de rate-limiting et de quotas de défis.
-- **Sécurité (P1) :** `/var/run/docker.sock` est monté dans `cemantix_web` pour permettre à la console admin de lire les logs conteneurs.
-- **Couverture de tests (P1) :** 32 % de couverture globale mesurée. Les modules `solvers.py`, `game/` et `api/routes/` ont moins de 11 % de couverture.
-- **God Module (P2) :** `src/services/seo.py` fait 1 692 lignes et centralise trop de responsabilités.
-- **Duplication (P3) :** Le CSS existe en 3 versions (source, dist, inline) et les gabarits HTML partagent des éléments dupliqués.
+- **Sécurité :** `X-Forwarded-For` accepté aveuglément sans filtrage de proxy de confiance ([src/api/server.py](src/api/server.py)). Montage de `/var/run/docker.sock` dans `cemantix_web` ([docker-compose.yml](docker-compose.yml)).
+- **Couverture de tests :** 32 % globale. Faible couverture sur `solvers.py` (6%), le domaine de jeu (<10%) et les routes API (<11%).
+- **God Module :** [src/services/seo.py](src/services/seo.py) (1 692 lignes) centralise templates, sitemap, ARD et formatage.
+- **Duplication :** Triple stockage CSS (source, `dist/`, inliné dans HTML).
+- *Détails complets et feuille de route : voir [docs/audits/M0_TECHNICAL_DEBT.md](docs/audits/M0_TECHNICAL_DEBT.md) et [docs/audits/M0_REFACTORING_ROADMAP.md](docs/audits/M0_REFACTORING_ROADMAP.md).*
 
 ---
 
-## 8. Directives pour les Futurs Agents IA
+## 7. Règles d'Intervention & Commandes Opérationnelles
 
-1. **Ne pas modifier le code de production lors des audits.**
-2. **Exécuter les tests dans l'image `python:3.12-slim`** pour éviter les conflits d'ABI sur les versions récentes de Python hôte.
-3. **Ne jamais lire les fichiers de données volumineux en entier :** `cemantix_data/lexique_fr.txt` (465 Ko), `volumes/web/css/dist/*` (fichiers compilés), `CHANGELOG.md` (77 Ko). Utiliser des outils d'inspection ciblée (`grep`, lecture par plage de lignes).
-4. **Si vous modifiez une feuille CSS dans `volumes/web/css/` :** exécuter impérativement `python tools/build_css_bundles.py` pour mettre à jour les bundles dist et les balises `<style>` inlinées dans les pages HTML.
-5. **Préserver le repli SQLite :** Ne jamais forcer de syntaxe PostgreSQL exclusive sans implémenter son équivalent SQLite dans `src/db/connection.py`.
+Les règles d'exécution, d'isolation du contexte agent et les 4 commandes de validation obligatoires sont consignées dans [AGENTS.md](AGENTS.md).
