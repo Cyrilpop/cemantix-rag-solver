@@ -20,18 +20,13 @@ import unicodedata
 from typing import Optional
 
 from ...config import log
+from ...db import challenges as dao
 from ...db import (
     CHALLENGE_ENABLED,
-    CHALLENGE_MAX_QUEUE,
-    CHALLENGE_MAX_TRIES,
-    CHALLENGE_QUOTA_PER_HOUR,
-    count_queued,
-    count_recent_for_ip,
     create_challenge,
     get_challenge,
     ip_hash,
     is_ip_whitelisted,
-    oldest_recent_for_ip,
 )
 from ..ratelimit import RateLimiter
 
@@ -82,13 +77,13 @@ def _quota_restant(hashed_ip: str, whitelisted: bool):
     """Défis restants sur la fenêtre (DEFI-04), ou "unlimited" si exempté."""
     if whitelisted:
         return "unlimited"
-    used = count_recent_for_ip(hashed_ip, QUOTA_WINDOW_SECONDS)
-    return max(0, CHALLENGE_QUOTA_PER_HOUR - used)
+    used = dao.count_recent_for_ip(hashed_ip, QUOTA_WINDOW_SECONDS)
+    return max(0, dao.CHALLENGE_QUOTA_PER_HOUR - used)
 
 
 def _retry_after_seconds(hashed_ip: str) -> float:
     """Temps d'attente avant libération d'un créneau : expiration du plus ancien."""
-    oldest = oldest_recent_for_ip(hashed_ip, QUOTA_WINDOW_SECONDS)
+    oldest = dao.oldest_recent_for_ip(hashed_ip, QUOTA_WINDOW_SECONDS)
     try:
         from datetime import datetime, timezone
         if isinstance(oldest, str):
@@ -124,15 +119,15 @@ def handle_challenge_post(manager, path: str, data: dict, client_ip: str,
         if not allowed:
             return {"error": "Trop de tentatives d'affilée.",
                     "retry_after": round(retry, 1)}, 429
-        used = count_recent_for_ip(hashed, QUOTA_WINDOW_SECONDS)
-        if used >= CHALLENGE_QUOTA_PER_HOUR:
+        used = dao.count_recent_for_ip(hashed, QUOTA_WINDOW_SECONDS)
+        if used >= dao.CHALLENGE_QUOTA_PER_HOUR:
             return {"error": "Quota de défis atteint : 10 par heure.",
                     "retry_after": _retry_after_seconds(hashed)}, 429
-        if count_queued() >= CHALLENGE_MAX_QUEUE:
+        if dao.count_queued() >= dao.CHALLENGE_MAX_QUEUE:
             return {"error": "Le bot est déjà occupé, la file d'attente est pleine.",
                     "retry_after": 30}, 429
 
-    challenge_id = create_challenge(word, hashed, max_tries=CHALLENGE_MAX_TRIES)
+    challenge_id = create_challenge(word, hashed, max_tries=dao.CHALLENGE_MAX_TRIES)
     log(f"⚔️  [DÉFI] Défi empilé ({'exempté de quota' if whitelisted else 'quota standard'})")
     return {"id": challenge_id, "status": "queued",
             "quota_restant": _quota_restant(hashed, whitelisted)}, 201
