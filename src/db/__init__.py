@@ -6,6 +6,29 @@ Fournit l'accès centralisé aux tables PostgreSQL (ou SQLite de repli) :
 - multi_rooms   : salons et parties multijoueurs 1v1
 - solo_sessions : sessions individuelles et défis
 """
+from .challenges import (
+    CHALLENGE_ENABLED,
+    CHALLENGE_MAX_QUEUE,
+    CHALLENGE_MAX_TRIES,
+    CHALLENGE_QUOTA_PER_HOUR,
+    CHALLENGE_TIMEOUT,
+    add_whitelist_ip,
+    append_trajectory,
+    claim_next_challenge,
+    count_queued,
+    count_recent_for_ip,
+    create_challenge,
+    finish_challenge,
+    get_challenge,
+    get_whitelist,
+    heartbeat,
+    ip_hash,
+    is_ip_whitelisted,
+    oldest_recent_for_ip,
+    purge_older_than,
+    remove_whitelist_ip,
+    requeue_stale_running,
+)
 from .connection import db, get_db_type, init_db
 from .daily import (
     get_all_daily_puzzles,
@@ -52,4 +75,26 @@ __all__ = [
     "cleanup_old_solo",
     "save_game_session",
     "load_game_session",
+    # Défis au bot (2026-10-06-defier-le-bot)
+    "CHALLENGE_ENABLED",
+    "CHALLENGE_MAX_QUEUE",
+    "CHALLENGE_MAX_TRIES",
+    "CHALLENGE_QUOTA_PER_HOUR",
+    "CHALLENGE_TIMEOUT",
+    "add_whitelist_ip",
+    "append_trajectory",
+    "claim_next_challenge",
+    "count_queued",
+    "count_recent_for_ip",
+    "create_challenge",
+    "finish_challenge",
+    "get_challenge",
+    "get_whitelist",
+    "heartbeat",
+    "ip_hash",
+    "is_ip_whitelisted",
+    "oldest_recent_for_ip",
+    "purge_older_than",
+    "remove_whitelist_ip",
+    "requeue_stale_running",
 ]

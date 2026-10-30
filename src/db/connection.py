@@ -98,6 +98,30 @@ CREATE TABLE IF NOT EXISTS solo_sessions (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_solo_sessions_updated ON solo_sessions(updated_at);
+
+CREATE TABLE IF NOT EXISTS bot_challenges (
+    id VARCHAR(32) PRIMARY KEY,
+    secret_word VARCHAR(64) NOT NULL,
+    ip_hash CHAR(64) NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'queued',
+    tries_count INT NOT NULL DEFAULT 0,
+    duration_seconds NUMERIC(8, 2),
+    max_tries INT NOT NULL DEFAULT 100,
+    trajectory JSONB NOT NULL DEFAULT '[]'::jsonb,
+    error VARCHAR(200),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ,
+    heartbeat_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_bot_challenges_queue ON bot_challenges (status, created_at);
+CREATE INDEX IF NOT EXISTS idx_bot_challenges_ip ON bot_challenges (ip_hash, created_at);
+
+CREATE TABLE IF NOT EXISTS bot_challenge_whitelist (
+    ip_address VARCHAR(45) PRIMARY KEY,
+    description VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 SQLITE_SCHEMA = """
@@ -143,6 +167,30 @@ CREATE TABLE IF NOT EXISTS solo_sessions (
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_solo_sessions_updated ON solo_sessions(updated_at);
+
+CREATE TABLE IF NOT EXISTS bot_challenges (
+    id VARCHAR(32) PRIMARY KEY,
+    secret_word VARCHAR(64) NOT NULL,
+    ip_hash CHAR(64) NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'queued',
+    tries_count INTEGER NOT NULL DEFAULT 0,
+    duration_seconds REAL,
+    max_tries INTEGER NOT NULL DEFAULT 100,
+    trajectory TEXT NOT NULL DEFAULT '[]',
+    error VARCHAR(200),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_at TEXT,
+    finished_at TEXT,
+    heartbeat_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_bot_challenges_queue ON bot_challenges (status, created_at);
+CREATE INDEX IF NOT EXISTS idx_bot_challenges_ip ON bot_challenges (ip_hash, created_at);
+
+CREATE TABLE IF NOT EXISTS bot_challenge_whitelist (
+    ip_address VARCHAR(45) PRIMARY KEY,
+    description VARCHAR(100),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
