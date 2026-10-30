@@ -68,6 +68,24 @@ def _resolve_store(store):
         return _shared_store
 
 
+def warm_store(args) -> None:
+    """Précharge le magasin vectoriel en arrière-plan (DEFI-11).
+
+    Sans ça, le tout premier défi après un démarrage du worker attend les
+    ~30 s d'ouverture de ChromaDB : la page affiche « premier coup imminent »
+    sans explication. Le thread est daemon et n'échoue jamais bruyamment — le
+    magasin se rechargera à la demande si le préchargement échoue.
+    """
+    def _load():
+        try:
+            args.store = _resolve_store(None)
+            log("⚔️  [DÉFI] Magasin vectoriel préchargé : le bot est prêt à jouer.")
+        except Exception as exc:
+            log(f"⚠️  [DÉFI] Préchargement du magasin en échec : {exc}", level="WARNING")
+
+    threading.Thread(target=_load, name="CemantixWarmStore", daemon=True).start()
+
+
 def process_next_challenge(store=None) -> bool:
     """Prélève et résout un défi. Retourne True si un défi a été traité.
 

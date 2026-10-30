@@ -28,7 +28,12 @@ from zoneinfo import ZoneInfo
 from ..config import DATA_DIR, enforce_runtime_config, log
 from ..db import CHALLENGE_ENABLED
 from ..engine import Solver
-from .challenges import CHALLENGE_POLL_SECONDS, challenge_maintenance, challenge_tick
+from .challenges import (
+    CHALLENGE_POLL_SECONDS,
+    challenge_maintenance,
+    challenge_tick,
+    warm_store,
+)
 
 PARIS_TZ = ZoneInfo("Europe/Paris")
 DAILY_HISTORY_FILE = DATA_DIR / "daily_history.json"
@@ -294,6 +299,31 @@ def run_daily_solver(args) -> dict:
     return entry
 
 
+def _wait_with_challenges(seconds: int, args, is_running) -> None:
+    """Attend `seconds` secondes en servant la file des défis au bot.
+
+    Le pick-up `DEFI-09` vit dans la boucle de veille ; sans ce relais, un démon
+    occupé ailleurs (rattrapage de démarrage qui échoue et se répète, attente
+    entre deux tentatives) laisse les défis empilés sans jamais les regarder —
+    le joueur voit « le bot cherche… » indéfiniment.
+
+    La résolution nocturne garde la priorité (`DEFI-13`) : cette aide n'est
+    appelée que pendant les attentes, jamais pendant une résolution.
+    """
+    last_poll = 0.0
+    for _ in range(int(seconds)):
+        if not is_running():
+            return
+        time.sleep(1)
+        last_poll += 1
+        if CHALLENGE_ENABLED and last_poll >= CHALLENGE_POLL_SECONDS:
+            last_poll = 0.0
+            try:
+                challenge_tick(getattr(args, "store", None))
+            except Exception as e:
+                log(f"⚠️  [DÉFI] Tour de pick-up en échec : {e}", level=logging.WARNING)
+
+
 def run_daemon_loop(args) -> None:
     """Boucle principale du démon 24h/24."""
     enforce_runtime_config()
@@ -347,6 +377,11 @@ def run_daemon_loop(args) -> None:
             log(f"⚠️  Impossible de démarrer l'API locale du jeu : {e}")
 
 
+    # DEFI-11 : le magasin vectoriel est préchargé en arrière-plan pour que le
+    # premier défi ne paie pas l'ouverture de ChromaDB (~30 s d'attente muette).
+    if CHALLENGE_ENABLED and getattr(args, "store", None) is None:
+        warm_store(args)
+
     # Rattrapage au démarrage : vérifier si le mot d'aujourd'hui est déjà résolu
     skip_on_start = getattr(args, "no_run_on_start", False)
     if not skip_on_start:
@@ -367,10 +402,9 @@ def run_daemon_loop(args) -> None:
                 log(f"❌  Erreur lors de la résolution initiale : {e}", level=logging.WARNING)
                 if not has_failed_entry_today(history, today_str):
                     log("🔁  Nouvel essai de résolution initiale dans 60 secondes...")
-                    for _ in range(60):
-                        if not running:
-                            break
-                        time.sleep(1)
+                    # Le pick-up des défis continue pendant cette attente : sinon
+                    # un worker qui ne joint pas le site officiel n'en traite aucun.
+                    _wait_with_challenges(60, args, lambda: running)
                     if running:
                         try:
                             run_daily_solver(args)
