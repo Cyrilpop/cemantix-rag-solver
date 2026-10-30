@@ -8,8 +8,10 @@ Exporte l'ensemble des contrôleurs modulaires d'API :
 - multi  : /api/multi/* (Mode Multijoueur 1v1 joueurs réels)
 """
 from .battle import handle_battle_post
+from .challenge import handle_challenge_get, handle_challenge_post, handle_challenge_stream
 from .admin import (
     ADMIN_BASE_PATH,
+    handle_admin_delete,
     handle_admin_get,
     handle_admin_post,
     is_admin_path,
@@ -23,6 +25,7 @@ __all__ = [
     "handle_system_post",
     "handle_admin_get",
     "handle_admin_post",
+    "handle_admin_delete",
     "is_admin_path",
     "ADMIN_BASE_PATH",
     "handle_solo_get",
@@ -30,4 +33,7 @@ __all__ = [
     "handle_battle_post",
     "handle_multi_get",
     "handle_multi_post",
+    "handle_challenge_get",
+    "handle_challenge_post",
+    "handle_challenge_stream",
 ]

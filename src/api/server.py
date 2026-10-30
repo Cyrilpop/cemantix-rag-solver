@@ -24,9 +24,13 @@ from ..config import log
 from ..game import GameManager
 from .routes import (
     ADMIN_BASE_PATH,
+    handle_admin_delete,
     handle_admin_get,
     handle_admin_post,
     handle_battle_post,
+    handle_challenge_get,
+    handle_challenge_post,
+    handle_challenge_stream,
     handle_multi_get,
     handle_multi_post,
     handle_solo_get,
@@ -264,6 +268,15 @@ class GameAPIHandler(BaseHTTPRequestHandler):
             res, status = handle_solo_get(_manager, path)
         elif path.startswith("/api/multi/"):
             res, status = handle_multi_get(_manager, path, query)
+        elif path == "/api/challenge" or path.startswith("/api/challenge/"):
+            if path.endswith("/stream"):
+                handle_challenge_stream(
+                    path,
+                    send_json=lambda payload, status=200: self._send_json(payload, status=status),
+                    send_sse=self._send_sse,
+                )
+                return
+            res, status = handle_challenge_get(_manager, path)
         else:
             res, status = {"error": "Route introuvable"}, 404
 
@@ -299,6 +312,9 @@ class GameAPIHandler(BaseHTTPRequestHandler):
             res, status = handle_battle_post(_manager, path, data)
         elif path.startswith("/api/multi/"):
             res, status = handle_multi_post(_manager, path, data)
+        elif path == "/api/challenge" or path.startswith("/api/challenge/"):
+            res, status = handle_challenge_post(
+                _manager, path, data, self._client_ip(), self._anonymized_ip())
         elif path == "/api/daily/reveal":
             res, status = handle_system_post(_manager, path, data)
         else:
@@ -310,6 +326,12 @@ class GameAPIHandler(BaseHTTPRequestHandler):
         self._send_error_json("Méthode non autorisée (405)", 405)
 
     def do_DELETE(self):
+        """Seule suppression autorisée : la whitelist des défis, côté admin."""
+        path = self.path.split("?")[0].rstrip("/")
+        if is_admin_path(path):
+            res, status = handle_admin_delete(_manager, path, self.headers, self._client_ip())
+            self._send_admin_json(res, status)
+            return
         self._send_error_json("Méthode non autorisée (405)", 405)
 
     def do_PATCH(self):

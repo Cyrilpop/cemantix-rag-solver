@@ -18,6 +18,7 @@ HMAC signé dérivé du mot de passe : il n'est jamais stocké en clair et expir
 import collections
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import shutil
@@ -416,6 +417,9 @@ def handle_admin_get(manager, path: str, query: str, headers, send_json, send_ss
                 time.sleep(0.25)
 
         send_sse(_produce)
+    elif sub == "whitelist":
+        from ...db import get_whitelist
+        send_json({"entries": get_whitelist()}, 200)
     elif sub == "whoami":
         send_json({"ok": True, "expires_in": int(ADMIN_TOKEN_TTL)}, 200)
     else:
@@ -458,6 +462,53 @@ def handle_admin_post(manager, path: str, data: dict, headers, client_ip: str) -
         if not action:
             return {"error": f"Action inconnue : {name}"}, 404
         return _launch_action(name, action, manager)
+
+    if sub == "whitelist":
+        from ...db import add_whitelist_ip, get_whitelist
+        ip_value = str((data or {}).get("ip_address", "")).strip()
+        if not _valid_ip(ip_value):
+            return {"error": "Adresse IP invalide (IPv4 ou IPv6 attendue)."}, 400
+        add_whitelist_ip(ip_value, str((data or {}).get("description", "")))
+        log("🛡️  [ADMIN] Whitelist des défis au bot : adresse ajoutée")
+        return {"ok": True, "entries": get_whitelist()}, 200
+
+    return {"error": "Route introuvable"}, 404
+
+
+# --------------------------------------------------------------------------- #
+# Whitelist des défis au bot (DEFI-18) — suppression
+# --------------------------------------------------------------------------- #
+def _valid_ip(value: str) -> bool:
+    """IPv4 ou IPv6 exacte, sinon rien n'entre dans la whitelist."""
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        return False
+
+
+def handle_admin_delete(manager, path: str, headers, client_ip: str) -> tuple[dict, int]:
+    """`DELETE <ADMIN_BASE_PATH>/whitelist/<ip>` : retire une exemption de quota."""
+    sub = path[len(ADMIN_BASE_PATH):].strip("/")
+
+    if not _admin_password():
+        return {"error": "Console d'administration désactivée (ADMIN_PASSWORD absent)"}, 403
+    if not authorize(headers):
+        return {"error": "Authentification requise"}, 401
+
+    allowed, retry = _api_limiter.allow(client_ip)
+    if not allowed:
+        return {"error": "Trop de requêtes.", "retry_after": round(retry, 1)}, 429
+
+    if sub.startswith("whitelist/"):
+        from ...db import get_whitelist, remove_whitelist_ip
+        ip_value = urllib.parse.unquote(sub.split("/", 1)[1])
+        if not _valid_ip(ip_value):
+            return {"error": "Adresse IP invalide (IPv4 ou IPv6 attendue)."}, 400
+        removed = remove_whitelist_ip(ip_value)
+        if removed:
+            log("🛡️  [ADMIN] Whitelist des défis au bot : adresse retirée")
+        return {"ok": bool(removed), "entries": get_whitelist()}, (200 if removed else 404)
 
     return {"error": "Route introuvable"}, 404
 
