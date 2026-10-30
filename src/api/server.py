@@ -122,11 +122,15 @@ class GameAPIHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store, must-revalidate")
 
     def _send_sse(self, produce) -> None:
-        """Flux `text/event-stream` : la console d'admin suit les logs en direct.
+        """Flux `text/event-stream` : console d'admin et défis en direct.
 
         `produce(emit)` est un générateur de lignes appelé jusqu'à ce que le
         client parte ; la coupure de connexion est la seule condition d'arrêt.
         """
+        try:
+            self.connection.settimeout(None)
+        except Exception:
+            pass
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-cache, no-transform")

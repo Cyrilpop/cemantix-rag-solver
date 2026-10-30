@@ -442,16 +442,17 @@ cemantix.cyril-randon.fr {
     @sitemap path /sitemap.xml /robots.txt /llms.txt /llms.md /agent-skills.md /.well-known/*
     header @sitemap Cache-Control "no-cache, must-revalidate"
 
-    # Flux « Défier le bot » en direct (SSE) — DÉCLARÉ AVANT /api/* et OBLIGATOIRE.
+    # Flux « Défier le bot » en direct (SSE) — chemin plus spécifique que /api/*
     # Un défi peut rester silencieux le temps que le worker le prenne : sans
     # flush_interval -1, Caddy met le flux en tampon et le navigateur ne reçoit
     # jamais les coups (le serveur émet pourtant un battement toutes les 10 s).
-    @defistream path_regexp "^/api/challenge/[0-9a-f]{32}/stream$"
-    handle @defistream {
+    handle /api/challenge/*/stream {
         header Cache-Control "no-store"
         reverse_proxy cemantix_web:8000 {
             flush_interval -1
-            read_timeout 900s
+            transport http {
+                read_timeout 900s
+            }
         }
     }
 
