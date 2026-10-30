@@ -83,6 +83,16 @@
         <p class="muted" style="margin:0 0 10px">Rediffuse les données du tableau de bord et les pages d'archive.</p>
         <button data-action="export">Régénérer</button>
       </div>
+      <div class="card">
+        <h3 style="margin:0 0 6px;font-size:13px">Whitelist « Défier le bot » (exemptées de quota)</h3>
+        <p class="muted" style="margin:0 0 10px">Ces adresses peuvent défier le bot sans limite horaire ni anti-rafale. Une ligne par IP exacte (IPv4 ou IPv6).</p>
+        <div class="row">
+          <input type="text" id="wl-ip" placeholder="ex. 88.175.123.252" style="flex:1 1 180px" autocomplete="off">
+          <input type="text" id="wl-desc" placeholder="motif (ex. Bureau Cyril)" style="flex:1 1 180px" autocomplete="off">
+          <button id="wl-add">Ajouter</button>
+        </div>
+        <div id="wl-list" class="muted" style="margin-top:8px">—</div>
+      </div>
     </div>
   </section>
 </main>

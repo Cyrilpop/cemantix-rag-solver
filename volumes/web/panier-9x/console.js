@@ -49,6 +49,56 @@
     });
   }
 
+  // --- Whitelist « Défier le bot » (DEFI-18) --------------------------------
+  function esc(s) {
+    return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function renderWhitelist(entries) {
+    var box = el('wl-list');
+    if (!box) return;
+    if (!entries || !entries.length) { box.textContent = 'Aucune IP exemptée.'; return; }
+    box.innerHTML = entries.map(function (e) {
+      return '<div style="display:flex;gap:8px;align-items:center;margin:4px 0">'
+        + '<code style="flex:0 0 auto">' + esc(e.ip_address) + '</code>'
+        + '<span style="flex:1">' + esc(e.description || '') + '</span>'
+        + '<button class="secondary wl-remove" data-ip="' + esc(e.ip_address) + '">Retirer</button>'
+        + '</div>';
+    }).join('');
+    box.querySelectorAll('.wl-remove').forEach(function (b) {
+      b.addEventListener('click', function () { removeWhitelist(b.getAttribute('data-ip')); });
+    });
+  }
+
+  function loadWhitelist() {
+    api('/whitelist', { headers: authHeaders() })
+      .then(function (r) { renderWhitelist(r.entries || []); })
+      .catch(function () {});
+  }
+
+  function addWhitelist() {
+    var ip = (el('wl-ip').value || '').trim();
+    if (!ip) { toast('Adresse IP requise', 'ko'); return; }
+    api('/whitelist', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ ip_address: ip, description: (el('wl-desc').value || '').trim() })
+    })
+      .then(function (r) {
+        renderWhitelist(r.entries || []);
+        el('wl-ip').value = ''; el('wl-desc').value = '';
+        toast('IP exemptée ajoutée', 'ok');
+      })
+      .catch(function (e) { toast(e.message, 'ko'); });
+  }
+
+  function removeWhitelist(ip) {
+    api('/whitelist/' + encodeURIComponent(ip), { method: 'DELETE', headers: authHeaders() })
+      .then(function (r) { renderWhitelist(r.entries || []); toast('IP retirée', 'ok'); })
+      .catch(function (e) { toast(e.message, 'ko'); });
+  }
+
   function unlock() {
     el('gate').classList.add('hide');
     el('app').classList.remove('hide');
@@ -56,6 +106,7 @@
     el('btn-refresh').disabled = false;
     el('state-dot').className = 'dot on';
     loadStats();
+    loadWhitelist();
   }
 
   function fmt(n) { return (n === null || n === undefined) ? '—' : n; }
@@ -229,6 +280,8 @@
   document.querySelectorAll('[data-action]').forEach(function (b) {
     b.addEventListener('click', function () { runAction(b.getAttribute('data-action')); });
   });
+  var wlAdd = el('wl-add');
+  if (wlAdd) wlAdd.addEventListener('click', addWhitelist);
 
   if (token) {
     api('/whoami', { headers: authHeaders() }).then(unlock).catch(function () { logout(); });

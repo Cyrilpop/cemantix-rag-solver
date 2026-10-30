@@ -73,6 +73,7 @@ NAV_LINKS = [
     ("Méthode & indices", "methode/"),
     ("Jouer Solo", "play/"),
     ("Mode Battle", "battle/"),
+    ("Défier le Bot", "defi/"),
     ("Mode Multijoueur", "multi/"),
 ]
 
@@ -1181,6 +1182,7 @@ def build_sitemap(entries: list, generated_at: datetime) -> str:
         _sitemap_url(f"{SITE_ORIGIN}/methode/", today, "0.9", "monthly"),
         _sitemap_url(f"{SITE_ORIGIN}/play/", today, "0.9", "weekly"),
         _sitemap_url(f"{SITE_ORIGIN}/battle/", today, "0.9", "weekly"),
+        _sitemap_url(f"{SITE_ORIGIN}/defi/", today, "0.9", "weekly"),
         _sitemap_url(f"{SITE_ORIGIN}/multi/", today, "0.9", "weekly"),
     ]
 

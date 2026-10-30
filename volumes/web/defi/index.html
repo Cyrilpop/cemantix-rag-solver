@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- ======================================================================
+       SEO & Indexation Moteurs de Recherche
+       ====================================================================== -->
+  <title>Défier le Bot IA Cémantix : Proposez un Mot, le Solveur RAG le Traque</title>
+  <meta name="description" content="Proposez un mot secret au bot IA Cémantix et regardez le solveur RAG le traquer coup par coup en direct : similarité cosinus frWac, thermomètre officiel, zéro LLM. 10 défis par heure, sans inscription.">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Cyril Randon">
+  <meta name="publisher" content="Cyril Randon">
+  <link rel="canonical" href="https://cemantix.cyril-randon.fr/defi/">
+  <link rel="alternate" hreflang="fr" href="https://cemantix.cyril-randon.fr/defi/">
+  <link rel="alternate" hreflang="x-default" href="https://cemantix.cyril-randon.fr/defi/">
+  <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+
+  <!-- Open Graph & Twitter Card -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://cemantix.cyril-randon.fr/defi/">
+  <meta property="og:title" content="Défier le Bot IA Cémantix : Proposez un Mot, le Solveur RAG le Traque">
+  <meta property="og:description" content="Un mot secret, un solveur RAG pur qui le traque en direct : suivez la trajectoire, les températures et le dénouement. 10 défis par heure.">
+  <meta property="og:image" content="https://cemantix.cyril-randon.fr/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Cémantix Solver — Défier le bot IA avec votre propre mot secret">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://cemantix.cyril-randon.fr/defi/">
+  <meta name="twitter:title" content="Défier le Bot IA Cémantix : Proposez un Mot, le Solveur RAG le Traque">
+  <meta name="twitter:description" content="Un mot secret, un solveur RAG pur qui le traque en direct : suivez la trajectoire, les températures et le dénouement. 10 défis par heure.">
+  <meta name="twitter:image" content="https://cemantix.cyril-randon.fr/og-image.jpg">
+  <meta name="twitter:image:alt" content="Cémantix Solver — Défier le bot IA avec votre propre mot secret">
+  <meta name="twitter:creator" content="@cyril_randon">
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+  <style id="critical-css" data-bundle="play">:root{--font-main:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--font-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;--bg-app:#0d1117;--bg-card:rgba(22,27,34,0.85);--bg-card-hover:rgba(30,37,46,0.95);--bg-input:#161b22;--border-color:#30363d;--border-focus:#58a6ff;--text-main:#f0f6fc;--text-muted:#8b949e;--text-dim:#9198a1;--accent:#58a6ff;--accent-btn:#1668dc;--accent-btn-hover:#1f6feb;--accent-glow:rgba(88,166,255,0.25);--success:#3fb950;--success-glow:rgba(63,185,80,0.25);--warning:#d29922;--danger:#f85149;--tier-ice:#38bdf8;--tier-cold:#60a5fa;--tier-cool:#34d399;--tier-warm:#fbbf24;--tier-fire:#f87171;--gradient-dashboard:linear-gradient(90deg,#075985 0%,#075985 16%,#3b82f6 24%,#3b82f6 36%,#10b981 44%,#10b981 56%,#f59e0b 64%,#f59e0b 76%,#c20000 84%,#c20000 100%);--gradient-game:linear-gradient(90deg,#fcf161 0%,#f59e0b 25%,#f97316 60%,#c20000 100%);--radius-sm:6px;--radius-md:10px;--radius-lg:16px;--shadow-sm:0 1px 3px rgba(0,0,0,0.3);--shadow-md:0 4px 14px rgba(0,0,0,0.4);--shadow-glow:0 0 25px rgba(88,166,255,0.15);--transition:all 0.2s cubic-bezier(0.4,0,0.2,1);--scrollbar-thumb:rgba(255,255,255,0.22);--scrollbar-thumb-hover:#58a6ff;--scrollbar-track:rgba(255,255,255,0.03);}[data-theme="light"]{--bg-app:#f6f8fa;--bg-card:rgba(255,255,255,0.95);--bg-card-hover:#ffffff;--bg-input:#f6f8fa;--border-color:#d0d7de;--border-focus:#0969da;--text-main:#1f2328;--text-muted:#656d76;--text-dim:#8c959f;--accent:#0969da;--accent-btn:#0969da;--accent-btn-hover:#0860c5;--accent-glow:rgba(9,105,218,0.15);--success:#1a7f37;--success-glow:rgba(26,127,55,0.15);--warning:#9a6700;--danger:#cf222e;--shadow-sm:0 1px 3px rgba(0,0,0,0.08);--shadow-md:0 4px 14px rgba(0,0,0,0.1);--shadow-glow:0 0 20px rgba(9,105,218,0.1);--scrollbar-thumb:rgba(0,0,0,0.22);--scrollbar-thumb-hover:#0969da;--scrollbar-track:rgba(0,0,0,0.03);}*{box-sizing:border-box;margin:0;padding:0;scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) transparent;}::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-track{background:var(--scrollbar-track);border-radius:9999px;}::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:9999px;transition:background-color 0.2s ease,box-shadow 0.2s ease;}::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-thumb-hover);box-shadow:0 0 8px var(--accent-glow);}html,body{width:100%;max-width:100vw;overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%;}body{font-family:var(--font-main);background-color:var(--bg-app);color:var(--text-main);line-height:1.5;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;transition:background-color 0.3s ease,color 0.3s ease;}a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable){color:#58a6ff;text-decoration:underline;text-underline-offset:3px;font-weight:600;position:relative;display:inline;transition:color 0.25s ease,text-shadow 0.25s ease;}[data-theme="light"] a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable){color:#0969da;}a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable)::after{content:"";position:absolute;left:0;bottom:-2px;width:0;height:1.5px;background:linear-gradient(90deg,var(--accent),#79c0ff);transition:width 0.3s cubic-bezier(0.4,0,0.2,1);border-radius:1px;}a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hover{color:#a5d6ff;text-shadow:0 0 12px var(--accent-glow);}a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hover::after{width:100%;}[data-theme="light"] a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hover{color:#0550ae;text-shadow:0 0 8px rgba(9,105,218,0.25);}.status-badge{display:inline-flex;align-items:center;gap:0.5rem;padding:0.35rem 0.75rem;border-radius:9999px;font-size:0.8rem;font-weight:500;border:1px solid var(--border-color);background:var(--bg-input);}.status-pulse{width:8px;height:8px;border-radius:50%;background-color:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite;}@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.9);}}.status-sleeping .status-pulse{background-color:var(--accent);box-shadow:0 0 8px var(--accent);}.btn{display:inline-flex;align-items:center;justify-content:center;gap:0.4rem;padding:0.5rem 1rem;font-size:0.875rem;font-weight:600;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;transition:var(--transition);text-decoration:none;}.btn-sm{padding:0.3rem 0.65rem;font-size:0.8rem;}.btn-primary{background:var(--accent-btn,#1668dc);color:#ffffff;border:1px solid rgba(88,166,255,0.35);}.btn-primary:hover{background:var(--accent-btn-hover,#1f6feb);filter:brightness(1.1);box-shadow:0 0 14px var(--accent-glow);}.btn-secondary{background:var(--bg-input);border-color:var(--border-color);color:var(--text-main);}.btn-secondary:hover{background:var(--bg-card-hover);border-color:var(--accent);}.btn-danger{background:var(--danger,#da3633);border-color:rgba(248,81,73,0.45);color:#ffffff;}.btn-danger:hover{background:#f85149;border-color:#f85149;box-shadow:0 0 14px rgba(248,81,73,0.45);transform:translateY(-1px);}.btn-ghost{background:transparent;border-color:var(--border-color);color:var(--text-muted);}.btn-ghost:hover{color:var(--text-main);background:var(--bg-input);}.btn-icon{width:36px;height:36px;border-radius:var(--radius-sm);background:var(--bg-input);border:1px solid var(--border-color);color:var(--text-main);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;transition:var(--transition);}.btn-icon:hover{border-color:var(--accent);background:var(--bg-card-hover);}.pill-group{display:inline-flex;align-items:center;background:var(--bg-input);border:1px solid var(--border-color);border-radius:9999px;padding:3px;gap:2px;}.pill-btn{background:transparent;border:none;padding:0.35rem 0.85rem;border-radius:9999px;font-size:0.8rem;font-weight:600;color:var(--text-muted);cursor:pointer;transition:var(--transition);}.pill-btn:hover:not(.active){color:var(--text-main);}.pill-btn.active{background:var(--accent-btn,#1668dc);color:#ffffff;box-shadow:0 0 10px var(--accent-glow);}.badge{display:inline-flex;align-items:center;padding:0.2rem 0.6rem;font-size:0.75rem;font-weight:600;border-radius:9999px;text-transform:uppercase;letter-spacing:0.04em;}.badge-accent{background:rgba(56,139,253,0.15);color:#79b8ff;border:1px solid rgba(88,166,255,0.35);}[data-theme="light"] .badge-accent{background:rgba(9,105,218,0.1);color:#0969da;border:1px solid rgba(9,105,218,0.3);}.badge-success{background:rgba(46,160,67,0.15);color:#56d364;border:1px solid rgba(63,185,80,0.35);}[data-theme="light"] .badge-success{background:rgba(26,127,55,0.12);color:#1a7f37;border:1px solid rgba(26,127,55,0.3);}.card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.5rem;box-shadow:var(--shadow-sm);transition:var(--transition);}.card:hover{box-shadow:var(--shadow-md);border-color:rgba(88,166,255,0.4);}.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border-color);}.card-title-group h3,.card-header h3{font-size:1.1rem;font-weight:600;}.card-subtitle{font-size:0.75rem;color:var(--text-muted);display:block;}@media (max-width:640px){.card{padding:1rem 0.85rem;border-radius:var(--radius-md);}.card-header{margin-bottom:0.85rem;padding-bottom:0.5rem;flex-wrap:wrap;gap:0.35rem 0.5rem;}.card-title-group h3,.card-header h3{font-size:1rem;}.card-subtitle{font-size:0.7rem;}}.toast{position:fixed;bottom:5.5rem;right:2rem;background:var(--accent-btn,#1668dc);color:#ffffff;padding:0.75rem 1.25rem;border-radius:var(--radius-md);font-size:0.85rem;font-weight:600;box-shadow:var(--shadow-md);opacity:0;transform:translateY(20px);pointer-events:none;transition:opacity 0.3s ease,transform 0.3s ease;z-index:1000;}.toast.show{opacity:1;transform:translateY(0);}@media (max-width:768px){html,body{overflow-x:hidden;overflow-x:clip;}.card{min-width:0;max-width:100%;}.btn-icon{min-width:44px;min-height:44px;width:44px;height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}.btn,.pill-btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent;}.toast{bottom:max(1.25rem,calc(env(safe-area-inset-bottom,0px) + 0.75rem));right:1rem;left:1rem;text-align:center;display:flex;justify-content:center;align-items:center;}}.app-header{border-bottom:1px solid var(--border-color);background:var(--bg-card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;padding-top:env(safe-area-inset-top,0px);}.header-container{max-width:1200px;margin:0 auto;padding:0.85rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;}.brand{display:flex;align-items:center;gap:0.75rem;min-width:0;}.brand-icon{font-size:1.8rem;filter:drop-shadow(0 0 8px var(--accent));flex-shrink:0;}.brand-text{min-width:0;}.brand-text .brand-title{display:block;font-size:1.25rem;font-weight:700;letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.brand-subtitle{font-size:0.75rem;color:var(--text-muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.header-actions{display:flex;align-items:center;gap:0.75rem;flex-shrink:0;}@media (max-width:768px){.header-container{padding:0.5rem max(0.75rem,env(safe-area-inset-right,0px)) 0.5rem max(0.75rem,env(safe-area-inset-left,0px));gap:0.5rem;flex-wrap:nowrap;}.brand{gap:0.45rem;flex:1 1 auto;min-width:0;}.brand-icon{font-size:clamp(1.3rem,4.2vw,1.5rem);}.brand-text .brand-title{font-size:clamp(0.96rem,3.8vw,1.08rem);line-height:1.2;}.brand-subtitle{font-size:clamp(0.64rem,2.5vw,0.7rem);line-height:1.2;}.header-actions{gap:0.35rem;flex-shrink:0;}}@media (max-width:640px){#daemon-badge{padding:0;width:36px;height:36px;min-width:36px;justify-content:center;flex-shrink:0;}#daemon-status-text{display:none;}}.main-content{max-width:1200px;width:100%;margin:0 auto;padding:1.5rem 1.5rem 7.5rem 1.5rem;flex:1;display:flex;flex-direction:column;gap:1.5rem;box-sizing:border-box;}.section{display:flex;flex-direction:column;gap:1rem;width:100%;}.section-title h3{font-size:1.15rem;font-weight:600;color:var(--text-main);}.grid-2col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:stretch;}@media (max-width:768px){.main-content{padding:0.75rem max(0.75rem,env(safe-area-inset-right,0px)) 2rem max(0.75rem,env(safe-area-inset-left,0px));gap:0.9rem;min-width:0;max-width:100%;}.page-heading{font-size:clamp(1.15rem,4.8vw,1.35rem);}.page-intro{font-size:0.84rem;margin-top:-0.6rem;}.section{min-width:0;max-width:100%;gap:0.85rem;}.grid-2col{grid-template-columns:minmax(0,1fr);gap:0.9rem;}}@media (max-width:380px){.main-content{padding:0.65rem max(0.6rem,env(safe-area-inset-right,0px)) 1.75rem max(0.6rem,env(safe-area-inset-left,0px));}}.nav-tabs{display:flex;align-items:center;justify-content:center;gap:0.75rem;margin-bottom:0.5rem;}.nav-tab{display:inline-flex;align-items:center;gap:0.5rem;padding:0.65rem 1.4rem;border-radius:var(--radius-lg);font-size:0.95rem;font-weight:600;cursor:pointer;transition:var(--transition);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-muted);text-decoration:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}.nav-tab:hover:not(.active){color:var(--text-main);border-color:rgba(88,166,255,0.4);transform:translateY(-1px);}.nav-tab.active{background:var(--accent-btn,#1668dc);color:#ffffff;border-color:rgba(88,166,255,0.4);box-shadow:0 0 20px var(--accent-glow);}.tab-badge{font-size:0.65rem;font-weight:700;text-transform:uppercase;padding:0.15rem 0.45rem;border-radius:9999px;background:rgba(255,255,255,0.25);color:#ffffff;}.view-content{display:flex;flex-direction:column;gap:1.5rem;width:100%;}.page-heading{font-size:1.5rem;font-weight:700;line-height:1.25;letter-spacing:-0.02em;color:var(--text-main);}.page-intro{font-size:0.9rem;line-height:1.55;color:var(--text-muted);margin-top:-0.9rem;}@media (max-width:768px){.view-content{gap:0.9rem;min-width:0;max-width:100%;}.nav-tabs{position:relative;flex-direction:row;flex-wrap:nowrap;justify-content:flex-start;width:100%;max-width:100%;gap:0.35rem;margin-bottom:0.25rem;padding:5px 8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-lg);box-sizing:border-box;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;scroll-snap-type:x proximity;scroll-padding-inline:8px;}.nav-tabs::-webkit-scrollbar{display:none;}.nav-tab{flex:1 0 auto;width:auto;min-height:40px;justify-content:center;align-items:center;padding:0.5rem 0.78rem;font-size:0.82rem;gap:0.4rem;border-radius:calc(var(--radius-lg) - 5px);border:1px solid transparent;background:transparent;white-space:nowrap;text-align:center;scroll-snap-align:start;}.nav-tab:hover:not(.active){transform:none;}.nav-tab.active{background:var(--accent-btn,#1668dc);color:#ffffff;border-color:rgba(88,166,255,0.4);box-shadow:0 2px 10px var(--accent-glow);}.nav-tab .tab-badge{display:none;}}@media (max-width:380px){.nav-tabs{padding:4px 6px;gap:0.25rem;}.nav-tab{font-size:0.78rem;padding:0.48rem 0.65rem;gap:0.32rem;}}.app-footer{position:fixed;bottom:0;left:0;width:100%;border-top:1px solid var(--border-color);background:var(--bg-card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:0.85rem 1.5rem;z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,0.12);}.footer-container{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;}.footer-left p{font-size:0.85rem;color:var(--text-main);}.footer-sub{font-size:0.8rem;color:#c9d1d9;margin-top:0.2rem;}[data-theme="light"] .footer-sub{color:#424a53;}.footer-author-link,.footer-sub a{color:#58a6ff;text-decoration:underline;text-underline-offset:3px;font-weight:600;position:relative;display:inline;transition:color 0.25s ease,text-shadow 0.25s ease;}[data-theme="light"] .footer-author-link,[data-theme="light"] .footer-sub a{color:#0969da;}.footer-author-link::after,.footer-sub a::after{content:"";position:absolute;left:0;bottom:-2px;width:0;height:1.5px;background:linear-gradient(90deg,var(--accent),#79c0ff);transition:width 0.3s cubic-bezier(0.4,0,0.2,1);border-radius:1px;}.footer-author-link:hover,.footer-sub a:hover{color:#a5d6ff;text-shadow:0 0 12px var(--accent-glow);}.footer-author-link:hover::after,.footer-sub a:hover::after{width:100%;}[data-theme="light"] .footer-author-link:hover,[data-theme="light"] .footer-sub a:hover{color:#0550ae;text-shadow:0 0 8px rgba(9,105,218,0.25);}.footer-right{display:flex;align-items:center;gap:0.75rem;}.footer-right .btn-ghost{color:#c9d1d9;border-color:rgba(240,246,252,0.2);}.footer-right .btn-ghost:hover{color:#ffffff;border-color:var(--accent);}[data-theme="light"] .footer-right .btn-ghost{color:#24292f;border-color:#d0d7de;}[data-theme="light"] .footer-right .btn-ghost:hover{color:#0969da;border-color:#0969da;}.footer-time{font-size:0.78rem;font-weight:500;color:#c9d1d9;}[data-theme="light"] .footer-time{color:#424a53;}@media (max-width:768px){.app-footer{position:static;margin-top:auto;padding:1.25rem 1rem max(1rem,env(safe-area-inset-bottom,1rem)) 1rem;box-shadow:none;}.footer-container{flex-direction:column;text-align:center;gap:0.75rem;align-items:center;justify-content:center;}.footer-left{text-align:center;}.footer-right{flex-direction:column;gap:0.4rem;align-items:center;justify-content:center;}}.game-control-card{padding:1.25rem 1.5rem;}.game-control-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}.game-mode-toggle,.game-difficulty-toggle{display:flex;align-items:center;gap:0.5rem;}.control-label{font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;}.pill-group{display:inline-flex;align-items:center;background:var(--bg-input);border:1px solid var(--border-color);border-radius:9999px;padding:3px;gap:2px;}.pill-btn{background:transparent;border:none;padding:0.35rem 0.85rem;border-radius:9999px;font-size:0.8rem;font-weight:600;color:var(--text-muted);cursor:pointer;transition:var(--transition);}.pill-btn:hover:not(.active){color:var(--text-main);}.pill-btn.active{background:var(--accent-btn,#1668dc);color:#ffffff;box-shadow:0 0 10px var(--accent-glow);}.game-actions{display:flex;align-items:center;gap:0.5rem;}.game-status-bar{border-top:1px solid var(--border-color);padding-top:0.75rem;margin-top:0.85rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;}.game-status-left{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;}.game-status-note{font-size:0.8rem;color:var(--text-muted);}.tries-counter{font-size:0.85rem;color:var(--text-main);}.tries-counter strong{font-family:var(--font-mono);color:var(--accent);font-size:1rem;}.game-win-banner{background:linear-gradient(135deg,rgba(63,185,80,0.15) 0%,rgba(26,127,55,0.25) 100%);border:2px solid var(--success);padding:1.5rem;border-radius:var(--radius-lg);box-shadow:0 0 30px var(--success-glow);animation:popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);}@keyframes popIn{0%{opacity:0;transform:scale(0.95) translateY(-10px);}100%{opacity:1;transform:scale(1) translateY(0);}}.win-content{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1.25rem;}.win-trophy{font-size:2.75rem;filter:drop-shadow(0 0 12px rgba(63,185,80,0.5));}.win-text h3{font-size:1.3rem;color:var(--success);font-weight:700;margin-bottom:0.25rem;}.win-text p{font-size:0.95rem;color:var(--text-main);}.win-text strong{color:var(--success);font-weight:700;}.game-input-section{width:100%;}.guess-form{width:100%;}.input-wrapper{display:flex;align-items:center;background:var(--bg-card);border:2px solid var(--border-color);border-radius:var(--radius-lg);padding:0.35rem 0.5rem 0.35rem 1.15rem;transition:var(--transition);box-shadow:var(--shadow-sm);}.input-wrapper:focus-within{border-color:var(--accent);box-shadow:0 0 20px var(--accent-glow);}.input-icon{font-size:1.35rem;margin-right:0.75rem;}.game-input{flex:1;background:transparent;border:none;outline:none;color:var(--text-main);font-size:1.15rem;font-weight:600;font-family:var(--font-mono);min-width:0;}.game-input::placeholder{color:var(--text-dim);font-weight:400;font-family:var(--font-main);font-size:0.95rem;}.btn-guess{font-size:0.95rem;padding:0.65rem 1.4rem;border-radius:calc(var(--radius-lg) - 4px);}.guess-form-row{display:flex;align-items:stretch;gap:0.5rem;width:100%;}.guess-form-row .input-wrapper{flex:1;min-width:0;}.guess-side-actions{display:flex;flex-direction:column;justify-content:space-between;gap:0.3rem;flex-shrink:0;}.guess-side-actions .btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:0.35rem;padding:0.2rem 0.65rem;font-size:0.78rem;font-weight:600;white-space:nowrap;border-radius:var(--radius-sm);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-muted);transition:var(--transition);line-height:1.15;box-sizing:border-box;cursor:pointer;}.guess-side-actions .btn:hover:not(:disabled){border-color:var(--accent);color:var(--text-main);background:rgba(255,255,255,0.05);}.guess-side-actions .btn-hint:hover:not(:disabled){border-color:rgba(210,153,34,0.5);color:#e3b341;background:rgba(210,153,34,0.12);}.guess-side-actions .btn-giveup:hover:not(:disabled){border-color:rgba(248,81,73,0.5);color:#f85149;background:rgba(248,81,73,0.12);}@media (max-width:768px){.guess-form-row{flex-direction:column;gap:0.55rem;width:100%;}.guess-form-row .input-wrapper{width:100%;flex:none;}.guess-side-actions{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;width:100%;}.guess-side-actions .btn{width:100%;min-height:44px;padding:0.5rem 0.65rem;font-size:0.82rem;border-radius:var(--radius-md);gap:0.35rem;}}@media (max-width:380px){.guess-side-actions{gap:0.4rem;}.guess-side-actions .btn{font-size:0.78rem;padding:0.45rem 0.45rem;}}.game-feedback{margin-top:0.5rem;padding:0.5rem 0.85rem;border-radius:var(--radius-sm);font-size:0.85rem;font-weight:600;animation:fadeIn 0.2s ease;}.game-feedback.is-error{background:rgba(248,81,73,0.15);color:var(--danger);border:1px solid var(--danger);}.game-feedback.is-warning{background:rgba(210,153,34,0.15);color:var(--warning);border:1px solid var(--warning);}.game-spotlight{padding:1.25rem 1.75rem;background:linear-gradient(135deg,rgba(88,166,255,0.04) 0%,rgba(22,27,34,0.95) 100%);border:1px solid rgba(88,166,255,0.25);border-radius:var(--radius-lg);box-shadow:0 4px 20px rgba(0,0,0,0.25);transition:var(--transition);}.spotlight-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem;padding-bottom:0.5rem;border-bottom:1px solid rgba(255,255,255,0.06);}.spotlight-label{font-size:0.75rem;text-transform:uppercase;color:var(--text-muted);font-weight:700;letter-spacing:0.08em;}.spotlight-body{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;}.spotlight-word-group{display:flex;align-items:center;gap:1rem;}.spotlight-word{font-family:var(--font-mono);font-size:2.1rem;font-weight:800;text-transform:uppercase;color:var(--text-main);letter-spacing:0.03em;line-height:1.1;}.spotlight-weather{font-size:0.85rem;font-weight:600;padding:0.3rem 0.75rem;border-radius:9999px;background:rgba(255,255,255,0.05);border:1px solid var(--border-color);color:var(--text-main);display:inline-flex;align-items:center;gap:0.35rem;}.spotlight-scores{display:flex;flex-direction:column;align-items:flex-end;gap:0.5rem;}.spotlight-metrics-row{display:flex;align-items:baseline;gap:0.75rem;}.spotlight-temp{font-family:var(--font-mono);font-size:1.7rem;font-weight:800;color:var(--text-main) !important;line-height:1;letter-spacing:-0.02em;}.spotlight-permille{font-family:var(--font-mono);font-size:0.85rem;font-weight:700;color:#fcf161;background:rgba(252,241,97,0.12);border:1px solid rgba(252,241,97,0.35);padding:0.2rem 0.6rem;border-radius:9999px;letter-spacing:0.04em;line-height:1.2;}.temp-gauge{width:190px;height:9px;background:rgba(255,255,255,0.06);border-radius:9999px;overflow:hidden;border:1px solid rgba(255,255,255,0.12);box-shadow:inset 0 1px 3px rgba(0,0,0,0.5);}.temp-gauge-fill{height:100%;border-radius:9999px;background:var(--gradient-game) !important;background-size:190px 100% !important;transition:width 0.4s cubic-bezier(0.4,0,0.2,1);box-shadow:0 0 8px rgba(252,241,97,0.25);}.game-guesses-list{display:flex;flex-direction:column;gap:0.5rem;height:320px;max-height:320px;overflow-y:auto;padding-right:0.4rem;}.guess-row{display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.85rem;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);font-size:0.85rem;transition:var(--transition);animation:fadeIn 0.2s ease;}.guess-row:hover{border-color:rgba(88,166,255,0.4);transform:translateX(2px);}.guess-row.is-winner{border-color:var(--success);background:var(--success-glow);}.guess-left{display:flex;align-items:center;gap:0.75rem;}.guess-order{font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);min-width:28px;}.guess-word{font-family:var(--font-mono);font-weight:700;text-transform:uppercase;}.guess-right{display:flex;align-items:center;gap:0.75rem;}.guess-weather{font-size:0.9rem;}.guess-temp{font-family:var(--font-mono);font-weight:700;}.guess-permille{font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);min-width:45px;text-align:right;}.badge-hint{display:inline-flex;align-items:center;gap:3px;font-size:0.68rem;font-weight:600;padding:1px 7px;border-radius:999px;background:rgba(210,153,34,0.18);color:#e3b341;border:1px solid rgba(210,153,34,0.45);margin-left:6px;letter-spacing:0.02em;vertical-align:middle;}@keyframes fadeIn{0%{opacity:0;transform:translateY(-4px);}100%{opacity:1;transform:scale(1);}}@media (max-width:768px){.game-control-card{padding:0.85rem 0.75rem;}.game-control-header{flex-direction:column;align-items:stretch;gap:0.65rem;}.game-mode-toggle,.game-difficulty-toggle{display:flex;flex-direction:column;align-items:stretch;gap:0.35rem;width:100%;}.control-label{font-size:0.72rem;}.pill-group{width:100%;display:flex;}.pill-btn{flex:1;text-align:center;justify-content:center;padding:0.5rem 0.4rem;min-height:40px;font-size:0.78rem;white-space:nowrap;}.game-actions{display:flex;flex-wrap:wrap;gap:0.45rem;width:100%;}.game-actions .btn{flex:1 1 100%;width:100%;padding:0.55rem 0.75rem;font-size:0.84rem;min-height:44px;justify-content:center;}.game-status-bar{flex-direction:column;align-items:stretch;gap:0.5rem;padding-top:0.6rem;margin-top:0.6rem;}.game-status-left{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:0.4rem;width:100%;}.game-status-note{width:100%;font-size:0.75rem;}.game-status-right{width:100%;text-align:center;background:rgba(88,166,255,0.08);border:1px solid rgba(88,166,255,0.2);border-radius:var(--radius-sm);padding:0.35rem;}.win-content{flex-direction:column;text-align:center;gap:0.85rem;}.win-content .btn{width:100%;min-height:44px;}.input-wrapper{padding:0.28rem 0.32rem 0.28rem 0.65rem;border-radius:var(--radius-md);}.input-icon{font-size:1.05rem;margin-right:0.35rem;flex-shrink:0;}.game-input{font-size:16px;min-width:0;width:100%;}.game-input::placeholder{font-size:0.82rem;}.btn-guess{padding:0.5rem 0.82rem;font-size:0.86rem;border-radius:var(--radius-sm);white-space:nowrap;min-height:44px;flex-shrink:0;}.game-spotlight{padding:0.85rem 1rem;}.spotlight-body{flex-direction:column;align-items:stretch;gap:0.75rem;}.spotlight-word-group{justify-content:space-between;width:100%;min-width:0;gap:0.5rem;}.spotlight-word{font-size:clamp(1.25rem,5.2vw,1.75rem);max-width:65%;overflow-wrap:anywhere;}.spotlight-weather{font-size:0.78rem;padding:0.25rem 0.55rem;flex-shrink:0;}.spotlight-scores{width:100%;align-items:stretch;gap:0.4rem;}.spotlight-metrics-row{width:100%;display:flex;justify-content:space-between;align-items:baseline;}.spotlight-temp{font-size:1.35rem;}.temp-gauge{width:100%;height:8px;}.temp-gauge-fill{background-size:100% 100% !important;}.game-guesses-list{height:auto;min-height:96px;max-height:260px;max-height:min(260px,38dvh);}.game-guesses-list .clues-empty{padding:1.25rem 0.75rem;}.guess-row{padding:0.48rem 0.6rem;font-size:0.8rem;gap:0.35rem;}.guess-left{gap:0.4rem;min-width:0;flex:1 1 auto;}.guess-order{min-width:22px;font-size:0.72rem;flex-shrink:0;}.guess-word{font-size:0.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;}.guess-right{gap:0.4rem;flex-shrink:0;}.guess-temp{font-size:0.8rem;min-width:48px;text-align:right;}.guess-permille{font-size:0.72rem;min-width:38px;}.badge-hint{font-size:0.62rem;padding:1px 5px;flex-shrink:0;}html.is-keyboard-open .app-header{position:relative;}html.is-keyboard-open .main-content,html.is-keyboard-open .view-content{gap:0.55rem;}html.is-keyboard-open .game-spotlight{padding:0.6rem 0.8rem;}html.is-keyboard-open .spotlight-header{margin-bottom:0.45rem;padding-bottom:0.3rem;}html.is-keyboard-open .game-guesses-list{max-height:175px;max-height:min(175px,30dvh);}}@media (max-width:768px) and (max-height:540px){.app-header{position:relative;}.main-content,.view-content{gap:0.55rem;}.game-guesses-list{max-height:min(175px,32dvh);}}</style>
+  <link rel="stylesheet" href="../css/dist/modal.css" media="print" data-deferred-css>
+  <noscript><link rel="stylesheet" href="../css/dist/modal.css"></noscript>
+  <link rel="modulepreload" href="../js/defi.js">
+  <link rel="modulepreload" href="../js/utils.js">
+
+  <!-- Données Structurées JSON-LD (Schema.org / WebApplication & Fil d'Ariane) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": ["WebApplication", "Game"],
+        "@id": "https://cemantix.cyril-randon.fr/defi/#defi",
+        "name": "Défier le Bot IA Cémantix",
+        "url": "https://cemantix.cyril-randon.fr/defi/",
+        "description": "Proposez un mot secret au bot IA : le solveur RAG (régression Ridge + k-NN frWac + reranking, zéro LLM) le traque coup par coup, en direct et sans inscription.",
+        "applicationCategory": "GameApplication",
+        "genre": "Jeu de réflexion et sémantique",
+        "operatingSystem": "All",
+        "inLanguage": "fr-FR",
+        "isPartOf": {
+          "@type": "WebSite",
+          "@id": "https://cemantix.cyril-randon.fr/#website"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Cyril Randon",
+          "url": "https://cyril-randon.fr",
+          "sameAs": [
+            "https://github.com/Cyrilpop/cemantix-rag-solver",
+            "https://www.linkedin.com/in/cyril-randon"
+          ]
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://cemantix.cyril-randon.fr/defi/#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://cemantix.cyril-randon.fr/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Défier le Bot",
+            "item": "https://cemantix.cyril-randon.fr/defi/"
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <span class="brand-icon">🎯</span>
+        <div class="brand-text">
+          <span class="brand-title">Cémantix Solver</span>
+          <span class="brand-subtitle">Mot du Jour &amp; IA Sémantique</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="theme-toggle" class="btn-icon" aria-label="Changer de thème" title="Basculer Mode Clair / Sombre">
+          <span class="theme-icon">☀️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <!-- Navigation des Vues Principales -->
+    <nav class="nav-tabs" aria-label="Navigation des vues">
+      <a href="../" id="tab-dashboard" class="nav-tab">
+        <span class="tab-icon">📊</span>
+        <span>Tableau de Bord</span>
+      </a>
+      <a href="../play/" id="tab-play" class="nav-tab">
+        <span class="tab-icon">🎮</span>
+        <span>Jouer Solo</span>
+      </a>
+      <a href="../battle/" id="tab-battle" class="nav-tab">
+        <span class="tab-icon">⚔️</span>
+        <span>Mode Battle</span>
+        <span class="tab-badge">Versus IA</span>
+      </a>
+      <a href="../defi/" id="tab-defi" class="nav-tab active">
+        <span class="tab-icon">🤖</span>
+        <span>Défier le Bot</span>
+        <span class="tab-badge">Live</span>
+      </a>
+      <a href="../multi/" id="tab-multi" class="nav-tab">
+        <span class="tab-icon">👥</span>
+        <span>Mode Multijoueur</span>
+        <span class="tab-badge">1v1 Ami</span>
+      </a>
+      <a href="../puzzles/" id="tab-archives" class="nav-tab">
+        <span class="tab-icon">📚</span>
+        <span>Archives</span>
+      </a>
+    </nav>
+
+    <!-- Zone du Défi au Bot -->
+    <div id="view-defi" class="view-content active">
+      <h1 class="page-heading">Défier le bot IA : à vous de choisir le mot secret</h1>
+      <p class="page-intro">Vous imposez un mot, le solveur RAG du site doit le retrouver,
+      coup après coup, exactement comme chaque nuit sur le Cémantix officiel. Le bot ne triche
+      pas : il ne voit que les températures de similarité cosinus, calculées localement sur le
+      même espace vectoriel frWac que le vrai jeu, <strong>sans aucun LLM</strong>. Suivi en
+      direct, 10 défis par heure, sans inscription.</p>
+      <noscript>
+        <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent, #6366f1); padding: 1rem;">
+          <h2 style="font-size: 1.1rem; margin-top: 0;">ℹ️ JavaScript requis pour défier le bot</h2>
+          <p>Le suivi en direct de la trajectoire du bot nécessite JavaScript. Vous pouvez consulter les résolutions passées dans les <a href="../puzzles/">archives complètes des énigmes</a>.</p>
+        </div>
+      </noscript>
+
+      <!-- Carte de saisie du défi -->
+      <section class="card game-control-card">
+        <form id="defi-form" class="input-wrapper" autocomplete="off">
+          <label for="defi-word" class="control-label" style="margin-right:.5rem">Votre mot secret :</label>
+          <input id="defi-word" name="word" class="game-input" type="text" inputmode="latin"
+                 minlength="3" maxlength="24" placeholder="ex. chaussette" required
+                 pattern="[a-zA-Z\u00E0-\u00FF][a-zA-Z\u00E0-\u00FF]{2,23}" aria-describedby="defi-status">
+          <button type="submit" id="defi-submit" class="btn btn-guess">🤖 Lancer le défi</button>
+        </form>
+        <p id="defi-status" class="game-status-note" role="status" aria-live="polite" style="margin-top:.6rem">
+          Le bot attend votre mot. Un seul mot français du dictionnaire Cémantix, 3 à 24 lettres.
+        </p>
+      </section>
+
+      <!-- Déroulé en direct -->
+      <section class="card" style="margin-top: 1rem;">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3>🔍 Trajectoire du bot en direct</h3>
+            <span class="card-subtitle">Ordre chronologique des coups, comme la nuit sur le mot du jour</span>
+          </div>
+          <span id="defi-chrono" class="status-badge status-sleeping">⏱️ —</span>
+        </div>
+        <div id="defi-guesses" class="clues-list game-guesses-list">
+          <div class="clues-empty">
+            <span>En attente d'un défi.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dénouement -->
+      <section id="defi-result" class="card" style="margin-top: 1rem; display: none;">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3 id="defi-result-title">🏁 Dénouement</h3>
+            <span id="defi-result-line" class="card-subtitle" role="status" aria-live="polite"></span>
+          </div>
+        </div>
+        <div class="game-actions" style="margin-top:.75rem">
+          <button type="button" id="defi-full-trajectory" class="btn btn-secondary">📜 Voir la trajectoire complète</button>
+          <button type="button" id="defi-retry" class="btn btn-secondary">🤖 Nouveau défi</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Modal de Trajectoire (même gabarit que le tableau de bord) -->
+  <div id="trajectory-modal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modal-puzzle-title">
+    <div class="modal-card trajectory-modal-card card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-badges">
+            <span id="modal-puzzle-badge" class="badge badge-accent">Défi au Bot</span>
+            <span id="modal-date-badge" class="meta-date">À l'instant</span>
+            <span id="modal-win-badge" class="badge badge-success">🏆 Trouvé</span>
+          </div>
+          <h2 id="modal-puzzle-title">Trajectoire de Résolution du Bot</h2>
+          <span class="modal-target-word">Mot cible : <strong id="modal-secret-word" class="word-spoiler is-hidden" title="Cliquer pour afficher / masquer">--------</strong></span>
+        </div>
+        <button type="button" id="modal-close-btn" class="modal-close-btn" aria-label="Fermer la modal" title="Fermer (Échap)">✕</button>
+      </div>
+
+      <!-- KPIs Synthétiques de la Session de Résolution -->
+      <div class="trajectory-summary-bar">
+        <div class="summary-metric">
+          <span class="metric-icon">🎯</span>
+          <div class="metric-body">
+            <span class="metric-label">Coups Joués</span>
+            <span id="modal-tries" class="metric-num">--</span>
+          </div>
+        </div>
+        <div class="summary-metric">
+          <span class="metric-icon">⚡</span>
+          <div class="metric-body">
+            <span class="metric-label">Temps Calcul</span>
+            <span id="modal-duration" class="metric-num">--</span>
+          </div>
+        </div>
+        <div class="summary-metric">
+          <span class="metric-icon">🔥</span>
+          <div class="metric-body">
+            <span class="metric-label">Top Proximité</span>
+            <span id="modal-best-word" class="metric-num">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barre de Filtrage & Actions -->
+      <div class="trajectory-filter-bar">
+        <div class="filter-group-wrapper">
+          <span class="filter-label">Afficher :</span>
+          <div class="pill-group" id="trajectory-filter-group">
+            <button type="button" class="pill-btn active" data-filter="all">Tous (<span id="count-all">0</span>)</button>
+            <button type="button" class="pill-btn" data-filter="seeds">🌱 Graines (<span id="count-seeds">0</span>)</button>
+            <button type="button" class="pill-btn" data-filter="rag">⚡ RAG (<span id="count-rag">0</span>)</button>
+            <button type="button" class="pill-btn" data-filter="hot">🔥 Top 1000 (<span id="count-hot">0</span>)</button>
+          </div>
+        </div>
+        <button type="button" id="copy-trajectory-btn" class="btn btn-ghost btn-xs" title="Copier le résumé textuel pour partage">
+          <span>📋</span> Copier la trajectoire
+        </button>
+      </div>
+
+      <!-- Timeline des Coups Joués par l'IA -->
+      <div class="trajectory-scroll-body">
+        <div id="trajectory-list" class="trajectory-list"></div>
+      </div>
+
+      <div class="modal-footer">
+        <span class="modal-footer-note">💡 Cliquez sur n'importe quel mot pour le copier dans le presse-papier.</span>
+        <button type="button" id="modal-bottom-close-btn" class="btn btn-secondary btn-sm">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-left">
+        <p><strong>Cémantix Solver</strong> — Propulsé par RAG vectoriel (frWac Word2Vec + ChromaDB).</p>
+        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>.</span>
+      </div>
+      <div class="footer-right">
+        <a href="../" class="btn btn-ghost btn-sm" title="Retour au Tableau de Bord">
+          <span>📊</span> Tableau de bord
+        </a>
+        <a href="../battle/" class="btn btn-ghost btn-sm" title="Défier l'IA en Mode Battle">
+          <span>⚔️</span> Mode Battle
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="../js/theme.js"></script>
+  <script type="module" src="../js/defi.js"></script>
+</body>
+</html>

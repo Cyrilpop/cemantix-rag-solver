@@ -23,6 +23,10 @@ local/*.log
 local/__pycache__/
 local/.pytest_cache/
 
+# Surcharge compose qui monte ./src à chaud : propre au poste de dev (le build
+# d'image y est impossible, pas de sortie réseau pour apt). Jamais en prod.
+docker-compose.dev.yml
+
 # --- Python ------------------------------------------------------------------
 __pycache__/
 *.py[cod]

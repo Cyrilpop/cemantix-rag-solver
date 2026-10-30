@@ -141,6 +141,15 @@ docker compose down
 > - **Rattrapage au démarrage** : Si le mot d'aujourd'hui n'a pas encore été résolu, le worker le trouve dès son lancement avant de se mettre en sommeil jusqu'au prochain minuit.
 > - **Génération automatique de `sitemap.xml` au démarrage** : Non versionnés sous Git (`.gitignore`) pour éviter tout conflit lors d'un `git pull`, `volumes/web/sitemap.xml` et les pages d'archives `/puzzles/` sont régénérés automatiquement et de manière atomique à chaque démarrage de `cemantix_web` et `cemantix_worker` (`ensure_seo_published()`).
 
+> [!IMPORTANT]
+> **Permissions POSIX du volume `cemantix_data` (ChromaDB & non-root UID 1000) :**
+> Par conformité de sécurité (`SEC-13`), les conteneurs `cemantix_worker` et `cemantix_web` s'exécutent avec l'utilisateur non privilégié `cemantix` (`UID 1000:1000`) et en système de fichiers en lecture seule (`read_only: true`).
+> Sur la machine hôte, le volume partagé `./cemantix_data` (notamment le sous-dossier `chroma_w2v/` hébergeant la base vectorielle SQLite) doit impérativement être accessible en écriture par cet utilisateur :
+> ```bash
+> sudo chown -R 1000:1000 ./cemantix_data
+> ```
+> Si ce répertoire appartient à `root`, SQLite bascule en mode lecture seule (`attempt to write a readonly database`), empêchant le chargement de ChromaDB et le traitement des défis.
+
 #### 3. Lancer une commande ponctuelle, interactive ou les tests
 Sans arrêter les services de production, vous pouvez exécuter le menu interactif ou les suites de tests via le conteneur CLI éphémère :
 
@@ -364,6 +373,15 @@ volumes/web/
 - **Ergonomie Responsive Mobile Native** : Refonte smartphone complète (`≤ 768px` / `≤ 480px`, GP8 Pro, iPhone, 360px) sans aucun impact sur l'affichage Bureau — verrouillage `overflow-x: clip`, saisie empilée `16px` sans auto-zoom, adaptation dynamique à l'ouverture du clavier virtuel (`visualViewport`), navigation défilante auto-centrée, cibles tactiles ≥ `44×44px` et support `safe-area-inset-bottom`.
 - **Performance Mobile PageSpeed (Zéro requête CSS bloquante & Zéro reflow forcé)** : Injection automatique du CSS critique minifié dans `<head>` (`tools/build_css_bundles.py`), chargement différé non bloquant de `modal.css` compatible CSP (`script-src 'self'`), lecture géométrique différée via `requestAnimationFrame` dans `js/theme.js` et manifestes de découverte agentique conformes ARD (`/.well-known/ard.json` et `/.well-known/ai-catalog.json`).
 
+#### 🤖 Défier le Bot IA (`/defi/`) :
+Le visiteur propose **un mot secret** ; le solveur RAG du site doit le retrouver, coup par coup, **en direct**. L'architecture tri-partite reste stricte :
+
+1. **`cemantix_web` enfile, ne calcule jamais** — `POST /api/challenge` valide le mot (regex + lexique du site, message unique « Mot non reconnu »), vérifie la whitelist d'exemption, l'anti-rafale mémoire, le **quota de 10 défis/heure persisté en base** (insensible aux redémarrages) et la file bornée, puis écrit une ligne dans `bot_challenges`. Le module de route n'importe ni solveur ni démon (`grep -n "solvers\|daemon" src/api/routes/challenge.py` est vide).
+2. **`cemantix_worker` résout** — dans sa boucle de veille, toutes les 3 s : recyclage des orphelins, claim atomique, résolution par le moteur existant (`Solver` + `MockClient(secret=…)` de l'option `--secret` du CLI) **en 100 % RAG pur, zéro LLM**, trajectoire publiée toutes les 2 s. La résolution nocturne de minuit garde la priorité ; `CHALLENGE_ENABLED=0` coupe tout sans redéploiement.
+3. **Le front affiche** — `js/defi.js` ouvre un `EventSource` sur `/api/challenge/<id>/stream` (repli polling automatique si le flux tombe) et rend chaque coup au gabarit exact de la trajectoire du mot du jour ; le bot peut **perdre** (statut `lost`), c'est une issue affichée.
+
+Sécurité : IP hachée (HMAC-SHA256 salé, /24), purge automatique à 30 jours, identifiants de défis aléatoires 128 bits, `Cache-Control: no-store`, mot jamais révélé avant le statut terminal (et seulement si le bot a gagné), anti-XSS en trois couches, plafond de 16 flux SSE simultanés. Les IP exemptées se gèrent dans la console d'exploitation (onglet Actions).
+
 #### Configuration Caddy (Production & Anti-Cache Automatique) :
 Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volumes/web` et appliquez la politique de cache HTTP optimisée.
 
@@ -427,11 +445,25 @@ cemantix.cyril-randon.fr {
     @html path *.html
     header @html Cache-Control "no-cache, must-revalidate"
 
-    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/*
+    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/* /defi /defi/*
     header @pages Cache-Control "no-cache, must-revalidate"
 
     @sitemap path /sitemap.xml /robots.txt /llms.txt /llms.md /agent-skills.md /.well-known/*
     header @sitemap Cache-Control "no-cache, must-revalidate"
+
+    # Flux « Défier le bot » en direct (SSE) — chemin plus spécifique que /api/*
+    # Un défi peut rester silencieux le temps que le worker le prenne : sans
+    # flush_interval -1, Caddy met le flux en tampon et le navigateur ne reçoit
+    # jamais les coups (le serveur émet pourtant un battement toutes les 10 s).
+    handle /api/challenge/*/stream {
+        header Cache-Control "no-store"
+        reverse_proxy cemantix_web:8000 {
+            flush_interval -1
+            transport http {
+                read_timeout 900s
+            }
+        }
+    }
 
     # API du Solveur (prioritaire et exclusive)
     handle /api/* {
@@ -730,6 +762,18 @@ Le projet utilise donc un volume Docker nommé `cemantix_db_data` (ext4 interne 
 
 ### Proxy d'entreprise & Variables Docker (QUAL-11)
 Si un proxy d'entreprise est configuré sur l'hôte Docker (`~/.docker/config.json`), le démon Docker peut injecter `http_proxy` en minuscules dans l'environnement des conteneurs. Pour éviter que `requests` ne contourne les exceptions locales, les variables doivent être définies en **deux casses** (`HTTP_PROXY` et `http_proxy`) ou neutralisées explicitement pour les services purement internes.
+
+### Permissions POSIX du volume `cemantix_data` & ChromaDB (UID 1000)
+Les conteneurs de production `cemantix_worker` et `cemantix_web` appliquent le principe de moindre privilège (`SEC-13`) : exécution sous l'utilisateur non-root `1000:1000`, `read_only: true` sur le système de fichiers racine, et abandon de toutes les capacités Linux (`cap_drop: - ALL`).
+
+Lorsque Docker monte le volume hôte `./cemantix_data` dans `/app/cemantix_data`, les permissions de l'hôte s'appliquent directement dans le conteneur. Si le répertoire `cemantix_data/chroma_w2v/` a été initialisé ou touché par `root` sur l'hôte, la base SQLite de ChromaDB ne peut pas créer ses fichiers temporaires de verrouillage (`chroma.sqlite3-wal` et `-shm`) et échoue avec l'erreur :
+```text
+ChromaDB non chargé (error returned from database: (code: 8) attempt to write a readonly database).
+```
+Pour garantir le bon fonctionnement de ChromaDB et le traitement des défis sans blocage, s'assurer que le répertoire appartient à l'UID 1000 :
+```bash
+sudo chown -R 1000:1000 ./cemantix_data
+```
 
 ---
 

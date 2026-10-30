@@ -54,6 +54,105 @@
           }
         }
       }
+    },
+    "/api/challenge": {
+      "post": {
+        "summary": "Proposer un mot secret au bot IA (file d'attente, aucun calcul dans ce service)",
+        "description": "Valide le mot (lexique du site), applique quota 10/h persiste, anti-rafale et file bornee, puis empile la tache. Le worker la resout en 100% RAG pur. IP exemptees (whitelist admin) : quota illimité.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "word"
+                ],
+                "properties": {
+                  "word": {
+                    "type": "string",
+                    "example": "chaussette"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Defi empile : {id, status: queued, quota_restant}"
+          },
+          "400": {
+            "description": "Mot non reconnu (message unique, sans oracle lexikaliste)"
+          },
+          "429": {
+            "description": "Quota 10/h atteint, rafale ou file pleine : {error, retry_after}"
+          },
+          "503": {
+            "description": "Fonctionnalité desactivee (CHALLENGE_ENABLED=0)"
+          }
+        }
+      }
+    },
+    "/api/challenge/{id}": {
+      "get": {
+        "summary": "Etat borne d'un defi (polling)",
+        "description": "Retourne {status, tries_count, steps} ; jamais la trajectoire ni le mot avant le statut terminal. Au terminal, le mot n'est renvoye que si status = solved.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Etat du defi"
+          },
+          "404": {
+            "description": "Defi introuvable (message generique)"
+          }
+        }
+      }
+    },
+    "/api/challenge/{id}/stream": {
+      "get": {
+        "summary": "Suivi en direct des coups d'un defi (SSE)",
+        "description": "Flux text/event-stream : un event {event: step, step} par coup, puis {event: done, status, tries_count, duration_seconds[, word]} et fermeture. Plafonne a SSE_MAX_STREAMS flux simultanés et 15 minutes par flux.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flux d'evenements",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Defi introuvable"
+          },
+          "503": {
+            "description": "Trop de suivis en direct (le client bascule sur le polling)"
+          }
+        }
+      }
     }
   },
   "components": {

@@ -47,3 +47,31 @@ CREATE TABLE IF NOT EXISTS solo_sessions (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_solo_sessions_updated ON solo_sessions(updated_at);
+
+-- 4. File de tâches « Défier le bot » (DEFI-01) : le conteneur web enqueue,
+--    le worker résout, l'API sert l'état et le direct. Aucune donnée personnelle :
+--    ip_hash est un HMAC-SHA256 salé de l'IP anonymisée /24 (SEC-21).
+CREATE TABLE IF NOT EXISTS bot_challenges (
+    id               VARCHAR(32) PRIMARY KEY,
+    secret_word      VARCHAR(64) NOT NULL,
+    ip_hash          CHAR(64) NOT NULL,
+    status           VARCHAR(16) NOT NULL DEFAULT 'queued',
+    tries_count      INT NOT NULL DEFAULT 0,
+    duration_seconds NUMERIC(8, 2),
+    max_tries        INT NOT NULL DEFAULT 100,
+    trajectory       JSONB NOT NULL DEFAULT '[]'::jsonb,
+    error            VARCHAR(200),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_at       TIMESTAMPTZ,
+    finished_at      TIMESTAMPTZ,
+    heartbeat_at     TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_bot_challenges_queue ON bot_challenges (status, created_at);
+CREATE INDEX IF NOT EXISTS idx_bot_challenges_ip ON bot_challenges (ip_hash, created_at);
+
+-- 5. IPs exemptées de quota (whitelist administrable, DEFI-18)
+CREATE TABLE IF NOT EXISTS bot_challenge_whitelist (
+    ip_address       VARCHAR(45) PRIMARY KEY,
+    description      VARCHAR(100),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

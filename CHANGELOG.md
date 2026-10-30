@@ -4,6 +4,28 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-30 · Évolution « Défier le bot IA » (docs/roadmap/2026-10-06-defier-le-bot)
+
+### Ajouté
+- **File de tâches tri-partite `bot_challenges` (`DEFI-01..03`)** — nouvelle table PostgreSQL/SQLite (id 128 bits aléatoire, `ip_hash` HMAC-SHA256 salé de l'IP /24, statuts `queued|running|solved|lost|error`, trajectoire JSONB incrémentale, `heartbeat_at`) + table `bot_challenge_whitelist` des IP exemptées. DAO dédié `src/db/challenges.py` : claim atomique (`UPDATE … WHERE status='queued'`), recyclage des orphelins (`requeue_stale_running` : un second orphelinat → `error`), purge RGPD à 30 jours. Repli SQLite complet, requêtes 100 % paramétrées.
+- **Trois routes publiques sans aucun calcul dans le web (`DEFI-04..08`)** — `POST /api/challenge` (validation regex + lexique à message unique, anti-rafale mémoire 6 créneaux refill 10/min, **quota 10/h persisté en base** insensible aux restarts, file bornée à 20), `GET /api/challenge/<id>` (état borné : compte de coups, jamais la trajectoire), `GET /api/challenge/<id>/stream` (SSE 0,5 s, plafond global de 16 flux, durée max 15 min). Le module `src/api/routes/challenge.py` n'importe **ni le solveur ni le démon** — vérifié par grep (`DEFI-04`).
+- **Pick-up et résolution dans le démon (`DEFI-09..13`)** — `src/services/challenges.py` : toutes les 3 s dans la boucle de veille, `requeue_stale_running()` puis claim atomique, résolution par le moteur existant `Solver` + `MockClient(secret=mot-du-joueur)` **en 100 % RAG pur (zéro LLM)**, trajectoire publiée toutes les 2 s avec heartbeat, plafond `CHALLENGE_TIMEOUT` (900 s), `max_tries` forcé côté serveur. La résolution nocturne de minuit reste prioritaire ; `CHALLENGE_ENABLED=0` = kill-switch sans redéploiement.
+- **Page `/defi/` à l'affichage identique (`DEFI-14..17`)** — nouveau mode « 🤖 Défier le Bot » ajouté à la navigation des 5 pages, suivi en direct par `EventSource` avec **repli polling** (3 reconnexions), chrono, quota restant, rendu des coups au gabarit exact de la trajectoire du mot du jour (badges Graine/RAG/Sniper, ⭐ record, 🏆 cible) et modal de trajectoire complète réutilisée. SEO complet (title, canonical, OG, JSON-LD) audité par `tools/check_seo.py` qui couvre désormais 5 pages.
+- **Whitelist administrable (`DEFI-18`)** — `GET/POST <ADMIN_BASE_PATH>/whitelist` + `DELETE …/whitelist/<ip>` (validation `ipaddress`), intégrée à la console cachée avec formulaire d'ajout et retrait en un clic ; une IP exemptée saute quota base, anti-rafale et file.
+- **Suite `tests/test_defi_bot.py` (30 tests, QUAL-20)** — validation du mot, quota 10→429 **survivant au rechargement mémoire**, anti-rafale, file bornée, exemption whitelist, administration (formats IP), claim atomique à deux threads, orphelins, purge, résolution bout-en-bout (moteur simulé), kill-switch.
+
+### Sécurité (aucune faille tolérée, `SEC-20..28`)
+- Quota **persisté en base** (HMAC d'IP /24, sel `CHALLENGE_IP_SALT`/`DB_PASS`, jamais l'IP brute) ; IP jamais stockée en clair dans `bot_challenges` ; purge automatique à 30 jours (RGPD).
+- Anti-XSS trois couches (regex+lexique, paramètres liés, `escapeHtml()` systématique) ; identifiants de défis non devinables ; `Cache-Control: no-store` sur toutes les réponses ; le mot du joueur n'apparaît dans **aucune** réponse avant le statut terminal, et seulement si le bot a gagné.
+- Coût borné : file ≤ 20, `max_tries` serveur, timeout 900 s, SSE ≤ 16 flux ; le worker ne lit **que** `bot_challenges` (le canal admin `daemon_command.json` reste réservé à l'admin).
+
+### Vérifications
+- `python -m unittest discover -s tests` : **151 tests OK** (dont 30 nouveaux).
+- Recette worker réelle (image `cemantix:latest`, mot « amour ») : `queued → running → solved` en 5 coups, 0,38 s de calcul, trajectoire incrémentale visible en base.
+- `tools/check_seo.py` (5 pages) et `tools/check_docs.py` : `=== OK ===`.
+
+---
+
 ## [Non publié] - 2026-10-30 · Roadmap : ordre chronologique des évolutions et contrôleur de documents durci
 
 ### Modifié & Optimisé
