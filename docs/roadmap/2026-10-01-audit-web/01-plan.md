@@ -6,7 +6,7 @@
 > (43 commits sur `main`), qui en était le seul exemplaire avant son archivage ici.
 > Son suivi est dans [`02-avancement.md`](02-avancement.md).
 > **Ne pas confondre** avec l'évolution
-> [2026-10 · Sécurité, SEO, performance, qualité](../2026-10-securite-seo-performance/01-plan.md),
+> [2026-10 · Sécurité, SEO, performance, qualité](../2026-10-02-securite-seo-performance/01-plan.md),
 > audit transverse du 27/10 qui a re-vérifié point par point ce que celui-ci annonçait comme traité.
 > Périmètre analysé : `volumes/web/**` (HTML/CSS/JS), `src/api/**` (API HTTP),
 > `src/services/web.py` (export données), `docker-compose.yml`, `Dockerfile`.

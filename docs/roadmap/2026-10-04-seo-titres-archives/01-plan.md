@@ -8,7 +8,7 @@
 > **Date de conception :** 30/10/2026
 > **Périmètre exclusif :** libellés des pages d'archives (`src/services/seo.py`), plan du site `sitemap.xml`, documents de découverte pour agents IA (`llms.txt`, `llms.md`, `agent-skills.md`, `.well-known/`). Aucune modification du rendu bureau, du jeu, ni de l'API.
 
-**Convention de lecture :** chaque finding porte un identifiant permanent (`SEO-13` à `SEO-16`) utilisé comme **clé de suivi** dans `02-avancement.md`. Les identifiants `SEO-01` à `SEO-12` sont déjà attribués par l'évolution [Sécurité, SEO, performance, qualité](../2026-10-securite-seo-performance/01-plan.md) et ne sont pas réutilisés ici.
+**Convention de lecture :** chaque finding porte un identifiant permanent (`SEO-13` à `SEO-16`) utilisé comme **clé de suivi** dans `02-avancement.md`. Les identifiants `SEO-01` à `SEO-12` sont déjà attribués par l'évolution [Sécurité, SEO, performance, qualité](../2026-10-02-securite-seo-performance/01-plan.md) et ne sont pas réutilisés ici.
 
 ---
 
