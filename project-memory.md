@@ -1,6 +1,6 @@
 # Project Memory — Cémantix RAG Solver
 
-**Dernière mise à jour :** 30 octobre 2026 (Milestone M2 — Modularisation Sécurisée du Solveur)  
+**Dernière mise à jour :** 30 octobre 2026 (Milestone M2.1 — Durcissement Compatibilité Solveur)  
 **Dépôt :** `Cyrilpop/cemantix-rag-solver`  
 **Statut du Projet :** Production active / Maintenance & Modernisation incrémentale  
 

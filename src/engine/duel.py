@@ -5,6 +5,7 @@ Agent autonome basé sur l'espace vectoriel et la régression Ridge,
 jouant coup par coup avec une heuristique calibrée selon la difficulté
 (facile, moyen, expert).
 """
+import sys
 from typing import Optional, TYPE_CHECKING
 import numpy as np
 
@@ -20,6 +21,12 @@ from .ranking import weather_for_score, estimate_secret, rerank
 if TYPE_CHECKING:
     from .vocab import VocabStore
     from .clients import MockClient
+
+
+def _resolve_ranking_fn(name: str, fallback):
+    """Résolution tardive supportant le monkeypatching historique sur src.engine.solvers."""
+    mod = sys.modules.get("src.engine.solvers")
+    return getattr(mod, name, fallback) if mod is not None else fallback
 
 
 class RagDuelPlayer:
@@ -62,9 +69,12 @@ class RagDuelPlayer:
 
         # 2. Régression Ridge + k-NN + Rerank
         if not word_to_play and len(known) >= 2:
+            fn_estimate = _resolve_ranking_fn("estimate_secret", estimate_secret)
+            fn_rerank = _resolve_ranking_fn("rerank", rerank)
+
             G = np.vstack([self.store.vec(w) for w, s in known])
             s = np.array([s for w, s in known], dtype=np.float32)
-            q_est = estimate_secret(G, s)
+            q_est = fn_estimate(G, s)
             k_knn = 150 if self.difficulty == "expert" else (100 if self.difficulty == "moyen" else 60)
             raw_pool = self.store.knn(q_est, k_knn)
 
@@ -87,7 +97,7 @@ class RagDuelPlayer:
                         break
 
             if cands:
-                reranked = rerank(self.store, cands, G, s, q_est)
+                reranked = fn_rerank(self.store, cands, G, s, q_est)
                 if reranked:
                     if self.difficulty == "expert":
                         # Expert : joue toujours le top 1 absolu
@@ -115,7 +125,8 @@ class RagDuelPlayer:
         self.tried.add(word_to_play)
         res = self.game.score(word_to_play)
         s, p = res if res else (0.0, None)
-        w_icon, w_lbl = weather_for_score(s, p)
+        fn_weather = _resolve_ranking_fn("weather_for_score", weather_for_score)
+        w_icon, w_lbl = fn_weather(s, p)
 
         self.guesses[word_to_play] = (s, p, turn_no, w_icon, w_lbl)
         return word_to_play, s, p, w_icon, w_lbl

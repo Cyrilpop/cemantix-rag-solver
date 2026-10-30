@@ -84,7 +84,7 @@ python tools/agent_find.py --summary src/engine/solvers.py  # Affiche les repèr
 Avant de soumettre toute modification, exécutez ces 4 contrôles :
 
 ```bash
-# 1. Suite de tests unitaires (204 tests attendus, 0 échec)
+# 1. Suite de tests unitaires (212 tests attendus, 0 échec)
 docker run --rm -v $(pwd):/app -w /app python:3.12-slim sh -c \
   "pip install --no-cache-dir -r requirements.txt && python -m unittest discover -s tests -v"
 

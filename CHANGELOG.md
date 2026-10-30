@@ -4,6 +4,14 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-30 · Jalon M2.1 : Durcissement de la Compatibilité Comportementale du Solveur
+
+### Modifié & Optimisé
+- **Compatibilité comportementale de monkeypatching (M2.1)** : intégration d'une résolution tardive de façade (`_resolve_ranking_fn`) dans `src/engine/duel.py`, garantissant que tout patch ciblant `src.engine.solvers.estimate_secret`, `rerank` ou `weather_for_score` intercepte immédiatement les décisions de `RagDuelPlayer` sans créer de cycle d'importation.
+- **Suite de tests comportementaux (`tests/test_solver_behavioral_compat.py`)** : validation de l'interception indirecte via `Solver` et `RagDuelPlayer`, et de la stricte équivalence numérique et séquentielle des trajectoires M1 vs M2. Total porté à 212 tests (0 échec).
+
+---
+
 ## [Non publié] - 2026-10-30 · Jalon M2 : Modularisation et Découplage Sécurisé du Solveur
 
 ### Modifié & Optimisé
