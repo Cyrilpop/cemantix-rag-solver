@@ -208,6 +208,23 @@ def oldest_recent_for_ip(ip_hash_value: str, window_seconds: float):
     return (row or {}).get("created_at")
 
 
+def queue_position(challenge_id: str) -> int:
+    """Rang d'attente d'un défi (0 = le prochain pris en charge).
+
+    La comparaison se fait en base sur `created_at` du défi lui-même : pas de
+    va-et-vient de formats de date entre les moteurs.
+    """
+    row = db.fetch_one(
+        """
+        SELECT COUNT(*) AS n FROM bot_challenges
+        WHERE status = 'queued'
+          AND created_at < (SELECT created_at FROM bot_challenges WHERE id = %s);
+        """,
+        (challenge_id,),
+    )
+    return int((row or {}).get("n") or 0)
+
+
 def count_queued() -> int:
     """Profondeur d'attente actuelle, pour le plafond de file (SEC-24)."""
     row = db.fetch_one("SELECT COUNT(*) AS n FROM bot_challenges WHERE status = 'queued';")

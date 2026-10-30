@@ -428,6 +428,79 @@ class TestFluxDirect(unittest.TestCase):
         self.assertNotIn("amour", evts[-1])  # perdu : le mot reste secret
 
 
+class TestEtatAttente(unittest.TestCase):
+    """Le joueur doit savoir OU il en est, et si le solveur est en vie.
+
+    Défaut vécu : un défi que personne ne traitait affichait « le bot cherche… »
+    indéfiniment. La vue publique expose désormais `solveur` et `position`.
+    """
+
+    def setUp(self):
+        _clean()
+        from src.api import liveness
+        from src.api.routes import challenge as routes
+        self.liveness = liveness
+        self.routes = routes
+        self.h = dao.ip_hash("9.9.9.0")
+
+    def _heartbeat(self, payload):
+        import json
+        import tempfile
+        from pathlib import Path
+        path = Path(tempfile.mkdtemp()) / "hb.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        return mock.patch.object(self.liveness, "HEARTBEAT_FILE", path)
+
+    def test_worker_vivant(self):
+        import time
+        with self._heartbeat({"status": "sleeping", "updated_at": time.time()}):
+            self.assertEqual(self.liveness.solveur_state(), "vivant")
+
+    def test_worker_silencieux_est_hors_ligne(self):
+        import time
+        vieux = time.time() - (self.liveness.WORKER_SILENCE_SECONDS + 60)
+        with self._heartbeat({"status": "sleeping", "updated_at": vieux}):
+            self.assertEqual(self.liveness.solveur_state(), "hors-ligne")
+
+    def test_worker_arrete_est_hors_ligne(self):
+        import time
+        with self._heartbeat({"status": "stopped", "updated_at": time.time()}):
+            self.assertEqual(self.liveness.solveur_state(), "hors-ligne")
+
+    def test_worker_absent_est_inconnu(self):
+        from pathlib import Path
+        with mock.patch.object(self.liveness, "HEARTBEAT_FILE", Path("/absent/hb.json")):
+            self.assertEqual(self.liveness.solveur_state(), "inconnu")
+
+    def test_vue_en_attente_expose_l_etat(self):
+        import time
+        cid = dao.create_challenge("amour", self.h)
+        with self._heartbeat({"status": "sleeping", "updated_at": time.time()}):
+            view, status = self.routes.handle_challenge_get(None, f"/api/challenge/{cid}", "")
+        self.assertEqual(status, 200)
+        self.assertEqual(view["solveur"], "vivant")
+        self.assertEqual(view["position"], 0)
+
+    def test_position_reflete_la_file(self):
+        dao.create_challenge("amour", self.h)
+        second = dao.create_challenge("volcan", self.h)
+        self.assertGreaterEqual(dao.queue_position(second), 1)
+        dao.claim_next_challenge()
+        self.assertEqual(dao.queue_position(second), 0)
+
+
+    def test_attente_longue_mesuree(self):
+        """Le signal qui attrape un worker vivant mais incapable de consommer."""
+        cid = dao.create_challenge("amour", self.h)
+        vue, _ = self.routes.handle_challenge_get(None, f"/api/challenge/{cid}", "")
+        self.assertIsNotNone(vue["attente_secondes"])
+        self.assertLess(vue["attente_secondes"], 60)
+
+    def test_attente_tolerante_aux_dates_inconnues(self):
+        self.assertIsNone(self.routes._attente_secondes({"created_at": "pas-une-date"}))
+        self.assertIsNone(self.routes._attente_secondes({}))
+
+
 if __name__ == "__main__":
     unittest.main()
 

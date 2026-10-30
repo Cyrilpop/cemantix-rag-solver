@@ -28,6 +28,7 @@ from ...db import (
     ip_hash,
     is_ip_whitelisted,
 )
+from ..liveness import solveur_state
 from ..ratelimit import RateLimiter
 
 # --------------------------------------------------------------------------- #
@@ -137,6 +138,26 @@ def handle_challenge_post(manager, path: str, data: dict, client_ip: str,
 # --------------------------------------------------------------------------- #
 # GET /api/challenge/<id> (DEFI-05, SEC-22, SEC-26)
 # --------------------------------------------------------------------------- #
+# L'état du solveur vient de `src.api.liveness` (lecture d'un fichier partagé) :
+# cette route continue de n'importer ni moteur de résolution ni code du worker.
+def _attente_secondes(challenge: dict):
+    """Ancienneté du défi, en secondes — le signal qui trahit un consommateur muet.
+
+    Un worker VIVANT mais ancien bat toujours la chamade sans consommer la file :
+    l'état du solveur seul ne suffit donc pas. Une attente anormalement longue à
+    statut `queued`, solveur annoncé vivant, est la preuve que rien ne lit la file.
+    """
+    from datetime import datetime, timezone
+    brut = challenge.get("created_at") or ""
+    try:
+        cree = datetime.fromisoformat(brut)
+        if cree.tzinfo is None:
+            cree = cree.replace(tzinfo=timezone.utc)
+        return max(0, int((datetime.now(timezone.utc) - cree).total_seconds()))
+    except Exception:
+        return None
+
+
 def _public_view(challenge: dict) -> dict:
     """Vue publique : jamais le mot avant le statut terminal ; au terminal,
     seulement si le bot a gagné (le mot est alors déjà dans la trajectoire)."""
@@ -151,6 +172,12 @@ def _public_view(challenge: dict) -> dict:
             view["word"] = challenge["secret_word"]
         elif challenge["status"] == "error":
             view["error"] = "Le bot n'a pas pu mener ce défi au bout."
+    else:
+        # En attente : le joueur voit où il en est ET si le solveur est en vie.
+        view["solveur"] = solveur_state()
+        if challenge["status"] == "queued":
+            view["position"] = dao.queue_position(challenge["id"])
+            view["attente_secondes"] = _attente_secondes(challenge)
     return view
 
 
@@ -219,7 +246,11 @@ def handle_challenge_stream(path: str, send_json, send_sse) -> None:
                 emit(json.dumps({"event": "gone"}))
                 return
             emit(json.dumps({"event": "status", "status": first["status"],
-                             "tries_count": first["tries_count"]}))
+                             "tries_count": first["tries_count"],
+                             "solveur": solveur_state(),
+                             "position": (dao.queue_position(challenge_id)
+                                          if first["status"] == "queued" else None),
+                             "attente_secondes": _attente_secondes(first)}))
             last_ping = time.time()
 
             while time.time() < deadline:
@@ -245,7 +276,9 @@ def handle_challenge_stream(path: str, send_json, send_sse) -> None:
                 # nouveau. Le flux reste « vivant » aux yeux des intermédiaires.
                 if time.time() - last_ping >= SSE_PING_SECONDS:
                     emit(json.dumps({"event": "ping", "status": challenge["status"],
-                                     "tries_count": challenge["tries_count"]}))
+                                     "tries_count": challenge["tries_count"],
+                                     "solveur": solveur_state(),
+                                     "attente_secondes": _attente_secondes(challenge)}))
                     last_ping = time.time()
                 time.sleep(SSE_POLL_SECONDS)
             emit(json.dumps({"event": "timeout"}))

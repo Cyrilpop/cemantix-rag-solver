@@ -85,11 +85,29 @@ function stepRowHtml(item) {
     </div>`;
 }
 
+/** Message d'attente : position dans la file, recherche, ou solveur absent. */
+function waitingMessage(payload) {
+  if (payload.solveur === "hors-ligne") {
+    return "⚠️ Le solveur ne répond pas : ton défi est bien enregistré, mais aucun bot ne le traite pour l'instant. Réessaie plus tard.";
+  }
+  if (payload.status === "queued") {
+    const attente = Number(payload.attente_secondes || 0);
+    if (attente > 60) {
+      return `⚠️ Ton défi attend depuis ${Math.round(attente / 60)} minute(s) sans que le bot le prenne : le solveur ne consomme pas la file (redéploiement du worker nécessaire).`;
+    }
+    const pos = payload.position;
+    return (pos === null || pos === undefined)
+      ? "Défi reçu — en file d'attente devant le bot."
+      : `Défi reçu — position ${Number(pos) + 1} dans la file.`;
+  }
+  return `Le bot cherche… ${payload.tries_count || 0} coup(s) joué(s).`;
+}
+
 function renderSteps() {
   const box = el("defi-guesses");
   if (!box) return;
   if (!steps.length) {
-    box.innerHTML = '<div class="clues-empty"><span>Le bot cherche… premier coup imminent.</span></div>';
+    box.innerHTML = '<div class="clues-empty"><span>En attente des premiers coups du bot.</span></div>';
     return;
   }
   box.innerHTML = steps.map(stepRowHtml).join("");
@@ -179,11 +197,7 @@ function openStream(id) {
     } else if (payload.event === "status" || payload.event === "ping") {
       // Battement du serveur : le flux est vivant. Rien à dessiner, mais c'est
       // lui qui empêche un proxy intermédiaire de fermer une attente silencieuse.
-      if (!steps.length) {
-        setStatus(payload.status === "queued"
-          ? "Défi reçu — le bot va s'en saisir."
-          : `Le bot cherche… ${payload.tries_count || 0} coup(s) joué(s).`);
-      }
+      if (!steps.length) setStatus(waitingMessage(payload));
     } else if (payload.event === "gone" || payload.event === "timeout") {
       stream = null;
       source.close();
@@ -228,7 +242,7 @@ function startPolling(id) {
             error: data.error,
           });
         } else {
-          setStatus(`Le bot cherche… ${data.tries_count || 0} coup(s) joué(s).`);
+          setStatus(waitingMessage(data));
         }
       })
       .catch(() => {});
