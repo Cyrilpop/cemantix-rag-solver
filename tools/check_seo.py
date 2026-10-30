@@ -8,6 +8,10 @@ Vérifie sur l'ensemble des pages clés (index.html, play, battle, multi) :
 5. Présence d'un bloc de métadonnées structurées JSON-LD valide.
 6. Absence de meta obsolète (keywords).
 
+Le contrôle audite aussi les deux pages hub produites par `src/services/seo.py`
+(`mot-du-jour`, `methode`) : elles sont régénérées à chaque publication et jamais
+versionnées, donc seul un audit du gabarit rendu en mémoire protège la CI.
+
 Usage :
     python tools/check_seo.py
 """
@@ -25,13 +29,8 @@ PAGES = [
 ]
 
 
-def check_page(path: Path) -> list[str]:
+def check_html(rel_path: str, html: str) -> list[str]:
     errors = []
-    if not path.exists():
-        return [f"Fichier manquant : {path}"]
-
-    html = path.read_text(encoding="utf-8")
-    rel_path = path.relative_to(RACINE)
 
     # 1. Title
     title_match = re.search(r"<title>([^<]+)</title>", html, re.I)
@@ -62,6 +61,59 @@ def check_page(path: Path) -> list[str]:
         errors.append(f"{rel_path}: Balise obsolète <meta name='keywords'> détectée")
 
     return errors
+
+
+def check_page(path: Path) -> list[str]:
+    if not path.exists():
+        return [f"Fichier manquant : {path}"]
+    return check_html(str(path.relative_to(RACINE)), path.read_text(encoding="utf-8"))
+
+
+# Entrée d'historique factice : elle sert à rendre les pages hub pour l'audit, sans
+# base de données ni modèle vectoriel (src/services/seo.py ne dépend que de la stdlib).
+_ENTREE_TEMOIN = {
+    "date": "2026-10-26",
+    "puzzle": 1700,
+    "word": "maison",
+    "win": True,
+    "tries": 9,
+    "duration_seconds": 41.7,
+    "source": "rag",
+    "top_guesses": [{"word": "cabane", "score": 31.2, "permille": 812}],
+}
+
+
+def check_pages_generees() -> list[str]:
+    """Audit des pages hub produites par `src/services/seo.py` (jamais versionnées).
+
+    `volumes/web/mot-du-jour/` et `volumes/web/methode/` sont régénérées à chaque
+    publication : elles ne sont donc jamais dans le dépôt. Les rendre en mémoire est
+    le seul moyen de casser la CI si un gabarit perd son titre, sa canonical ou son
+    JSON-LD.
+    """
+    sys.path.insert(0, str(RACINE))
+    try:
+        from src.services.seo import build_methode_page, build_mot_du_jour_page
+    except ModuleNotFoundError as exc:
+        # Dépendance tierce absente (poste de dev sans requirements.txt) : l'audit des
+        # pages générées est suspendu, mais il ne doit pas faire échouer le contrôle.
+        print(f"  [i] Pages générées non auditées : module manquant « {exc.name} »")
+        return []
+    except Exception as exc:  # le générateur lui-même est cassé
+        return [f"Impossible d'importer le générateur SEO : {exc}"]
+
+    erreurs = []
+    gabarits = (
+        ("volumes/web/mot-du-jour/index.html (généré)", build_mot_du_jour_page(_ENTREE_TEMOIN, [_ENTREE_TEMOIN])),
+        ("volumes/web/methode/index.html (généré)", build_methode_page()),
+    )
+    for nom, html in gabarits:
+        erreurs.extend(check_html(nom, html))
+        if "••••••••" in html:
+            erreurs.append(f"{nom}: le leurre de mot masqué •••••••• est publié comme indice")
+        if "<h1>" not in html:
+            erreurs.append(f"{nom}: <h1> manquante, aucune page ne doit être sans titre H1")
+    return erreurs
 
 
 LLMS_TXT = RACINE / "volumes" / "web" / "llms.txt"
@@ -185,6 +237,7 @@ def main() -> int:
     for page in PAGES:
         errs = check_page(page)
         total_errors.extend(errs)
+    total_errors.extend(check_pages_generees())
     total_errors.extend(check_agentique())
 
     if total_errors:
@@ -194,6 +247,7 @@ def main() -> int:
         return 1
 
     print(f"[OK] Audit SEO reussi sur {len(PAGES)} pages principales (title, description, canonical, OG, JSON-LD).")
+    print("[OK] Audit des pages hub generees reussi (mot-du-jour, methode).")
     print("[OK] Audit agentique reussi (llms.txt H1 + liens, catalogue ARD conforme).")
     return 0
 

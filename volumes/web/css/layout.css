@@ -41,7 +41,8 @@
   min-width: 0;
 }
 
-.brand-text h1 {
+.brand-text .brand-title {
+  display: block;
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -84,7 +85,7 @@
     font-size: clamp(1.3rem, 4.2vw, 1.5rem);
   }
 
-  .brand-text h1 {
+  .brand-text .brand-title {
     font-size: clamp(0.96rem, 3.8vw, 1.08rem);
     line-height: 1.2;
   }
@@ -154,6 +155,15 @@
     gap: 0.9rem;
     min-width: 0;
     max-width: 100%;
+  }
+
+  .page-heading {
+    font-size: clamp(1.15rem, 4.8vw, 1.35rem);
+  }
+
+  .page-intro {
+    font-size: 0.84rem;
+    margin-top: -0.6rem;
   }
 
   .section {
@@ -229,6 +239,24 @@
   flex-direction: column;
   gap: 1.5rem;
   width: 100%;
+}
+
+/* Titre de page (SEO-20) : la marque quitte le <h1> d'en-tête, répété à l'identique
+   sur les quatre vues, au profit d'un <h1> descriptif par page. La marque reste
+   visible, en .brand-title dans l'en-tête. */
+.page-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
+.page-intro {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin-top: -0.9rem;
 }
 
 /* Navigation par Onglets — Barre Défilante Fluide sur Smartphone (RESP-02) */

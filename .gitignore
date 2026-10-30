@@ -42,6 +42,10 @@ volumes/db/
 volumes/web/data.json
 volumes/web/sitemap.xml
 volumes/web/puzzles/
+# Pages hub régénérées à chaque publication SEO (comme /puzzles/ et le sitemap) :
+# elles sont recréées par ensure_seo_published() au démarrage des conteneurs.
+volumes/web/mot-du-jour/
+volumes/web/methode/
 
 # --- Cache & modèles lourds (téléchargés au premier lancement) ---------------
 cemantix_data/*.bin

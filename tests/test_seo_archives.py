@@ -116,6 +116,12 @@ class TestPageArchive(unittest.TestCase):
             self.html,
         )
 
+    def test_l_archive_maille_vers_le_mot_du_jour_et_la_methode(self):
+        # Le maillage interne descendant (archive → hub) fait circuler le PageRank
+        # collecté par les pages datées vers les pages qui ciblent la tendance.
+        self.assertIn('href="../../mot-du-jour/"', self.html)
+        self.assertIn('href="../../methode/"', self.html)
+
     def test_une_archive_non_resolue_reste_noindex(self):
         html = build_archive_page(
             _entry(win=False, word="", tries=None, top_guesses=[]), None, None
@@ -129,22 +135,34 @@ class TestIndexDesArchives(unittest.TestCase):
         self.entrees = [_entry(), _entry(date="2026-10-25", puzzle=1699)]
         self.html = build_archives_index_page(self.entrees, 1, 1)
 
-    def test_le_titre_de_l_index_vise_solution_cemantix(self):
-        self.assertIn("<title>Solution Cémantix : archives", self.html)
+    def test_le_titre_de_l_index_vise_le_cluster_dominant(self):
+        # La tendance Google place « mot du jour » sur 5 requêtes sur 10 et « indice »
+        # sur les deux premières : l'index des archives doit porter ce cluster, le mot
+        # « solution » restant la spécialité des pages datées (SEO-13).
+        self.assertIn("<title>Cémantix du jour : mot du jour, indices et solutions", self.html)
         self.assertIn(
-            "<h1>Solution Cémantix : archives des puzzles résolus</h1>", self.html
+            "<h1>Archives Cémantix du jour : le mot du jour, ses indices et sa solution</h1>",
+            self.html,
         )
 
-    def test_chaque_ancre_porte_le_titre_complet_de_l_archive(self):
-        # Le texte d'ancre est un critère de classement : « Solution Cémantix du
-        # lundi 26 octobre 2026 » vaut mieux qu'une date nue ou qu'un « lire la suite ».
-        self.assertIn(f"<span>{TITRE_ATTENDU}</span>", self.html)
-        self.assertIn(f"<span>{archive_title('2026-10-25')}</span>", self.html)
+    def test_chaque_ancre_porte_indices_et_solution_datés(self):
+        # Le texte d'ancre est un critère de classement : il décrit la cible et reprend
+        # les deux mots qui manquaient (indice, solution) à la simple date.
+        self.assertIn(
+            "<span>Indices et solution du Cémantix du lundi 26 octobre 2026</span>", self.html
+        )
+        self.assertIn(
+            "<span>Indices et solution du Cémantix du dimanche 25 octobre 2026</span>", self.html
+        )
+
+    def test_l_index_maille_vers_les_pages_hub(self):
+        self.assertIn('href="../mot-du-jour/"', self.html)
+        self.assertIn('href="../methode/"', self.html)
 
     def test_la_page_2_est_titree_et_canonique(self):
         html = build_archives_index_page(self.entrees, 2, 2)
         self.assertIn(
-            "<title>Solution Cémantix — archives des puzzles, page 2</title>", html
+            "<title>Cémantix du jour : archives des indices et solutions, page 2</title>", html
         )
         self.assertIn(f'{SITE_ORIGIN}/puzzles/page/2/"', html)
 
