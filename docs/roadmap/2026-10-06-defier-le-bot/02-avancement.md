@@ -34,8 +34,8 @@
 | Statut | Nombre | Dont 🔴 critique |
 |---|---|---|
 | ✅ Fait | **29** | 8 |
-| 🔨 En cours | **1** | 0 |
-| ⚠️ Partiel | **0** | 0 |
+| 🔨 En cours | **0** | 0 |
+| ⚠️ Partiel | **1** | 0 |
 | ⬜ À faire | **0** | 0 |
 | **Total suivis** | **30** | **8** |
 
@@ -83,7 +83,9 @@ Mesuré le 29/10/2026 :
 | 30/10 | DEFI-14..17 | Phase 4 : page `/defi/` (SEO complet, modal trajectoire), `js/defi.js` (SSE + repli polling), onglet sur les 5 pages, `check_seo.py` élargi à 5 pages — commit `c43b626` | `tools/check_seo.py` : OK sur 5 pages + hubs + llms.txt |
 | 30/10 | DEFI-18 (UI) | Phase 5 : section whitelist dans la console cachée (liste, ajout, retrait 1 clic, chiffrée anti-XSS) — commit `2d48f38` | revue grep : SQL 100 % paramétré, `escapeHtml`/`esc()` systématiques |
 | 30/10 | QUAL-20 | Phase 6 : `tests/test_defi_bot.py` (30 tests) + correction de lecture des bornes via le module DAO (pilotables en test) — commit `ed109a7` | `python -m unittest discover -s tests` : **151 tests OK** (image cemantix:latest) |
-| 30/10 | QUAL-21 | Documentation : `openapi.json` (3 routes), README (section « Défier le Bot IA »), CHANGELOG, 11 variables `.env.example`, suivi présent | `tools/check_docs.py` à revoir ci-dessous |
+| 30/10 | QUAL-21 | Documentation : `openapi.json` (3 routes), README (section « Défier le Bot IA »), CHANGELOG, 11 variables `.env.example`, suivi présent — commit `f8ec1f7` | `tools/check_docs.py` vert ; `tools/check_seo.py` vert (5 pages) |
+| 30/10 | QUAL-22 (partiel) | Recette backend **contre la PostgreSQL de production** : conteneur temporaire `cemantix:latest` sur `cemantix-net`, `src/` de la branche monté en ro — empilement, claim atomique, résolution RAG pur réelle | logs : `MOTEUR: postgres` → `CLAIM atomique OK` → `STATUT: solved \| coups: 5 \| durée: 0.19 \| trajectoire: 5` ; `docker stats` : `cemantix_web CPU=0.02 %` pendant la résolution ; trace nettoyée en fin de recette |
+| 30/10 | — | Branche `feat/bot_defy` poussée (7 commits de développement, `b06a2be..f8ec1f7`), iso `origin/feat/bot_defy` ; suite complète verte : **151 tests OK** | `git push` OK, `python -m unittest discover -s tests` dans l'image de production |
 
 ---
 
@@ -147,7 +149,7 @@ Mesuré le 29/10/2026 :
 |---|---|---|---|
 | **QUAL-20** | Tests (validation, quota, claim, bout-en-bout mock, purge) | ✅ Fait | tests/test_defi_bot.py : 30 tests ; suite complete python -m unittest discover -s tests = 151 OK |
 | **QUAL-21** | `openapi.json`, README, CHANGELOG, `.env.example` | ✅ Fait | openapi.json (5 paths), README (section Défier le Bot), CHANGELOG, 11 variables dans .env.example |
-| **QUAL-22** | Recette docker complète (direct, quota, nuit, CPU web = 0) | 🔨 En cours | Résolution réelle prouvée hors stack (image `cemantix:latest` : « amour » solved en 5 coups) ; la recette `docker compose up` complète (11ᵉ → 429, `docker stats` CPU web ≈ 0, défi de 23h59) reste à courir sur l'environnement de production |
+| **QUAL-22** | Recette docker complète (direct, quota, nuit, CPU web = 0) | ⚠️ Partiel | **Partie backend prouvée contre la PostgreSQL de production** (conteneur temporaire sur `cemantix-net`, code de la branche monté en lecture seule) : `MOTEUR: postgres`, défi empilé → claim atomique `running` → **solved en 5 coups / 0,19 s**, trajectoire 5 pas en base, trace nettoyée ; `docker stats` pendant la résolution : **cemantix_web CPU = 0,02 %** (le web ne calcule pas). Reste la partie navigateur après redéploiement : direct affiché < 1 s/coup, 11ᵉ défi → 429 vu par la page, consultabilité clavier |
 
 ---
 
