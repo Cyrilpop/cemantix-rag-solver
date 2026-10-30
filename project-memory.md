@@ -1,6 +1,6 @@
 # Project Memory — Cémantix RAG Solver
 
-**Dernière mise à jour :** 30 octobre 2026 (Milestone M0.1)  
+**Dernière mise à jour :** 30 octobre 2026 (Milestone M1 — Harnais Déterministe)  
 **Dépôt :** `Cyrilpop/cemantix-rag-solver`  
 **Statut du Projet :** Production active / Maintenance & Modernisation incrémentale  
 
@@ -126,7 +126,8 @@ L'architecture s'organise en 3 tiers orchestrés par Docker Compose :
 ## 6. Dette Technique Connue (Synthèse M0)
 
 - **Sécurité :** `X-Forwarded-For` accepté aveuglément sans filtrage de proxy de confiance ([src/api/server.py](src/api/server.py)). Montage de `/var/run/docker.sock` dans `cemantix_web` ([docker-compose.yml](docker-compose.yml)).
-- **Couverture de tests :** 32 % globale. Faible couverture sur `solvers.py` (6%), le domaine de jeu (<10%) et les routes API (<11%).
+- **Couverture de tests :** 46 % globale (en hausse depuis 32 % suite à M1). Le cœur algorithmique (`solvers.py` à 55 %) et le domaine de jeu (`manager.py` à 68 %, `solo.py` à 81 %, `multi.py` à 63 %) sont désormais sanctuarisés par 197 tests unitaires déterministes. Reste à couvrir : routes API (<18%) et interfaces CLI (<6%).
+- **Harnais de non-régression (M1) :** [`tests/test_engine_solvers.py`](tests/test_engine_solvers.py) et [`tests/test_game_manager.py`](tests/test_game_manager.py) couvrent la régression Ridge, le reranking, les cycles de vie solo/duel/multi, les invariants anti-spoiler et la persistance relationnelle.
 - **God Module :** [src/services/seo.py](src/services/seo.py) (1 692 lignes) centralise templates, sitemap, ARD et formatage.
 - **Duplication :** Triple stockage CSS (source, `dist/`, inliné dans HTML).
 - *Détails complets et feuille de route : voir [docs/audits/M0_TECHNICAL_DEBT.md](docs/audits/M0_TECHNICAL_DEBT.md) et [docs/audits/M0_REFACTORING_ROADMAP.md](docs/audits/M0_REFACTORING_ROADMAP.md).*
