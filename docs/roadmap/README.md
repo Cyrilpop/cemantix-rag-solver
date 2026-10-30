@@ -26,14 +26,21 @@ docs/roadmap/
 
 ### 1.2 Nom des dossiers
 
-`AAAA-MM-slug` en **minuscules ASCII**, mots séparés par des tirets, sans accent.
+`AAAA-MM-NN-slug` en **minuscules ASCII**, mots séparés par des tirets, sans accent.
+`NN` est le **rang d'ouverture dans le mois**, sur deux chiffres, à partir de `01`.
 
 | Règle | Raison |
 |---|---|
 | Préfixe `AAAA-MM` (mois d'ouverture) | tri chronologique naturel dans l'explorateur, `ls` et GitHub ; évite deux slugs identiques à six mois d'écart |
+| **Rang `NN` dans le mois** | le mois seul ne suffit pas à ordonner : cinq évolutions ouvertes en octobre 2026 se rangeaient **par slug**, donc à l'envers de l'histoire du projet. `NN` fait coïncider ordre alphabétique et ordre chronologique |
 | Slug **thématique**, pas technique | on retrouve une évolution par son intention (« securite-seo-performance »), pas par le nom d'un fichier touché |
-| Jamais de numéro séquentiel seul | `evo-01` ne dit rien ; la date dans le nom suffit à ordonner |
+| Jamais de numéro **seul** | `evo-01` ne dit rien ; `NN` n'a de sens qu'adossé au mois, qui le borne et le rend non ambigu |
 | Nom **figé à l'ouverture** | le dossier devient une référence stable des `CHANGELOG.md` et des messages de commit |
+
+Renommer un dossier reste possible mais coûte cher : il faut reprendre l'index §3, les
+renvois croisés entre plans et le `CHANGELOG.md` — 32 références pour le passage à `NN`.
+L'outillage, lui, n'en dépend plus : `tools/check_docs.py` découvre les suivis via
+`docs/roadmap/*/02-avancement.md` et non par un nom écrit en dur.
 
 ### 1.3 Nom des fichiers
 
@@ -68,12 +75,12 @@ et dans l'ordre de lecture : `03-maquette.md`, `04-recette.md`, `05-post-mortem.
 ## 2. Ouvrir une nouvelle évolution
 
 ```bash
-# 1. Creer le dossier au nom de l'evolution (AAAA-MM-slug)
-mkdir docs/roadmap/2026-12-slug-de-levaluation
+# 1. Creer le dossier au nom de l'evolution (AAAA-MM-NN-slug, NN = rang d'ouverture dans le mois)
+mkdir docs/roadmap/2026-12-01-slug-de-levaluation
 
 # 2. Reprendre la structure du dossier existant comme gabarit de mise en forme
 cp docs/roadmap/2026-10-02-securite-seo-performance/01-plan.md \
-   docs/roadmap/2026-12-slug-de-levaluation/01-plan.md
+   docs/roadmap/2026-12-01-slug-de-levaluation/01-plan.md
 # puis vider 01-plan.md de son contenu et relancer la methodologie du §0 du modele
 
 # 3. Declarer l'evolution dans l'index ci-dessous (statut "En cours")
