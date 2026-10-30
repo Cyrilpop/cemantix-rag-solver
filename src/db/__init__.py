@@ -11,6 +11,7 @@ from .challenges import (
     CHALLENGE_MAX_QUEUE,
     CHALLENGE_MAX_TRIES,
     CHALLENGE_QUOTA_PER_HOUR,
+    CHALLENGE_RETENTION_DAYS,
     CHALLENGE_TIMEOUT,
     add_whitelist_ip,
     append_trajectory,
@@ -26,6 +27,7 @@ from .challenges import (
     is_ip_whitelisted,
     oldest_recent_for_ip,
     purge_older_than,
+    release_challenge,
     remove_whitelist_ip,
     requeue_stale_running,
 )
@@ -80,6 +82,7 @@ __all__ = [
     "CHALLENGE_MAX_QUEUE",
     "CHALLENGE_MAX_TRIES",
     "CHALLENGE_QUOTA_PER_HOUR",
+    "CHALLENGE_RETENTION_DAYS",
     "CHALLENGE_TIMEOUT",
     "add_whitelist_ip",
     "append_trajectory",
@@ -95,6 +98,7 @@ __all__ = [
     "is_ip_whitelisted",
     "oldest_recent_for_ip",
     "purge_older_than",
+    "release_challenge",
     "remove_whitelist_ip",
     "requeue_stale_running",
 ]

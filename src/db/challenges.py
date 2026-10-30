@@ -151,6 +151,22 @@ def heartbeat(challenge_id: str) -> int:
     )
 
 
+def release_challenge(challenge_id: str) -> int:
+    """Rend une tâche `running` à la file sans la marquer orpheline.
+
+    Cas légitime : le worker ne peut pas démarrer la résolution (index vectoriel
+    en cours de reconstruction) — la tâche attend le prochain réveil, intacte.
+    """
+    return db.execute(
+        """
+        UPDATE bot_challenges
+        SET status = 'queued', started_at = NULL, heartbeat_at = NULL
+        WHERE id = %s AND status = 'running';
+        """,
+        (challenge_id,),
+    )
+
+
 def finish_challenge(challenge_id: str, status: str, tries_count: int,
                      duration_seconds: float, error: Optional[str] = None) -> int:
     """Clôture un défi : `solved`, `lost` ou `error` (DEFI-03, DEFI-12)."""
