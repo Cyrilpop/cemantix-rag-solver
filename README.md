@@ -141,6 +141,15 @@ docker compose down
 > - **Rattrapage au démarrage** : Si le mot d'aujourd'hui n'a pas encore été résolu, le worker le trouve dès son lancement avant de se mettre en sommeil jusqu'au prochain minuit.
 > - **Génération automatique de `sitemap.xml` au démarrage** : Non versionnés sous Git (`.gitignore`) pour éviter tout conflit lors d'un `git pull`, `volumes/web/sitemap.xml` et les pages d'archives `/puzzles/` sont régénérés automatiquement et de manière atomique à chaque démarrage de `cemantix_web` et `cemantix_worker` (`ensure_seo_published()`).
 
+> [!IMPORTANT]
+> **Permissions POSIX du volume `cemantix_data` (ChromaDB & non-root UID 1000) :**
+> Par conformité de sécurité (`SEC-13`), les conteneurs `cemantix_worker` et `cemantix_web` s'exécutent avec l'utilisateur non privilégié `cemantix` (`UID 1000:1000`) et en système de fichiers en lecture seule (`read_only: true`).
+> Sur la machine hôte, le volume partagé `./cemantix_data` (notamment le sous-dossier `chroma_w2v/` hébergeant la base vectorielle SQLite) doit impérativement être accessible en écriture par cet utilisateur :
+> ```bash
+> sudo chown -R 1000:1000 ./cemantix_data
+> ```
+> Si ce répertoire appartient à `root`, SQLite bascule en mode lecture seule (`attempt to write a readonly database`), empêchant le chargement de ChromaDB et le traitement des défis.
+
 #### 3. Lancer une commande ponctuelle, interactive ou les tests
 Sans arrêter les services de production, vous pouvez exécuter le menu interactif ou les suites de tests via le conteneur CLI éphémère :
 
@@ -753,6 +762,18 @@ Le projet utilise donc un volume Docker nommé `cemantix_db_data` (ext4 interne 
 
 ### Proxy d'entreprise & Variables Docker (QUAL-11)
 Si un proxy d'entreprise est configuré sur l'hôte Docker (`~/.docker/config.json`), le démon Docker peut injecter `http_proxy` en minuscules dans l'environnement des conteneurs. Pour éviter que `requests` ne contourne les exceptions locales, les variables doivent être définies en **deux casses** (`HTTP_PROXY` et `http_proxy`) ou neutralisées explicitement pour les services purement internes.
+
+### Permissions POSIX du volume `cemantix_data` & ChromaDB (UID 1000)
+Les conteneurs de production `cemantix_worker` et `cemantix_web` appliquent le principe de moindre privilège (`SEC-13`) : exécution sous l'utilisateur non-root `1000:1000`, `read_only: true` sur le système de fichiers racine, et abandon de toutes les capacités Linux (`cap_drop: - ALL`).
+
+Lorsque Docker monte le volume hôte `./cemantix_data` dans `/app/cemantix_data`, les permissions de l'hôte s'appliquent directement dans le conteneur. Si le répertoire `cemantix_data/chroma_w2v/` a été initialisé ou touché par `root` sur l'hôte, la base SQLite de ChromaDB ne peut pas créer ses fichiers temporaires de verrouillage (`chroma.sqlite3-wal` et `-shm`) et échoue avec l'erreur :
+```text
+ChromaDB non chargé (error returned from database: (code: 8) attempt to write a readonly database).
+```
+Pour garantir le bon fonctionnement de ChromaDB et le traitement des défis sans blocage, s'assurer que le répertoire appartient à l'UID 1000 :
+```bash
+sudo chown -R 1000:1000 ./cemantix_data
+```
 
 ---
 
