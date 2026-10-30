@@ -71,6 +71,7 @@ python tools/agent_find.py --summary src/engine/solvers.py  # Affiche les repèr
 | Client Certitudes & Simulation Mock | [src/engine/clients.py](src/engine/clients.py) | L20-L80 (`CemantixClient`, `MockClient`) |
 | Gestionnaire des Sessions de Jeu | [src/game/manager.py](src/game/manager.py) | L230-L360 (`new_game`, `new_battle`) |
 | Serveur HTTP REST & CORS | [src/api/server.py](src/api/server.py) | L65-L160 (`GameAPIHandler`) |
+| Sécurité Réseau & Proxys de Confiance | [src/api/proxy.py](src/api/proxy.py) | L70-L140 (`extract_client_ip`, `anonymize_ip`) |
 | Contrôleur des Défis au Bot | [src/api/routes/challenge.py](src/api/routes/challenge.py) | L100-L190 (`handle_challenge_post`) |
 | Couche Base de Données (Pool & Dialectes) | [src/db/connection.py](src/db/connection.py) | L480-L560 (`transaction`, `execute`) |
 | Démon 24/7 & Battement | [src/services/daemon.py](src/services/daemon.py) | L240-L350 (`run_daily_solver`, boucle) |
@@ -84,7 +85,7 @@ python tools/agent_find.py --summary src/engine/solvers.py  # Affiche les repèr
 Avant de soumettre toute modification, exécutez ces 4 contrôles :
 
 ```bash
-# 1. Suite de tests unitaires (212 tests attendus, 0 échec)
+# 1. Suite de tests unitaires (231 tests attendus, 0 échec)
 docker run --rm -v $(pwd):/app -w /app python:3.12-slim sh -c \
   "pip install --no-cache-dir -r requirements.txt && python -m unittest discover -s tests -v"
 

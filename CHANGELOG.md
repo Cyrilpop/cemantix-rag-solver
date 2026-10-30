@@ -4,6 +4,16 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-31 · Jalon M3 : Sécurisation & Frontières de Confiance Réseau (Security Hardening & Trust Boundaries)
+
+### Ajouté & Sécurisé
+- **Gestion sécurisée des proxys de confiance (`src/api/proxy.py`)** : résolution fail-closed de l'IP effective du client via `extract_client_ip`. L'en-tête `X-Forwarded-For` n'est désormais pris en compte QUE si la connexion TCP directe provient d'un proxy explicitement déclaré dans `TRUSTED_PROXIES`. Dépilage de droite à gauche insensible à l'injection d'adresses en amont. Anonymisation RGPD (/24 en IPv4, /48 en IPv6).
+- **Suppression du socket Docker dans le conteneur web (`docker-compose.yml`)** : suppression du montage `/var/run/docker.sock` et du groupe `DOCKER_GID` sur `cemantix_web`, neutralisant tout risque d'évasion vers l'hôte. Repli gracieux et informatif sur les journaux mémoire applicatifs (`source=app`).
+- **Durcissement de l'API d'administration (`src/api/routes/admin.py`)** : application du rate limiting (`_api_limiter`) sur les routes `GET`, révocation immédiate de tout jeton si `ADMIN_PASSWORD` est vide, traçabilité de l'adresse IP cliente sur les échecs d'authentification.
+- **Suite de tests de sécurité (`tests/test_security_hardening.py`)** : 19 tests déterministes couvrant le filtrage des proxys de confiance, l'impossibilité de contourner le rate limiting ou les quotas de défi par rotation d'en-tête, le refus d'usurpation de whitelist, et l'isolation du socket Docker. Total porté à 231 tests (0 échec).
+
+---
+
 ## [Non publié] - 2026-10-30 · Jalon M2.1 : Durcissement de la Compatibilité Comportementale du Solveur
 
 ### Modifié & Optimisé

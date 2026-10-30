@@ -128,9 +128,9 @@ L'architecture s'organise en 3 tiers orchestrés par Docker Compose :
 
 ## 6. Dette Technique Connue (Synthèse M0)
 
-- **Sécurité :** `X-Forwarded-For` accepté aveuglément sans filtrage de proxy de confiance ([src/api/server.py](src/api/server.py)). Montage de `/var/run/docker.sock` dans `cemantix_web` ([docker-compose.yml](docker-compose.yml)).
-- **Couverture de tests :** 46 % globale (en hausse depuis 32 % suite à M1). Le cœur algorithmique (`solvers.py` à 55 %) et le domaine de jeu (`manager.py` à 68 %, `solo.py` à 81 %, `multi.py` à 63 %) sont désormais sanctuarisés par 197 tests unitaires déterministes. Reste à couvrir : routes API (<18%) et interfaces CLI (<6%).
-- **Harnais de non-régression (M1) :** [`tests/test_engine_solvers.py`](tests/test_engine_solvers.py) et [`tests/test_game_manager.py`](tests/test_game_manager.py) couvrent la régression Ridge, le reranking, les cycles de vie solo/duel/multi, les invariants anti-spoiler et la persistance relationnelle.
+- **Sécurité (Résolue en M3) :** Filtrage fail-closed de `X-Forwarded-For` par proxys de confiance (`TRUSTED_PROXIES`) via [`src/api/proxy.py`](src/api/proxy.py). Suppression du montage de `/var/run/docker.sock` dans `cemantix_web` ([docker-compose.yml](docker-compose.yml)) éliminant le vecteur d'évasion vers l'hôte. Durcissement de l'API admin (rate limiting sur GET, fail-closed).
+- **Couverture de tests :** 48 % globale (sanctuarisée par 231 tests unitaires déterministes suite à M1, M2, M2.1 et M3). Le cœur algorithmique (`solvers.py` à 64 %), le domaine de jeu (`manager.py` à 68 %) et l'infrastructure de sécurité réseau/admin sont validés sans dépendance externe.
+- **Harnais de non-régression (M1-M3) :** [`tests/test_engine_solvers.py`](tests/test_engine_solvers.py), [`tests/test_game_manager.py`](tests/test_game_manager.py), [`tests/test_solver_behavioral_compat.py`](tests/test_solver_behavioral_compat.py) et [`tests/test_security_hardening.py`](tests/test_security_hardening.py).
 - **God Module :** [src/services/seo.py](src/services/seo.py) (1 692 lignes) centralise templates, sitemap, ARD et formatage.
 - **Duplication :** Triple stockage CSS (source, `dist/`, inliné dans HTML).
 - *Détails complets et feuille de route : voir [docs/audits/M0_TECHNICAL_DEBT.md](docs/audits/M0_TECHNICAL_DEBT.md) et [docs/audits/M0_REFACTORING_ROADMAP.md](docs/audits/M0_REFACTORING_ROADMAP.md).*

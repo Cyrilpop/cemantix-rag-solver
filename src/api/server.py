@@ -40,6 +40,7 @@ from .routes import (
     is_admin_path,
 )
 from .ratelimit import RateLimiter
+from .proxy import anonymize_ip, extract_client_ip
 from ..engine import VocabStore
 
 # --------------------------------------------------------------------------- #
@@ -76,24 +77,14 @@ class GameAPIHandler(BaseHTTPRequestHandler):
     # Utilitaires
     # ----------------------------------------------------------------- #
     def _client_ip(self) -> str:
-        """Adresse du client, en tenant compte du reverse proxy Caddy."""
+        """Adresse du client, vérifiée selon les proxys de confiance."""
+        peer = self.client_address[0] if self.client_address else None
         forwarded = self.headers.get("X-Forwarded-For", "")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
-        return self.client_address[0] if self.client_address else "unknown"
+        return extract_client_ip(peer, forwarded)
 
     def _anonymized_ip(self) -> str:
-        """Anonymise l'adresse IP (/24 en IPv4) pour conformité RGPD (RGPD-03)."""
-        ip = self._client_ip()
-        if "." in ip:
-            parts = ip.split(".")
-            if len(parts) == 4:
-                return f"{parts[0]}.{parts[1]}.{parts[2]}.0"
-        elif ":" in ip:
-            parts = ip.split(":")
-            if len(parts) >= 3:
-                return f"{parts[0]}:{parts[1]}:{parts[2]}::"
-        return ip
+        """Anonymise l'adresse IP (/24 en IPv4, /48 en IPv6) pour conformité RGPD (RGPD-03)."""
+        return anonymize_ip(self._client_ip())
 
     def _is_allowed_origin(self) -> bool:
         """Le CORS n'est ouvert qu'à l'origine déclarée (et aux clients sans en-tête)."""
@@ -258,6 +249,7 @@ class GameAPIHandler(BaseHTTPRequestHandler):
                 _manager, path, query, self.headers,
                 send_json=lambda payload, status=200: self._send_admin_json(payload, status),
                 send_sse=self._send_sse,
+                client_ip=self._client_ip(),
             )
             return
 
