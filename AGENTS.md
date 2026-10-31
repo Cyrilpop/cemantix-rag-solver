@@ -57,10 +57,11 @@ Les fichiers et répertoires suivants **ne doivent jamais être lus en intégral
 ## 4. Navigation Rapide & Outil de Découverte de Symboles
 
 ### 4.1 Outil d'Inspection Rapide (`tools/agent_find.py`)
-Utilisez le script utilitaire léger (zéro dépendance) pour repérer l'emplacement exact d'une fonction ou d'une classe sans charger de gros fichiers :
+Utilisez le script utilitaire léger (zéro dépendance) pour repérer l'emplacement exact d'une fonction, d'une classe ou d'un élément DOM sans charger de gros fichiers :
 ```bash
-python tools/agent_find.py estimate_secret      # Localise la fonction et renvoie son span Lxx-Lyy
-python tools/agent_find.py --summary src/engine/solvers.py  # Affiche les repères clés sans le corps
+python tools/agent_find.py estimate_secret            # Localise un symbole Python, JS ou ID HTML (span Lxx-Lyy)
+python tools/agent_find.py --summary volumes/web/index.html  # Diagnostic de taille, repères et alertes token
+python tools/agent_find.py --safe-html volumes/web/index.html 40 60  # Inspecte le HTML en masquant le CSS critique
 ```
 
 ### 4.2 Sous-Systèmes Clés
@@ -80,7 +81,12 @@ python tools/agent_find.py --summary src/engine/solvers.py  # Affiche les repèr
 | Sitemap XML & Écriture Atomique | [src/services/seo_sitemap.py](src/services/seo_sitemap.py) | L20-L65 (`build_sitemap`, `_write_file`) |
 | Manifestes ARD & Docs Agentiques | [src/services/seo_agents.py](src/services/seo_agents.py) | L70-L150 (`build_ard_manifest`, `build_agent_card`) |
 | Orchestration & Rétrocompatibilité SEO | [src/services/seo.py](src/services/seo.py) | L150-L230 (`publish_seo_pages`, `ensure_seo_published`, ré-exports) |
-| Frontend Javascript | [volumes/web/js/](volumes/web/js/) | `render.js` (rendu coups), `utils.js` (tiers météo) |
+| Frontend Javascript | [volumes/web/js/](volumes/web/js/) | `render.js` (rendu coups), `trajectory.js` (modal & timeline), `utils.js` (tiers météo) |
+| Frontend HTML (Dashboard) | [volumes/web/index.html](volumes/web/index.html) | L52-L695 (ignorer L49 CSS critique généré : 32 ko) |
+| Frontend HTML (Jeu Solo) | [volumes/web/play/index.html](volumes/web/play/index.html) | L50-L343 (ignorer L45 CSS critique généré : 27 ko) |
+| Frontend HTML (Mode Battle) | [volumes/web/battle/index.html](volumes/web/battle/index.html) | L52-L580 (ignorer L49 CSS critique généré : 41 ko) |
+| Frontend HTML (Multijoueur) | [volumes/web/multi/index.html](volumes/web/multi/index.html) | L52-L582 (ignorer L49 CSS critique généré : 41 ko) |
+| Frontend HTML (Défi Bot) | [volumes/web/defi/index.html](volumes/web/defi/index.html) | L48-L245 (ignorer L44 CSS critique généré : 27 ko) |
 
 ---
 
@@ -89,7 +95,7 @@ python tools/agent_find.py --summary src/engine/solvers.py  # Affiche les repèr
 Avant de soumettre toute modification, exécutez ces 4 contrôles :
 
 ```bash
-# 1. Suite de tests unitaires (248 tests attendus, 0 échec)
+# 1. Suite de tests unitaires (268 tests attendus, 0 échec)
 docker run --rm -v $(pwd):/app -w /app python:3.12-slim sh -c \
   "pip install --no-cache-dir -r requirements.txt && python -m unittest discover -s tests -v"
 

@@ -139,10 +139,6 @@ a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hov
 .game-control-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
 .game-mode-toggle,.game-difficulty-toggle{display:flex;align-items:center;gap:0.5rem;}
 .control-label{font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;}
-.pill-group{display:inline-flex;align-items:center;background:var(--bg-input);border:1px solid var(--border-color);border-radius:9999px;padding:3px;gap:2px;}
-.pill-btn{background:transparent;border:none;padding:0.35rem 0.85rem;border-radius:9999px;font-size:0.8rem;font-weight:600;color:var(--text-muted);cursor:pointer;transition:var(--transition);}
-.pill-btn:hover:not(.active){color:var(--text-main);}
-.pill-btn.active{background:var(--accent-btn,#1668dc);color:#ffffff;box-shadow:0 0 10px var(--accent-glow);}
 .game-actions{display:flex;align-items:center;gap:0.5rem;}
 .game-status-bar{border-top:1px solid var(--border-color);padding-top:0.75rem;margin-top:0.85rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;}
 .game-status-left{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;}

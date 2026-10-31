@@ -216,74 +216,7 @@
     </div>
   </main>
 
-  <!-- Modal de Trajectoire (même gabarit que le tableau de bord) -->
-  <div id="trajectory-modal" class="modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modal-puzzle-title">
-    <div class="modal-card trajectory-modal-card card">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <div class="modal-badges">
-            <span id="modal-puzzle-badge" class="badge badge-accent">Défi au Bot</span>
-            <span id="modal-date-badge" class="meta-date">À l'instant</span>
-            <span id="modal-win-badge" class="badge badge-success">🏆 Trouvé</span>
-          </div>
-          <h2 id="modal-puzzle-title">Trajectoire de Résolution du Bot</h2>
-          <span class="modal-target-word">Mot cible : <strong id="modal-secret-word" class="word-spoiler is-hidden" title="Cliquer pour afficher / masquer">--------</strong></span>
-        </div>
-        <button type="button" id="modal-close-btn" class="modal-close-btn" aria-label="Fermer la modal" title="Fermer (Échap)">✕</button>
-      </div>
-
-      <!-- KPIs Synthétiques de la Session de Résolution -->
-      <div class="trajectory-summary-bar">
-        <div class="summary-metric">
-          <span class="metric-icon">🎯</span>
-          <div class="metric-body">
-            <span class="metric-label">Coups Joués</span>
-            <span id="modal-tries" class="metric-num">--</span>
-          </div>
-        </div>
-        <div class="summary-metric">
-          <span class="metric-icon">⚡</span>
-          <div class="metric-body">
-            <span class="metric-label">Temps Calcul</span>
-            <span id="modal-duration" class="metric-num">--</span>
-          </div>
-        </div>
-        <div class="summary-metric">
-          <span class="metric-icon">🔥</span>
-          <div class="metric-body">
-            <span class="metric-label">Top Proximité</span>
-            <span id="modal-best-word" class="metric-num">--</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Barre de Filtrage & Actions -->
-      <div class="trajectory-filter-bar">
-        <div class="filter-group-wrapper">
-          <span class="filter-label">Afficher :</span>
-          <div class="pill-group" id="trajectory-filter-group">
-            <button type="button" class="pill-btn active" data-filter="all">Tous (<span id="count-all">0</span>)</button>
-            <button type="button" class="pill-btn" data-filter="seeds">🌱 Graines (<span id="count-seeds">0</span>)</button>
-            <button type="button" class="pill-btn" data-filter="rag">⚡ RAG (<span id="count-rag">0</span>)</button>
-            <button type="button" class="pill-btn" data-filter="hot">🔥 Top 1000 (<span id="count-hot">0</span>)</button>
-          </div>
-        </div>
-        <button type="button" id="copy-trajectory-btn" class="btn btn-ghost btn-xs" title="Copier le résumé textuel pour partage">
-          <span>📋</span> Copier la trajectoire
-        </button>
-      </div>
-
-      <!-- Timeline des Coups Joués par l'IA -->
-      <div class="trajectory-scroll-body">
-        <div id="trajectory-list" class="trajectory-list"></div>
-      </div>
-
-      <div class="modal-footer">
-        <span class="modal-footer-note">💡 Cliquez sur n'importe quel mot pour le copier dans le presse-papier.</span>
-        <button type="button" id="modal-bottom-close-btn" class="btn btn-secondary btn-sm">Fermer</button>
-      </div>
-    </div>
-  </div>
+  <!-- Modal de trajectoire injectée dynamiquement par trajectory.js si ouverte -->
 
   <!-- Toast Notification -->
   <div id="toast" class="toast" role="alert" aria-live="polite"></div>

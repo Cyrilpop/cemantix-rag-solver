@@ -1,6 +1,6 @@
 # Project Memory — Cémantix RAG Solver
 
-**Dernière mise à jour :** 30 octobre 2026 (Milestone M2.1 — Durcissement Compatibilité Solveur)  
+**Dernière mise à jour :** 31 octobre 2026 (Milestone M5 — Simplification Frontend & Efficacité Contexte Agent)  
 **Dépôt :** `Cyrilpop/cemantix-rag-solver`  
 **Statut du Projet :** Production active / Maintenance & Modernisation incrémentale  
 
@@ -134,10 +134,11 @@ L'architecture s'organise en 3 tiers orchestrés par Docker Compose :
 ## 6. Dette Technique Connue (Synthèse M0)
 
 - **Sécurité (Résolue en M3) :** Filtrage fail-closed de `X-Forwarded-For` par proxys de confiance (`TRUSTED_PROXIES`) via [`src/api/proxy.py`](src/api/proxy.py). Suppression du montage de `/var/run/docker.sock` dans `cemantix_web` ([docker-compose.yml](docker-compose.yml)) éliminant le vecteur d'évasion vers l'hôte. Durcissement de l'API admin (rate limiting sur GET, fail-closed).
-- **Couverture de tests :** Sanctuarisée par 248 tests unitaires déterministes (suite à M1, M2, M2.1, M3 et M4). Le cœur algorithmique (`solvers.py`), le domaine de jeu (`manager.py`), la sécurité réseau/admin et l'ensemble de la génération SEO sont validés sans dépendance externe en 8,4 s.
-- **Harnais de non-régression (M1-M4) :** [`tests/test_engine_solvers.py`](tests/test_engine_solvers.py), [`tests/test_game_manager.py`](tests/test_game_manager.py), [`tests/test_solver_behavioral_compat.py`](tests/test_solver_behavioral_compat.py), [`tests/test_security_hardening.py`](tests/test_security_hardening.py), [`tests/test_seo_characterization.py`](tests/test_seo_characterization.py) et [`tests/test_seo_backward_compat.py`](tests/test_seo_backward_compat.py).
+- **Couverture de tests :** Sanctuarisée par 268 tests unitaires déterministes (suite à M1, M2, M2.1, M3, M4 et M5). Le cœur algorithmique (`solvers.py`), le domaine de jeu (`manager.py`), la sécurité réseau/admin, la génération SEO et l'ensemble des contrats frontend DOM/JS sont validés sans dépendance externe en ~7 s.
+- **Harnais de non-régression (M1-M5) :** [`tests/test_engine_solvers.py`](tests/test_engine_solvers.py), [`tests/test_game_manager.py`](tests/test_game_manager.py), [`tests/test_solver_behavioral_compat.py`](tests/test_solver_behavioral_compat.py), [`tests/test_security_hardening.py`](tests/test_security_hardening.py), [`tests/test_seo_characterization.py`](tests/test_seo_characterization.py), [`tests/test_seo_backward_compat.py`](tests/test_seo_backward_compat.py), [`tests/test_frontend_characterization.py`](tests/test_frontend_characterization.py) et [`tests/test_agent_find.py`](tests/test_agent_find.py).
 - **God Module SEO (Résolu en M4) :** Modularisation de [`src/services/seo.py`](src/services/seo.py) (réduit de 1 692 à ~250 lignes, soit -85 % de contexte token) en sous-modules spécialisés (`seo_templates.py`, `seo_archives.py`, `seo_hubs.py`, `seo_sitemap.py`, `seo_agents.py`) avec parité bit à bit et rétrocompatibilité ascendante totale via `__all__`.
-- **Duplication :** Triple stockage CSS (source, `dist/`, inliné dans HTML).
+- **Simplification Frontend & Contexte Agent (Résolu en M5) :** Élimination des duplications de rendu JS (`render.js` pour le solo dans `game.js`, `trajectory.js` pour le bot dans `defi.js`), injection dynamique de `#trajectory-modal` supprimant 68 lignes HTML statiques dans `defi/index.html`, dédoublonnage des boutons pill dans `game.css`, durcissement CSP dans `multi/index.html`, et extension de `tools/agent_find.py` (`--summary`, `--safe-html`) épargnant ~42 000 tokens de CSS critique inliné par tournée d'inspection.
+- **Duplication :** Triple stockage CSS (source, `dist/`, inliné dans HTML). Conforme aux invariants de performance Lighthouse mobile (0 requête bloquante) ; outillage d'inspection masquée mis en place en M5 pour préserver la fenêtre de contexte agent.
 - *Détails complets et feuille de route : voir [docs/audits/M0_TECHNICAL_DEBT.md](docs/audits/M0_TECHNICAL_DEBT.md) et [docs/audits/M0_REFACTORING_ROADMAP.md](docs/audits/M0_REFACTORING_ROADMAP.md).*
 
 ---

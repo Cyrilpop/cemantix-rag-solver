@@ -6,8 +6,150 @@ import { escapeHtml, getTierClass, getTierWeatherIcon, showToast } from "./utils
 let activeTrajectoryEntry = null;
 let activeTrajectoryFilter = "all";
 
+/**
+ * Garantit la présence de la modal de trajectoire dans le DOM (injection dynamique si absente).
+ * Évite de dupliquer les 39 lignes de gabarit HTML statique sur chaque page qui en a besoin.
+ */
+export function ensureTrajectoryModal() {
+  let modal = document.getElementById("trajectory-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "trajectory-modal";
+    modal.className = "modal-backdrop";
+    modal.style.display = "none";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "modal-puzzle-title");
+    modal.innerHTML = `
+      <div class="modal-card trajectory-modal-card card">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <div class="modal-badges">
+              <span id="modal-puzzle-badge" class="badge badge-accent">Puzzle #--</span>
+              <span id="modal-date-badge" class="meta-date">--</span>
+              <span id="modal-win-badge" class="badge badge-success">🏆 Trouvé</span>
+            </div>
+            <h3 id="modal-puzzle-title" class="modal-target-word">--</h3>
+            <span id="modal-secret-word" class="word-spoiler is-hidden" style="display: none;"></span>
+          </div>
+          <button id="modal-close-btn" class="modal-close-btn" aria-label="Fermer la modal">&times;</button>
+        </div>
+
+        <div class="trajectory-summary-bar">
+          <div class="summary-metric">
+            <span class="metric-icon">🎯</span>
+            <div class="metric-body">
+              <span class="metric-num" id="modal-tries">--</span>
+              <span class="metric-label">coups</span>
+            </div>
+          </div>
+          <div class="summary-metric">
+            <span class="metric-icon">⏱️</span>
+            <div class="metric-body">
+              <span class="metric-num" id="modal-duration">--</span>
+              <span class="metric-label">secondes</span>
+            </div>
+          </div>
+          <div class="summary-metric">
+            <span class="metric-icon">🔥</span>
+            <div class="metric-body">
+              <span class="metric-num" id="modal-best-word">--</span>
+              <span class="metric-label">meilleur coup</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="trajectory-scroll-body">
+          <div class="trajectory-filter-bar">
+            <span class="filter-label">Filtrer les coups :</span>
+            <div class="pill-group" id="trajectory-filter-group">
+              <button type="button" class="pill-btn active" data-filter="all">Tous (<span id="filter-all-count">0</span>)</button>
+              <button type="button" class="pill-btn" data-filter="top1000">Top 1000 (<span id="filter-top1000-count">0</span>)</button>
+              <button type="button" class="pill-btn" data-filter="rag">⚡ RAG (<span id="filter-rag-count">0</span>)</button>
+              <button type="button" class="pill-btn" data-filter="llm">🤖 LLM (<span id="filter-llm-count">0</span>)</button>
+            </div>
+          </div>
+
+          <button type="button" id="copy-trajectory-btn" class="btn btn-ghost btn-xs" title="Copier le parcours en texte brut">
+            <span>📋</span> Copier le résumé
+          </button>
+
+          <div id="trajectory-list" class="trajectory-list"></div>
+        </div>
+
+        <div class="modal-footer">
+          <span class="modal-footer-note">⚡ Résolu par descente Ridge &amp; RAG vectoriel</span>
+          <button type="button" id="modal-bottom-close-btn" class="btn btn-secondary">Fermer</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  return modal;
+}
+
+/**
+ * Génère le fragment HTML d'une étape de trajectoire (mutualisé entre modal et page défi).
+ *
+ * @param {Object} item Données de l'étape {step, word, score, permille, is_record, source, weather}
+ * @param {Object} [options={}] Options d'affichage
+ * @param {boolean} [options.showGauge=true] Afficher la mini-jauge de progression
+ * @returns {string} Fragment HTML
+ */
+export function buildTrajectoryStepHtml(item, options = {}) {
+  const isWin = item.permille === 1000;
+  const isRecord = item.is_record && !isWin;
+  const score = typeof item.score === "number" ? item.score : 0;
+  const hasPermille = item.permille !== null && item.permille !== undefined;
+  const permilleText = hasPermille ? `${item.permille} ‰` : "Hors 1000";
+  const permilleClass = hasPermille ? getTierClass(score) : "tier-ice";
+  const weather = item.weather || getTierWeatherIcon(score, item.permille);
+  const gaugePercent = hasPermille
+    ? Math.min(100, Math.max(8, item.permille / 10))
+    : Math.max(0, Math.min(100, score + 20));
+
+  let sourceLabel = "⚡ RAG";
+  let sourceClass = "source-rag";
+  if (item.source === "seed") {
+    sourceLabel = "🌱 Graine";
+    sourceClass = "source-seed";
+  } else if (item.source === "llm") {
+    sourceLabel = "🤖 LLM";
+    sourceClass = "source-llm";
+  } else if (item.source === "sniper") {
+    sourceLabel = "🎯 Sniper";
+    sourceClass = "source-sniper";
+  }
+
+  const showGauge = options.showGauge !== false;
+  const gaugeHtml = showGauge
+    ? `
+          <div class="step-mini-gauge" title="Progression : ${permilleText}">
+            <div class="step-mini-gauge-bar ${permilleClass}" style="width: ${gaugePercent}%;"></div>
+          </div>`
+    : "";
+
+  return `
+      <div class="trajectory-step-card ${isWin ? "is-win" : (isRecord ? "is-record" : "")}">
+        <div class="step-left">
+          <span class="step-num">#${escapeHtml(String(item.step || ""))}</span>
+          <span class="step-source-badge ${sourceClass}">${sourceLabel}</span>
+          <strong class="step-word copyable-word" data-copy="${escapeHtml(item.word)}" title="Cliquer pour copier le mot">
+            ${escapeHtml(String(item.word || ""))}
+          </strong>
+          ${isRecord ? '<span class="step-record-star" title="Nouveau record thermique du bot !">⭐ Record</span>' : ""}
+          ${isWin ? '<span class="badge badge-success" style="font-size: 0.65rem; padding: 1px 6px;">🏆 Cible</span>' : ""}
+        </div>
+        <div class="step-right">
+          <span class="step-weather" title="Indicateur d'ambiance">${escapeHtml(weather)}</span>
+          <span class="step-temp ${getTierClass(score)}">${score >= 0 ? "+" : ""}${score.toFixed(2)}°C</span>
+          <span class="step-permille-badge ${permilleClass}">${escapeHtml(permilleText)}</span>${gaugeHtml}
+        </div>
+      </div>`;
+}
+
 export function initTrajectoryModal() {
-  const modal = document.getElementById("trajectory-modal");
+  const modal = ensureTrajectoryModal();
   const closeBtn = document.getElementById("modal-close-btn");
   const bottomCloseBtn = document.getElementById("modal-bottom-close-btn");
   const copyBtn = document.getElementById("copy-trajectory-btn");
@@ -193,50 +335,7 @@ function renderTrajectoryList() {
     return;
   }
 
-  const html = filtered.map((item) => {
-    const isWin = item.permille === 1000;
-    const isRecord = item.is_record && !isWin;
-    const score = typeof item.score === "number" ? item.score : 0;
-    const permilleText = item.permille !== null ? `${item.permille} ‰` : "Hors 1000";
-    const permilleClass = item.permille !== null ? getTierClass(score) : "tier-ice";
-    const weather = item.weather || getTierWeatherIcon(score, item.permille);
-    const gaugePercent = item.permille !== null ? Math.min(100, Math.max(8, item.permille / 10)) : Math.max(0, Math.min(100, score + 20));
-
-    let sourceLabel = "⚡ RAG";
-    let sourceClass = "source-rag";
-    if (item.source === "seed") {
-      sourceLabel = "🌱 Graine";
-      sourceClass = "source-seed";
-    } else if (item.source === "llm") {
-      sourceLabel = "🤖 LLM";
-      sourceClass = "source-llm";
-    } else if (item.source === "sniper") {
-      sourceLabel = "🎯 Sniper";
-      sourceClass = "source-sniper";
-    }
-
-    return `
-      <div class="trajectory-step-card ${isWin ? "is-win" : (isRecord ? "is-record" : "")}">
-        <div class="step-left">
-          <span class="step-num">#${item.step}</span>
-          <span class="step-source-badge ${sourceClass}">${sourceLabel}</span>
-          <strong class="step-word copyable-word" data-copy="${escapeHtml(item.word)}" title="Cliquer pour copier le mot">
-            ${escapeHtml(item.word)}
-          </strong>
-          ${isRecord ? '<span class="step-record-star" title="Nouveau record thermique du bot !">⭐ Record</span>' : ""}
-          ${isWin ? '<span class="badge badge-success" style="font-size: 0.65rem; padding: 1px 6px;">🏆 Cible</span>' : ""}
-        </div>
-        <div class="step-right">
-          <span class="step-weather" title="Indicateur d'ambiance">${weather}</span>
-          <span class="step-temp">${score > 0 ? "+" : ""}${score.toFixed(2)}°C</span>
-          <span class="step-permille-badge ${permilleClass}">${permilleText}</span>
-          <div class="step-mini-gauge" title="Progression : ${permilleText}">
-            <div class="step-mini-gauge-bar ${permilleClass}" style="width: ${gaugePercent}%;"></div>
-          </div>
-        </div>
-      </div>`;
-  }).join("");
-
+  const html = filtered.map((item) => buildTrajectoryStepHtml(item, { showGauge: true })).join("");
   listEl.innerHTML = html;
 }
 

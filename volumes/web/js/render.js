@@ -18,7 +18,7 @@ import { escapeHtml, getTierClass, getTierWeatherIcon } from "./utils.js";
  * @returns {string} Fragment HTML complet
  */
 export function buildGuessesListHtml(guesses, options = {}) {
-  const { isMasked = false, isPlayer = true, emptyMessage } = options;
+  const { isMasked = false, isPlayer = true, emptyMessage, orderFormat = "default" } = options;
 
   if (!guesses || guesses.length === 0) {
     const defaultMsg = isPlayer
@@ -38,7 +38,7 @@ export function buildGuessesListHtml(guesses, options = {}) {
     const scoreStr = `${scoreVal.toFixed(2)}°C`;
     const permilleStr = g.permille ? `${g.permille} ‰` : "";
     const hintBadge = g.is_hint
-      ? `<span class="badge-hint" title="Mot obtenu via un indice">💡 Indice</span>`
+      ? `<span class="badge-hint" title="Mot obtenu via un indice (+1 coup)">💡 Indice</span>`
       : "";
     const weatherIcon = g.weather ? g.weather.split(" ")[0] : getTierWeatherIcon(scoreVal, g.permille);
 
@@ -46,10 +46,17 @@ export function buildGuessesListHtml(guesses, options = {}) {
       ? `<span class="masked-word-pill">••••••••</span>`
       : `<span class="copyable-word" data-copy="${escapeHtml(g.word)}" style="cursor: pointer;" title="Cliquer pour copier">${escapeHtml(String(g.word || "").toUpperCase())}</span>`;
 
+    let orderPrefix = `#${g.order || idx + 1}`;
+    if (orderFormat === "brackets") {
+      orderPrefix = `[${g.order || idx + 1}]`;
+    } else if (orderFormat === "rank") {
+      orderPrefix = `#${idx + 1}`;
+    }
+
     return `
       <div class="guess-row ${isWinner ? "is-winner" : ""}">
         <div class="guess-left">
-          <span class="guess-order">#${g.order || idx + 1}</span>
+          <span class="guess-order">${orderPrefix}</span>
           <span class="guess-word">${wordDisplay}</span>
           ${hintBadge}
         </div>
@@ -76,6 +83,7 @@ export function renderGuessesContainer(container, guesses, options = {}) {
 
   const cacheKey = JSON.stringify({
     isMasked: !!options.isMasked,
+    orderFormat: options.orderFormat || "default",
     items: (guesses || []).map((g) => [g.word, g.score, g.permille, g.order, g.is_hint]),
   });
 

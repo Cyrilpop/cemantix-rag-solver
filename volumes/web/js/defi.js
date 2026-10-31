@@ -7,7 +7,7 @@
  * même modal). Toute valeur affichée passe par escapeHtml() — règle du projet.
  */
 import { escapeHtml, getTierClass, getTierWeatherIcon } from "./utils.js";
-import { initTrajectoryModal, openTrajectoryModal } from "./trajectory.js";
+import { initTrajectoryModal, openTrajectoryModal, buildTrajectoryStepHtml } from "./trajectory.js";
 
 const API = "/api/challenge";
 const POLL_MS = 2000;
@@ -45,46 +45,6 @@ function stopChrono() {
   chronoTimer = null;
 }
 
-/** Ligne de coup — même gabarit que la timeline de la modal trajectoire. */
-function stepRowHtml(item) {
-  const score = typeof item.score === "number" ? item.score : 0;
-  const isWin = item.permille === 1000;
-  const isRecord = item.is_record && !isWin;
-  const hasP = item.permille !== null && item.permille !== undefined;
-  const permilleText = hasP ? `${item.permille} ‰` : "Hors 1000";
-  const permilleClass = hasP ? getTierClass(score) : "tier-ice";
-  const weather = item.weather || getTierWeatherIcon(score, item.permille);
-
-  let sourceLabel = "⚡ RAG";
-  let sourceClass = "source-rag";
-  if (item.source === "seed") {
-    sourceLabel = "🌱 Graine";
-    sourceClass = "source-seed";
-  } else if (item.source === "llm") {
-    sourceLabel = "🤖 LLM";
-    sourceClass = "source-llm";
-  } else if (item.source === "sniper") {
-    sourceLabel = "🎯 Sniper";
-    sourceClass = "source-sniper";
-  }
-
-  return `
-    <div class="trajectory-step-card ${isWin ? "is-win" : ""} ${isRecord ? "is-record" : ""}">
-      <div class="step-left">
-        <span class="step-num">#${escapeHtml(String(item.step || ""))}</span>
-        <span class="step-source-badge ${sourceClass}">${sourceLabel}</span>
-        <strong class="step-word">${escapeHtml(String(item.word || ""))}</strong>
-        ${isRecord ? '<span class="step-record-star" title="Nouveau record thermique du bot !">⭐ Record</span>' : ""}
-        ${isWin ? '<span class="badge badge-success" style="font-size: 0.65rem; padding: 1px 6px;">🏆 Cible</span>' : ""}
-      </div>
-      <div class="step-right">
-        <span class="step-weather" title="Indicateur d'ambiance">${escapeHtml(weather)}</span>
-        <span class="step-temp ${getTierClass(score)}">${score >= 0 ? "+" : ""}${score.toFixed(2)}°C</span>
-        <span class="step-permille ${permilleClass}">${escapeHtml(permilleText)}</span>
-      </div>
-    </div>`;
-}
-
 /** Message d'attente : position dans la file, recherche, ou solveur absent. */
 function waitingMessage(payload) {
   if (payload.solveur === "hors-ligne") {
@@ -110,7 +70,7 @@ function renderSteps() {
     box.innerHTML = '<div class="clues-empty"><span>En attente des premiers coups du bot.</span></div>';
     return;
   }
-  box.innerHTML = steps.map(stepRowHtml).join("");
+  box.innerHTML = steps.map((s) => buildTrajectoryStepHtml(s, { showGauge: false })).join("");
   box.scrollTop = box.scrollHeight;
 }
 
