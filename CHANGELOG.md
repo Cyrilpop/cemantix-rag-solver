@@ -4,6 +4,55 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-31 · Jalon M4 : Modularisation Sécurisée du Sous-Système SEO & Réduction de Contexte Agent (Safe SEO Modularization & Context Reduction)
+
+### Modifié & Optimisé
+- **Modularisation du God Module SEO (`src/services/seo.py`)** : découpage du fichier monolithique de 1 692 lignes (76 Ko) en sous-modules spécialisés à responsabilité unique, réduisant l'empreinte de `seo.py` à ~250 lignes (-85 % de contexte token) :
+  - `src/services/seo_templates.py` : squelette HTML autonome (`render_page`), constantes de mise en page, formatage de dates en français (`format_date_fr`, `archive_title`), sérialisation Schema.org JSON-LD et injection CSS inline sans requête bloquante.
+  - `src/services/seo_archives.py` : pages d'archives quotidiennes (`build_archive_page`) avec protection anti-spoiler `<details>` et protection "thin content" (balise `noindex` automatique si aucun indice), index paginé (`build_archives_index_page`).
+  - `src/services/seo_hubs.py` : hubs thématiques rendus côté serveur ciblant la longue traîne Google (`build_mot_du_jour_page`, `build_methode_page`), accordéons FAQ natifs et micro-données `HowTo`/`FAQPage`.
+  - `src/services/seo_sitemap.py` : génération conforme au protocole sitemaps.org (`build_sitemap`), écriture atomique multi-conteneurs `_write_file`.
+  - `src/services/seo_agents.py` : manifestes de découverte ARD/A2A (`build_ard_manifest`, `build_agent_card`, `publish_ard_manifests`) et régénération dynamique de `llms.txt` et `agent-skills.md`.
+  - `src/services/seo.py` : orchestrateur allégé (`publish_seo_pages`, `ensure_seo_published`, `prerender_dashboard`) assurant une rétrocompatibilité descendante totale via ré-exports explicites (`__all__`).
+- **Rétrocompatibilité ascendante stricte & Préservation des contrats de patch** : tous les imports existants (`from src.services.seo import ...`) conservent l'identité stricte d'objet (`assertIs`), le monkeypatching historique (`ensure_seo_published`, `publish_seo_pages`, `WEB_ROOT`) est préservé sans effet de bord.
+- **Suite de tests de caractérisation et rétrocompatibilité** :
+  - [`tests/test_seo_characterization.py`](tests/test_seo_characterization.py) : 12 tests de caractérisation déterministe validant la structure HTML, les invariants anti-spoiler, la conformité sitemap XML et la non-régression de publication sur disque temporaire.
+  - [`tests/test_seo_backward_compat.py`](tests/test_seo_backward_compat.py) : 5 tests d'identité stricte d'objets, de validation de `__all__`, d'interception par monkeypatching et d'équivalence bit à bit des sorties directes vs ré-exportées.
+- **Validation** : suite complète portée à **248 tests unitaires déterministes** (0 échec, 0 régression en ~8,4 s sous conteneur Docker Python 3.12). 100 % de réussite sur `tools/check_docs.py`, `tools/check_seo.py` et `tools/build_css_bundles.py --check`.
+
+---
+
+## [Non publié] - 2026-10-31 · Jalon M3 : Sécurisation & Frontières de Confiance Réseau (Security Hardening & Trust Boundaries)
+
+### Ajouté & Sécurisé
+- **Gestion sécurisée des proxys de confiance (`src/api/proxy.py`)** : résolution fail-closed de l'IP effective du client via `extract_client_ip`. L'en-tête `X-Forwarded-For` n'est désormais pris en compte QUE si la connexion TCP directe provient d'un proxy explicitement déclaré dans `TRUSTED_PROXIES`. Dépilage de droite à gauche insensible à l'injection d'adresses en amont. Anonymisation RGPD (/24 en IPv4, /48 en IPv6).
+- **Suppression du socket Docker dans le conteneur web (`docker-compose.yml`)** : suppression du montage `/var/run/docker.sock` et du groupe `DOCKER_GID` sur `cemantix_web`, neutralisant tout risque d'évasion vers l'hôte. Repli gracieux et informatif sur les journaux mémoire applicatifs (`source=app`).
+- **Durcissement de l'API d'administration (`src/api/routes/admin.py`)** : application du rate limiting (`_api_limiter`) sur les routes `GET`, révocation immédiate de tout jeton si `ADMIN_PASSWORD` est vide, traçabilité de l'adresse IP cliente sur les échecs d'authentification.
+- **Suite de tests de sécurité (`tests/test_security_hardening.py`)** : 19 tests déterministes couvrant le filtrage des proxys de confiance, l'impossibilité de contourner le rate limiting ou les quotas de défi par rotation d'en-tête, le refus d'usurpation de whitelist, et l'isolation du socket Docker. Total porté à 231 tests (0 échec).
+
+---
+
+## [Non publié] - 2026-10-30 · Jalon M2.1 : Durcissement de la Compatibilité Comportementale du Solveur
+
+### Modifié & Optimisé
+- **Compatibilité comportementale de monkeypatching (M2.1)** : intégration d'une résolution tardive de façade (`_resolve_ranking_fn`) dans `src/engine/duel.py`, garantissant que tout patch ciblant `src.engine.solvers.estimate_secret`, `rerank` ou `weather_for_score` intercepte immédiatement les décisions de `RagDuelPlayer` sans créer de cycle d'importation.
+- **Suite de tests comportementaux (`tests/test_solver_behavioral_compat.py`)** : validation de l'interception indirecte via `Solver` et `RagDuelPlayer`, et de la stricte équivalence numérique et séquentielle des trajectoires M1 vs M2. Total porté à 212 tests (0 échec).
+
+---
+
+## [Non publié] - 2026-10-30 · Jalon M2 : Modularisation et Découplage Sécurisé du Solveur
+
+### Modifié & Optimisé
+- **Découplage modulaire de `src/engine/solvers.py` (M2)** : scission du fichier monolithique de 588 lignes en modules spécialisés et hautement cohésifs :
+  - `src/engine/ranking.py` : fonctions mathématiques pures (Ridge `estimate_secret`, rerank multicritère `rerank`, météo officielle `weather_for_score`). Couverture unitaire : 100 %.
+  - `src/engine/llm.py` : intégration du client OpenAI ChatCompletions local (`ask_llm`) et formatage strict du prompt avec candidats RAG.
+  - `src/engine/duel.py` : joueur IA autonome `RagDuelPlayer` pour le mode Duel/Battle.
+  - `src/engine/solvers.py` : orchestrateur autonome `Solver` (allégé à 397 lignes, -32,5 %) conservant la trajectoire, l'échantillonnage FPS et la boucle de convergence.
+- **Rétrocompatibilité ascendante stricte** : tous les symboles historiques sont ré-exportés via `src.engine.solvers`, `src.engine` et `src`. Préservation validée par `tests/test_solver_backward_compat.py` (identité stricte `assertIs`, monkeypatching effectif, absence d'imports circulaires).
+- **Validation** : 204 tests unitaires passés avec succès sous conteneur Docker Python 3.12 (0 échec).
+
+---
+
 ## [Non publié] - 2026-10-30 · Évolution « Défier le bot IA » (docs/roadmap/2026-10-06-defier-le-bot)
 
 ### Ajouté

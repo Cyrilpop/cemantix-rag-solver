@@ -117,23 +117,17 @@ services:
       - ADMIN_API_PATH=${ADMIN_API_PATH:-/api/snap-9x}
       - TZ=${TZ:-Europe/Paris}
       - PYTHONUNBUFFERED=${PYTHONUNBUFFERED:-1}
+      # Reverse-proxys de confiance pour le filtrage sécurisé de X-Forwarded-For (M3)
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES:-}
     volumes:
       - ./cemantix_data:/app/cemantix_data:rw
       - ./volumes/web:/app/volumes/web:rw
-      # Lecture seule du socket Docker : indispensable pour relire et suivre les
-      # journaux des conteneurs depuis la console. Sans lui, la console reste
-      # utilisable mais se limite aux journaux de l'application en mémoire.
-      # Retirer cette ligne si tu estimes que exposer l'API Docker au conteneur
-      # web est un risque trop élevé (le socket donne en réalité un accès total
-      # au démon ; la console, elle, n'y fait que des GET de logs).
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    # L'utilisateur du conteneur (cemantix, uid 1000) n'est pas membre du groupe
-    # `docker` de l'hôte : sans ce groupe supplémentaire, la lecture du socket est
-    # refusée (EACCES) et la console affiche simplement « logs indisponibles ».
-    # `stat -c %g /var/run/docker.sock` donne le GID de ton hôte (120 en général) ;
-    # la variable DOCKER_GID permet de l'ajuster sans toucher ce fichier.
-    group_add:
-      - "${DOCKER_GID:-120}"
+      # NOTE DE SÉCURITÉ (Jalon M3) :
+      # Le montage de /var/run/docker.sock a été retiré pour éliminer tout risque
+      # d'évasion du conteneur web vers l'hôte. La console admin reste 100%
+      # opérationnelle via les journaux applicatifs en mémoire vive (source=app).
+      # Si un suivi spécifique des logs conteneurs bruts est requis, utiliser
+      # `docker compose logs` sur l'hôte ou configurer un proxy de socket dédié.
     networks:
       - web-net
       - cemantix-net

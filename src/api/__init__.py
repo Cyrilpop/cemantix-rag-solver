@@ -32,6 +32,11 @@ from .routes import (
     handle_system_post,
 )
 from .ratelimit import RateLimiter
+from .proxy import (
+    anonymize_ip,
+    extract_client_ip,
+    parse_trusted_proxies,
+)
 from .server import (
     BoundedHTTPServer,
     GameAPIHandler,
@@ -47,6 +52,9 @@ __all__ = [
     "GameAPIHandler",
     "BoundedHTTPServer",
     "RateLimiter",
+    "extract_client_ip",
+    "anonymize_ip",
+    "parse_trusted_proxies",
     "start_api_server",
     "start_api_thread",
     "get_weather_tier",

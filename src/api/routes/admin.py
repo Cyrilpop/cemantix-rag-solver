@@ -81,7 +81,7 @@ def _issue_token() -> str:
 
 
 def _check_token(token: str) -> bool:
-    if not token:
+    if not token or not _admin_password():
         return False
     parts = token.split(".")
     if len(parts) != 3:
@@ -162,6 +162,8 @@ def _dechunk_docker_stream(raw: bytes) -> str:
 
 def container_logs(container: str, tail: int = 200) -> list:
     """Dernières `tail` lignes de log d'un conteneur."""
+    if not os.path.exists(DOCKER_SOCKET):
+        return [f"ℹ️  Logs conteneur '{container}' indisponibles : socket Docker non monté (sécurité renforcée)."]
     try:
         conn = http_unix_connection(DOCKER_SOCKET)
         conn.request("GET", f"/containers/{container}/logs?stdout=1&stderr=1&tail={int(tail)}")
@@ -177,6 +179,9 @@ def container_logs(container: str, tail: int = 200) -> list:
 
 def container_log_stream(container: str, emit) -> None:
     """Relit le flux de log d'un conteneur en continu et appelle `emit(ligne)`."""
+    if not os.path.exists(DOCKER_SOCKET):
+        emit(f"ℹ️  Suivi des logs {container} indisponible : socket Docker non monté (sécurité renforcée).")
+        return
     conn = None
     try:
         conn = http_unix_connection(DOCKER_SOCKET)
@@ -364,7 +369,9 @@ def _parse_query(query: str) -> dict:
     return {key: values[0] for key, values in parsed.items() if values}
 
 
-def handle_admin_get(manager, path: str, query: str, headers, send_json, send_sse) -> None:
+def handle_admin_get(
+    manager, path: str, query: str, headers, send_json, send_sse, client_ip: str = "127.0.0.1"
+) -> None:
     """Route les GET d'administration.
 
     `send_json(payload, status)` et `send_sse(producer)` sont fournis par le
@@ -378,6 +385,11 @@ def handle_admin_get(manager, path: str, query: str, headers, send_json, send_ss
         return
     if not authorize(headers, params):
         send_json({"error": "Authentification requise"}, 401)
+        return
+
+    allowed, retry = _api_limiter.allow(client_ip)
+    if not allowed:
+        send_json({"error": "Trop de requêtes.", "retry_after": round(retry, 1)}, 429)
         return
 
     if sub == "stats":
@@ -444,7 +456,7 @@ def handle_admin_post(manager, path: str, data: dict, headers, client_ip: str) -
                     "retry_after": round(retry, 1)}, 429
         supplied = str((data or {}).get("password", ""))
         if not hmac.compare_digest(supplied, _admin_password()):
-            log("🛡️  [ADMIN] Tentative d'authentification refusée", level="WARNING")
+            log(f"🛡️  [ADMIN] Tentative d'authentification refusée (IP: {client_ip})", level="WARNING")
             return {"error": "Mot de passe incorrect"}, 401
         log("🛡️  [ADMIN] Authentification réussie")
         return {"token": _issue_token(), "expires_in": int(ADMIN_TOKEN_TTL)}, 200
