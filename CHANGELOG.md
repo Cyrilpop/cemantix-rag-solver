@@ -4,6 +4,24 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-31 · Jalon M4 : Modularisation Sécurisée du Sous-Système SEO & Réduction de Contexte Agent (Safe SEO Modularization & Context Reduction)
+
+### Modifié & Optimisé
+- **Modularisation du God Module SEO (`src/services/seo.py`)** : découpage du fichier monolithique de 1 692 lignes (76 Ko) en sous-modules spécialisés à responsabilité unique, réduisant l'empreinte de `seo.py` à ~250 lignes (-85 % de contexte token) :
+  - `src/services/seo_templates.py` : squelette HTML autonome (`render_page`), constantes de mise en page, formatage de dates en français (`format_date_fr`, `archive_title`), sérialisation Schema.org JSON-LD et injection CSS inline sans requête bloquante.
+  - `src/services/seo_archives.py` : pages d'archives quotidiennes (`build_archive_page`) avec protection anti-spoiler `<details>` et protection "thin content" (balise `noindex` automatique si aucun indice), index paginé (`build_archives_index_page`).
+  - `src/services/seo_hubs.py` : hubs thématiques rendus côté serveur ciblant la longue traîne Google (`build_mot_du_jour_page`, `build_methode_page`), accordéons FAQ natifs et micro-données `HowTo`/`FAQPage`.
+  - `src/services/seo_sitemap.py` : génération conforme au protocole sitemaps.org (`build_sitemap`), écriture atomique multi-conteneurs `_write_file`.
+  - `src/services/seo_agents.py` : manifestes de découverte ARD/A2A (`build_ard_manifest`, `build_agent_card`, `publish_ard_manifests`) et régénération dynamique de `llms.txt` et `agent-skills.md`.
+  - `src/services/seo.py` : orchestrateur allégé (`publish_seo_pages`, `ensure_seo_published`, `prerender_dashboard`) assurant une rétrocompatibilité descendante totale via ré-exports explicites (`__all__`).
+- **Rétrocompatibilité ascendante stricte & Préservation des contrats de patch** : tous les imports existants (`from src.services.seo import ...`) conservent l'identité stricte d'objet (`assertIs`), le monkeypatching historique (`ensure_seo_published`, `publish_seo_pages`, `WEB_ROOT`) est préservé sans effet de bord.
+- **Suite de tests de caractérisation et rétrocompatibilité** :
+  - [`tests/test_seo_characterization.py`](tests/test_seo_characterization.py) : 12 tests de caractérisation déterministe validant la structure HTML, les invariants anti-spoiler, la conformité sitemap XML et la non-régression de publication sur disque temporaire.
+  - [`tests/test_seo_backward_compat.py`](tests/test_seo_backward_compat.py) : 5 tests d'identité stricte d'objets, de validation de `__all__`, d'interception par monkeypatching et d'équivalence bit à bit des sorties directes vs ré-exportées.
+- **Validation** : suite complète portée à **248 tests unitaires déterministes** (0 échec, 0 régression en ~8,4 s sous conteneur Docker Python 3.12). 100 % de réussite sur `tools/check_docs.py`, `tools/check_seo.py` et `tools/build_css_bundles.py --check`.
+
+---
+
 ## [Non publié] - 2026-10-31 · Jalon M3 : Sécurisation & Frontières de Confiance Réseau (Security Hardening & Trust Boundaries)
 
 ### Ajouté & Sécurisé

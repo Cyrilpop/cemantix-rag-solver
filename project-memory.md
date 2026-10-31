@@ -73,7 +73,12 @@ L'architecture s'organise en 3 tiers orchestrés par Docker Compose :
 - [src/services/](src/services/) : Services autonomes :
   - `daemon.py` : Boucle planificatrice 00h00 et surveillance de battement (*heartbeat*).
   - `challenges.py` : Traitement de la file des défis lancés au bot.
-  - `seo.py` : Génération des pages HTML d'archives, sitemap XML et fiches agents.
+  - `seo.py` : Orchestrateur de publication SEO, pré-rendu du tableau de bord et ré-exports universels.
+  - `seo_templates.py` : Gabarits HTML autonomes, composants Schema.org et tokens de style.
+  - `seo_archives.py` : Pages d'archives quotidiennes et index paginé.
+  - `seo_hubs.py` : Hubs thématiques « mot du jour » et « méthode & indices » (rendu serveur).
+  - `seo_sitemap.py` : Génération conforme du sitemap XML et écriture atomique multi-conteneurs.
+  - `seo_agents.py` : Manifestes ARD/A2A et documentation agentique dynamique (`llms.txt`).
   - `web.py` : Synchronisation et export de `data.json`.
 - [src/cli/](src/cli/) : Expérience console :
   - `menu.py` : Menu interactif principal ANSI.
@@ -129,9 +134,9 @@ L'architecture s'organise en 3 tiers orchestrés par Docker Compose :
 ## 6. Dette Technique Connue (Synthèse M0)
 
 - **Sécurité (Résolue en M3) :** Filtrage fail-closed de `X-Forwarded-For` par proxys de confiance (`TRUSTED_PROXIES`) via [`src/api/proxy.py`](src/api/proxy.py). Suppression du montage de `/var/run/docker.sock` dans `cemantix_web` ([docker-compose.yml](docker-compose.yml)) éliminant le vecteur d'évasion vers l'hôte. Durcissement de l'API admin (rate limiting sur GET, fail-closed).
-- **Couverture de tests :** 48 % globale (sanctuarisée par 231 tests unitaires déterministes suite à M1, M2, M2.1 et M3). Le cœur algorithmique (`solvers.py` à 64 %), le domaine de jeu (`manager.py` à 68 %) et l'infrastructure de sécurité réseau/admin sont validés sans dépendance externe.
-- **Harnais de non-régression (M1-M3) :** [`tests/test_engine_solvers.py`](tests/test_engine_solvers.py), [`tests/test_game_manager.py`](tests/test_game_manager.py), [`tests/test_solver_behavioral_compat.py`](tests/test_solver_behavioral_compat.py) et [`tests/test_security_hardening.py`](tests/test_security_hardening.py).
-- **God Module :** [src/services/seo.py](src/services/seo.py) (1 692 lignes) centralise templates, sitemap, ARD et formatage.
+- **Couverture de tests :** Sanctuarisée par 248 tests unitaires déterministes (suite à M1, M2, M2.1, M3 et M4). Le cœur algorithmique (`solvers.py`), le domaine de jeu (`manager.py`), la sécurité réseau/admin et l'ensemble de la génération SEO sont validés sans dépendance externe en 8,4 s.
+- **Harnais de non-régression (M1-M4) :** [`tests/test_engine_solvers.py`](tests/test_engine_solvers.py), [`tests/test_game_manager.py`](tests/test_game_manager.py), [`tests/test_solver_behavioral_compat.py`](tests/test_solver_behavioral_compat.py), [`tests/test_security_hardening.py`](tests/test_security_hardening.py), [`tests/test_seo_characterization.py`](tests/test_seo_characterization.py) et [`tests/test_seo_backward_compat.py`](tests/test_seo_backward_compat.py).
+- **God Module SEO (Résolu en M4) :** Modularisation de [`src/services/seo.py`](src/services/seo.py) (réduit de 1 692 à ~250 lignes, soit -85 % de contexte token) en sous-modules spécialisés (`seo_templates.py`, `seo_archives.py`, `seo_hubs.py`, `seo_sitemap.py`, `seo_agents.py`) avec parité bit à bit et rétrocompatibilité ascendante totale via `__all__`.
 - **Duplication :** Triple stockage CSS (source, `dist/`, inliné dans HTML).
 - *Détails complets et feuille de route : voir [docs/audits/M0_TECHNICAL_DEBT.md](docs/audits/M0_TECHNICAL_DEBT.md) et [docs/audits/M0_REFACTORING_ROADMAP.md](docs/audits/M0_REFACTORING_ROADMAP.md).*
 

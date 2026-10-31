@@ -43,7 +43,7 @@ TASKS = [
         "optimized_reads": [
             ("AGENTS.md", None, None),
             ("project-memory.md", 1, 100),  # section architecture & SEO
-            ("src/services/seo.py", 1150, 1220),  # fonctions sitemap ciblées
+            ("src/services/seo_sitemap.py", 1, 75),  # fonctions sitemap ciblées
         ],
         "validation_cmd": "python tools/check_seo.py",
     },
