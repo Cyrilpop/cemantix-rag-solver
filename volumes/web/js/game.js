@@ -2,6 +2,7 @@
  * Cémantix Solver — Moteur de Jeu Interactif (Défi du Jour & Mode Illimité)
  */
 import { escapeHtml, getTierClass, showToast, showConfirmDialog } from "./utils.js";
+import { renderGuessesContainer } from "./render.js";
 
 const GAME_STORAGE_KEY = "cemantix_game_state_v2";
 
@@ -639,56 +640,12 @@ function renderSpotlight(guess) {
 }
 
 function renderGameLists() {
-  const gameTopList = document.getElementById("game-top-list");
-  const gameChronoList = document.getElementById("game-chrono-list");
-
-  // 1. Top 10 des meilleurs mots
-  if (gameTopList) {
-    if (gameState.topGuesses.length === 0) {
-      gameTopList.innerHTML = `<div class="clues-empty"><span>Vos meilleures tentatives apparaîtront ici.</span></div>`;
-    } else {
-      gameTopList.innerHTML = gameState.topGuesses.map((g, idx) => {
-        const tier = getTierClass(g.score);
-        const isWinner = g.permille === 1000 || g.score >= 100.0;
-        const hintBadge = g.is_hint ? '<span class="badge-hint" title="Mot obtenu via un indice (+1 coup)">💡 Indice</span>' : "";
-        return `
-          <div class="guess-row ${isWinner ? "is-winner" : ""}">
-            <div class="guess-left">
-              <span class="guess-order">#${idx + 1}</span>
-              <span class="guess-word">${escapeHtml(g.word.toUpperCase())}${hintBadge}</span>
-            </div>
-            <div class="guess-right">
-              <span class="guess-weather">${g.weather ? g.weather.split(" ")[0] : ""}</span>
-              <span class="guess-temp ${tier}">${g.score >= 0 ? "+" : ""}${g.score.toFixed(2)}°C</span>
-              <span class="guess-permille">${g.permille ? `${g.permille} ‰` : ""}</span>
-            </div>
-          </div>`;
-      }).join("");
-    }
-  }
-
-  // 2. Chronologie de tous les coups
-  if (gameChronoList) {
-    if (gameState.history.length === 0) {
-      gameChronoList.innerHTML = `<div class="clues-empty"><span>Aucun mot joué pour le moment.</span></div>`;
-    } else {
-      gameChronoList.innerHTML = gameState.history.map((g) => {
-        const tier = getTierClass(g.score);
-        const isWinner = g.permille === 1000 || g.score >= 100.0;
-        const hintBadge = g.is_hint ? '<span class="badge-hint" title="Mot obtenu via un indice (+1 coup)">💡 Indice</span>' : "";
-        return `
-          <div class="guess-row ${isWinner ? "is-winner" : ""}">
-            <div class="guess-left">
-              <span class="guess-order">[${g.order}]</span>
-              <span class="guess-word">${escapeHtml(g.word.toUpperCase())}${hintBadge}</span>
-            </div>
-            <div class="guess-right">
-              <span class="guess-weather">${g.weather ? g.weather.split(" ")[0] : ""}</span>
-              <span class="guess-temp ${tier}">${g.score >= 0 ? "+" : ""}${g.score.toFixed(2)}°C</span>
-              <span class="guess-permille">${g.permille ? `${g.permille} ‰` : ""}</span>
-            </div>
-          </div>`;
-      }).join("");
-    }
-  }
+  renderGuessesContainer("game-top-list", gameState.topGuesses, {
+    emptyMessage: "Vos meilleures tentatives apparaîtront ici.",
+    orderFormat: "rank",
+  });
+  renderGuessesContainer("game-chrono-list", gameState.history, {
+    emptyMessage: "Aucun mot joué pour le moment.",
+    orderFormat: "brackets",
+  });
 }

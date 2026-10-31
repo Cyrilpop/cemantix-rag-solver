@@ -29,37 +29,7 @@
   letter-spacing: 0.04em;
 }
 
-.pill-group {
-  display: inline-flex;
-  align-items: center;
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  border-radius: 9999px;
-  padding: 3px;
-  gap: 2px;
-}
-
-.pill-btn {
-  background: transparent;
-  border: none;
-  padding: 0.35rem 0.85rem;
-  border-radius: 9999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.pill-btn:hover:not(.active) {
-  color: var(--text-main);
-}
-
-.pill-btn.active {
-  background: var(--accent-btn, #1668dc);
-  color: #ffffff;
-  box-shadow: 0 0 10px var(--accent-glow);
-}
+/* Note: styles de base .pill-group et .pill-btn mutualisés dans base.css */
 
 .game-actions {
   display: flex;

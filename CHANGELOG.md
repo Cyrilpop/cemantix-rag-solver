@@ -4,6 +4,46 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-31 · Jalon M5.1 : Correction de la Révélation du Mot Secret & Accessibilité Clavier (Dashboard Secret Word Reveal Bugfix)
+
+### Corrigé
+- **Révélation locale du mot secret sur le tableau de bord (`volumes/web/js/dashboard.js`, `volumes/web/index.html`)** :
+  - Suppression de la condition bloquante `!themeState.globalSpoiler` dans `revealSecretWord()`, permettant au clic direct sur la carte `#secret-word-card` de lever le flou et d'afficher le mot du jour sans désactiver la protection anti-spoiler globale sur les autres indices et l'historique.
+  - Déduplication des requêtes en cours de vol via le drapeau `dashboardState.isRevealing` pour prévenir les doubles appels API en cas de clics répétés.
+  - Préservation de la révélation locale lors des actualisations périodiques en arrière-plan (`renderDashboard`).
+  - Accessibilité clavier renforcée sur la carte (`tabindex="0"`, `role="button"`, `aria-expanded`, gestion des touches `Entrée` et `Espace`).
+  - Ajout de 9 tests de non-régression dans `tests/test_frontend_characterization.py` (suite portée à 277 tests unitaires déterministes, 0 échec).
+
+---
+
+## [Non publié] - 2026-10-31 · Jalon M5 : Simplification Frontend & Efficacité Contexte Agent (Frontend Simplification & Agent Context Efficiency)
+
+### Modifié & Optimisé
+- **Mutualisation du rendu JavaScript des tentatives (`volumes/web/js/render.js`, `game.js`)** :
+  - Extension de `buildGuessesListHtml` avec l'option `orderFormat` (`"rank"`, `"brackets"`, `"default"`).
+  - Délégation du rendu de `gameTopList` et `gameChronoList` dans `game.js` au module partagé `renderGuessesContainer`, réduisant `game.js` de 51 lignes (-7,3 %) tout en apportant le cache anti-scintillement DOM et la copie au clic.
+- **Mutualisation des étapes de trajectoire (`volumes/web/js/trajectory.js`, `defi.js`)** :
+  - Extraction de `buildTrajectoryStepHtml(item, options)` dans `trajectory.js`, partagé entre la modal de débriefing et la page live de défi bot.
+  - Suppression de la fonction dupliquée `stepRowHtml` dans `defi.js` (-40 lignes, -13,1 %).
+- **Allègement des gabarits HTML statiques & Injection dynamique des modales** :
+  - Ajout de `ensureTrajectoryModal()` dans `trajectory.js` pour injecter dynamiquement le conteneur `#trajectory-modal` au premier appel si absent du DOM.
+  - Retrait de 68 lignes de duplication HTML statique dans `volumes/web/defi/index.html` (-9,3 % de taille).
+  - Suppression du gestionnaire inline `onsubmit="return false;"` sur `<form id="form-join-game">` dans `volumes/web/multi/index.html` pour renforcer la conformité CSP.
+- **Dédoublonnage CSS & Régénération des bundles** :
+  - Suppression des règles desktop dupliquées `.pill-group`, `.pill-btn`, `.pill-btn:hover`, `.pill-btn.active` dans `volumes/web/css/game.css` (déjà déclarées dans `base.css`).
+  - Régénération des bundles via `tools/build_css_bundles.py` : allègement de 514 octets sur `play.css`, `battle.css` et `multi.css`.
+- **Efficacité de Contexte & Outils d'Inspection IA (`tools/agent_find.py`, `AGENTS.md`)** :
+  - Extension de `tools/agent_find.py` avec la recherche d'identifiants et de repères HTML (`id`, `header`, `nav`, `main`, `section`, `form`).
+  - Détection automatique du bloc CSS critique inliné (L44-L49, ~32 ko / ~8 000 tokens) dans `file_summary` avec recommandations de plages de lecture contextuelles.
+  - Ajout du mode `--safe-html` masquant le bloc CSS critique lors de l'inspection du `<head>` HTML pour économiser ~42 000 tokens par tournée d'analyse complète.
+  - Actualisation du guide opérationnel `AGENTS.md` et de `project-memory.md`.
+- **Suite de tests de caractérisation et non-régression** :
+  - [`tests/test_frontend_characterization.py`](tests/test_frontend_characterization.py) : 15 tests vérifiant les contrats DOM, la cohérence de navigation, l'accessibilité des modales, la conformité CSP et la stabilité des exports ES Modules.
+  - [`tests/test_agent_find.py`](tests/test_agent_find.py) : 5 tests validant la découverte multi-langages (Python, JS, HTML) et la protection de contexte agent.
+- **Validation** : suite complète portée à **268 tests unitaires déterministes** (0 échec, 0 régression en 7,1 s sous Docker Python 3.12). 100 % de réussite sur `tools/check_docs.py`, `tools/check_seo.py`, `tools/build_css_bundles.py --check` et `tests/test_responsive.py`.
+
+---
+
 ## [Non publié] - 2026-10-31 · Jalon M4 : Modularisation Sécurisée du Sous-Système SEO & Réduction de Contexte Agent (Safe SEO Modularization & Context Reduction)
 
 ### Modifié & Optimisé

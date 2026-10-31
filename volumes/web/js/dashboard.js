@@ -11,6 +11,7 @@ export const dashboardState = {
   secretWord: null,
   searchQuery: "",
   cluesVisible: true,
+  isRevealing: false,
 };
 
 export function isTodayEntry(entry) {
@@ -41,11 +42,19 @@ export function initDashboard() {
   const historyTbody = document.getElementById("history-tbody");
   const manualRefreshBtn = document.getElementById("manual-refresh-btn");
 
-  // Clic direct sur la carte du mot secret pour révéler
+  // Clic direct ou activation clavier sur la carte du mot secret pour révéler
   if (secretWordCard) {
     secretWordCard.addEventListener("click", (e) => {
       if (secretWordCard.classList.contains("is-spoiled") && !e.target.closest("button")) {
         revealSecretWord();
+      }
+    });
+    secretWordCard.addEventListener("keydown", (e) => {
+      if ((e.key === "Enter" || e.key === " ") && !e.target.closest("button")) {
+        if (secretWordCard.classList.contains("is-spoiled")) {
+          e.preventDefault();
+          revealSecretWord();
+        }
       }
     });
   }
@@ -56,6 +65,7 @@ export function initDashboard() {
     if (isSpoiled) {
       // Masquer partout
       secretWordCard?.classList.add("is-spoiled");
+      secretWordCard?.setAttribute("aria-expanded", "false");
       if (dashboardState.data?.current?.top_guesses) {
         renderClues(dashboardState.data.current.top_guesses);
       }
@@ -77,6 +87,7 @@ export function initDashboard() {
         toggleGlobalSpoiler();
       } else {
         secretWordCard?.classList.add("is-spoiled");
+        secretWordCard?.setAttribute("aria-expanded", "false");
       }
     });
   }
@@ -101,6 +112,7 @@ export function initDashboard() {
             const secretWord = document.getElementById("secret-word");
             if (secretWord) secretWord.textContent = json.word.toUpperCase();
             secretWordCard?.classList.remove("is-spoiled");
+            secretWordCard?.setAttribute("aria-expanded", "true");
             navigator.clipboard.writeText(json.word.toUpperCase()).then(() => {
               showToast(`📋 Mot secret « ${json.word.toUpperCase()} » copié !`);
             });
@@ -199,15 +211,17 @@ export function revealSecretWord() {
 
   if (dashboardState.secretWord) {
     if (secretWord) secretWord.textContent = dashboardState.secretWord.toUpperCase();
-    if (!themeState.globalSpoiler) {
-      secretWordCard?.classList.remove("is-spoiled");
-    }
+    secretWordCard?.classList.remove("is-spoiled");
+    secretWordCard?.setAttribute("aria-expanded", "true");
     if (dashboardState.data?.current?.top_guesses) {
       renderClues(dashboardState.data.current.top_guesses);
     }
     renderHistoryTable();
     return;
   }
+
+  if (dashboardState.isRevealing) return;
+  dashboardState.isRevealing = true;
 
   fetch("/api/daily/reveal", { method: "POST" })
     .then((res) => {
@@ -218,9 +232,8 @@ export function revealSecretWord() {
       if (json.word) {
         dashboardState.secretWord = json.word;
         if (secretWord) secretWord.textContent = json.word.toUpperCase();
-        if (!themeState.globalSpoiler) {
-          secretWordCard?.classList.remove("is-spoiled");
-        }
+        secretWordCard?.classList.remove("is-spoiled");
+        secretWordCard?.setAttribute("aria-expanded", "true");
         if (dashboardState.data?.current) {
           dashboardState.data.current.word = json.word;
         }
@@ -246,7 +259,11 @@ export function revealSecretWord() {
       console.warn("Échec révélation mot secret :", err);
       if (secretWord) secretWord.textContent = "--------";
       secretWordCard?.classList.add("is-spoiled");
+      secretWordCard?.setAttribute("aria-expanded", "false");
       showToast(err.message || "Impossible de révéler le mot secret");
+    })
+    .finally(() => {
+      dashboardState.isRevealing = false;
     });
 }
 
@@ -313,9 +330,10 @@ export function renderDashboard(data) {
   if (puzzleBadge) puzzleBadge.textContent = current.puzzle ? `Puzzle #${current.puzzle}` : "Puzzle du jour";
   if (puzzleDate) puzzleDate.textContent = formatDateFr(current.date);
   if (secretWord) {
-    if (wordToDisplay && !themeState.globalSpoiler) {
+    if (wordToDisplay && (!themeState.globalSpoiler || !secretWordCard?.classList.contains("is-spoiled"))) {
       secretWord.textContent = wordToDisplay.toUpperCase();
       secretWordCard?.classList.remove("is-spoiled");
+      secretWordCard?.setAttribute("aria-expanded", "true");
     } else {
       if (wordToDisplay) {
         secretWord.textContent = wordToDisplay.toUpperCase();
@@ -323,6 +341,7 @@ export function renderDashboard(data) {
         secretWord.textContent = "--------";
       }
       secretWordCard?.classList.add("is-spoiled");
+      secretWordCard?.setAttribute("aria-expanded", "false");
     }
   }
   if (metricTries) metricTries.textContent = current.tries ? `${current.tries} coups` : "--";
