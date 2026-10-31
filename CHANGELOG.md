@@ -4,6 +4,18 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-10-31 · Jalon M5.1 : Correction de la Révélation du Mot Secret & Accessibilité Clavier (Dashboard Secret Word Reveal Bugfix)
+
+### Corrigé
+- **Révélation locale du mot secret sur le tableau de bord (`volumes/web/js/dashboard.js`, `volumes/web/index.html`)** :
+  - Suppression de la condition bloquante `!themeState.globalSpoiler` dans `revealSecretWord()`, permettant au clic direct sur la carte `#secret-word-card` de lever le flou et d'afficher le mot du jour sans désactiver la protection anti-spoiler globale sur les autres indices et l'historique.
+  - Déduplication des requêtes en cours de vol via le drapeau `dashboardState.isRevealing` pour prévenir les doubles appels API en cas de clics répétés.
+  - Préservation de la révélation locale lors des actualisations périodiques en arrière-plan (`renderDashboard`).
+  - Accessibilité clavier renforcée sur la carte (`tabindex="0"`, `role="button"`, `aria-expanded`, gestion des touches `Entrée` et `Espace`).
+  - Ajout de 9 tests de non-régression dans `tests/test_frontend_characterization.py` (suite portée à 277 tests unitaires déterministes, 0 échec).
+
+---
+
 ## [Non publié] - 2026-10-31 · Jalon M5 : Simplification Frontend & Efficacité Contexte Agent (Frontend Simplification & Agent Context Efficiency)
 
 ### Modifié & Optimisé
