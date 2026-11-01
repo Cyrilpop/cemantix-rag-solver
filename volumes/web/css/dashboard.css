@@ -902,6 +902,28 @@
   box-shadow: 0 2px 8px var(--accent-glow);
 }
 
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.5rem 0.25rem;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.history-pagination .history-page-info {
+  font-weight: 500;
+  user-select: none;
+}
+
+.history-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 @media (max-width: 640px) {
   .history-header {
     flex-direction: column;

@@ -12,6 +12,8 @@ export const dashboardState = {
   searchQuery: "",
   cluesVisible: true,
   isRevealing: false,
+  historyPage: 1,
+  historyPageSize: 10,
 };
 
 export function isTodayEntry(entry) {
@@ -142,8 +144,27 @@ export function initDashboard() {
     let searchTimer = null;
     historySearch.addEventListener("input", (e) => {
       dashboardState.searchQuery = e.target.value;
+      dashboardState.historyPage = 1;
       if (searchTimer) clearTimeout(searchTimer);
       searchTimer = setTimeout(renderHistoryTable, 150);
+    });
+  }
+
+  // Historique - pagination
+  const historyPrev = document.getElementById("history-prev");
+  const historyNext = document.getElementById("history-next");
+  if (historyPrev) {
+    historyPrev.addEventListener("click", () => {
+      if (dashboardState.historyPage > 1) {
+        dashboardState.historyPage--;
+        renderHistoryTable();
+      }
+    });
+  }
+  if (historyNext) {
+    historyNext.addEventListener("click", () => {
+      dashboardState.historyPage++;
+      renderHistoryTable();
     });
   }
 
@@ -479,6 +500,11 @@ export function renderHistoryTable() {
   const historyTbody = document.getElementById("history-tbody");
   if (!historyTbody || !dashboardState.data || !dashboardState.data.history) return;
 
+  const historyPagination = document.getElementById("history-pagination");
+  const historyPrev = document.getElementById("history-prev");
+  const historyNext = document.getElementById("history-next");
+  const historyPageInfo = document.getElementById("history-page-info");
+
   let items = dashboardState.data.history;
   const q = dashboardState.searchQuery.trim().toLowerCase();
 
@@ -496,10 +522,33 @@ export function renderHistoryTable() {
       <tr>
         <td colspan="8" class="loading-cell">Aucun puzzle correspondant trouvé.</td>
       </tr>`;
+    if (historyPagination) historyPagination.style.display = "none";
+    historyTbody.dataset.rendered = "";
     return;
   }
 
-  const html = items.map((entry) => {
+  const pageSize = dashboardState.historyPageSize || 10;
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  if (dashboardState.historyPage > totalPages) {
+    dashboardState.historyPage = totalPages;
+  }
+  if (dashboardState.historyPage < 1) {
+    dashboardState.historyPage = 1;
+  }
+
+  const startIndex = (dashboardState.historyPage - 1) * pageSize;
+  const pageItems = items.slice(startIndex, startIndex + pageSize);
+
+  if (historyPagination) {
+    historyPagination.style.display = totalPages > 1 ? "flex" : "none";
+    if (historyPrev) historyPrev.disabled = dashboardState.historyPage <= 1;
+    if (historyNext) historyNext.disabled = dashboardState.historyPage >= totalPages;
+    if (historyPageInfo) {
+      historyPageInfo.textContent = `Page ${dashboardState.historyPage} sur ${totalPages} (${items.length} puzzles)`;
+    }
+  }
+
+  const html = pageItems.map((entry) => {
     const isWinner = entry.win !== false;
     const isToday = isTodayEntry(entry);
     const effectiveWord = getEffectiveWord(entry);
@@ -544,7 +593,8 @@ export function renderHistoryTable() {
       </tr>`;
   }).join("");
 
-  if (historyTbody.dataset.rendered === html) return;
-  historyTbody.dataset.rendered = html;
+  const renderKey = `${dashboardState.historyPage}_${totalPages}_${html}`;
+  if (historyTbody.dataset.rendered === renderKey) return;
+  historyTbody.dataset.rendered = renderKey;
   historyTbody.innerHTML = html;
 }
