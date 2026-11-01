@@ -71,6 +71,18 @@ CREATE TABLE IF NOT EXISTS daily_puzzles (
     solved_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS daily_puzzle_hints (
+    id SERIAL PRIMARY KEY,
+    puzzle_date DATE NOT NULL REFERENCES daily_puzzles(date) ON DELETE CASCADE,
+    tier VARCHAR(8) NOT NULL,
+    word VARCHAR(100) NOT NULL,
+    score NUMERIC(6, 2) NOT NULL,
+    is_revealed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(puzzle_date, word)
+);
+CREATE INDEX IF NOT EXISTS idx_daily_hints_date ON daily_puzzle_hints(puzzle_date);
+
 CREATE TABLE IF NOT EXISTS multi_rooms (
     room_id VARCHAR(16) PRIMARY KEY,
     mode VARCHAR(32) NOT NULL DEFAULT 'same_word',
@@ -139,6 +151,18 @@ CREATE TABLE IF NOT EXISTS daily_puzzles (
     is_revealed BOOLEAN DEFAULT 0,
     solved_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS daily_puzzle_hints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    puzzle_date TEXT NOT NULL REFERENCES daily_puzzles(date) ON DELETE CASCADE,
+    tier TEXT NOT NULL,
+    word TEXT NOT NULL,
+    score REAL NOT NULL,
+    is_revealed BOOLEAN DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(puzzle_date, word)
+);
+CREATE INDEX IF NOT EXISTS idx_daily_hints_date ON daily_puzzle_hints(puzzle_date);
 
 CREATE TABLE IF NOT EXISTS multi_rooms (
     room_id TEXT PRIMARY KEY,
