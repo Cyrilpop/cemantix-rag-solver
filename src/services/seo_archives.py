@@ -18,6 +18,7 @@ from .seo_templates import (
     archive_anchor,
     archive_title,
     archive_url,
+    format_clue_words_list,
     format_date_fr,
     format_duration_fr,
     render_page,
@@ -38,10 +39,14 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
 
     puzzle_label = f"Puzzle #{puzzle}" if puzzle else "Puzzle du jour"
     puzzle_ref = f" #{puzzle}" if puzzle else ""
-    title = archive_title(date_str, puzzle=puzzle)
+    title = f"{archive_title(date_str, puzzle=puzzle)} : 10 indices, synonymes et solution"
+    mots_indices = format_clue_words_list(guesses, limit=10)
+    clue_paren = f" ({mots_indices})" if mots_indices else ""
+    puzzle_prefix = f"Indices Cémantix #{puzzle}" if puzzle else "Indices Cémantix"
+    tries_part = f" en {tries} coups" if tries else ""
     description = (
-        f"{title} : le mot secret et les {min(len(guesses), 10)} mots les plus proches, "
-        f"trouvés en {tries or '--'} coups par le solveur {source_label} ({puzzle_label})."
+        f"{puzzle_prefix} du {date_fr} : aide sans spoiler avec les 10 mots les plus proches{clue_paren} "
+        f"et synonymes pour trouver le mot secret{tries_part}."
     )
     canonical = archive_url(date_str)
 
@@ -267,9 +272,9 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
     newest_fr = format_date_fr(newest.get("date")) if newest else ""
 
     if page == 1:
-        title = "Cémantix du jour : mot du jour, indices et solutions par date"
+        title = "Indice Cémantix du jour : archives des mots du jour, indices et solutions par date"
     else:
-        title = f"Cémantix du jour : archives des indices et solutions, page {page}"
+        title = f"Indice Cémantix du jour : archives des indices et solutions, page {page}"
     description = (
         f"Le mot du jour Cémantix et ses indices, date par date ({len(entries)} puzzles "
         f"résolus) : thermomètre sémantique, nombre de coups et solution dépliable. "
@@ -298,7 +303,8 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "@id": f"{canonical}#collection",
-        "name": "Archives Cémantix du jour : mot du jour, indices et solutions",
+        "name": title,
+        "headline": title,
         "description": description,
         "inLanguage": "fr-FR",
         "isPartOf": {"@type": "WebSite", "name": "Cémantix Solver", "url": f"{SITE_ORIGIN}/"},

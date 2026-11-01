@@ -36,6 +36,7 @@ class TestSeoBackwardCompatibility(unittest.TestCase):
         self.assertIs(seo.ARCHIVES_PAGE_SIZE, seo_templates.ARCHIVES_PAGE_SIZE)
         self.assertIs(seo.parse_puzzle_date, seo_templates.parse_puzzle_date)
         self.assertIs(seo.format_date_fr, seo_templates.format_date_fr)
+        self.assertIs(seo.format_clue_words_list, seo_templates.format_clue_words_list)
         self.assertIs(seo.archive_title, seo_templates.archive_title)
         self.assertIs(seo.archive_url, seo_templates.archive_url)
         self.assertIs(seo.render_page, seo_templates.render_page)

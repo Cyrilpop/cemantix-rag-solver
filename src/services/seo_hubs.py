@@ -15,6 +15,7 @@ from .seo_templates import (
     _json_ld_block,
     _rel_index,
     archive_anchor,
+    format_clue_words_list,
     format_date_fr,
     format_duration_fr,
     hub_url,
@@ -211,7 +212,7 @@ def build_mot_du_jour_page(entry: Optional[dict], entries: list) -> str:
     canonical = hub_url(MOT_DU_JOUR_DIRNAME)
     date_fr = format_date_fr(entry.get("date")) if entry else ""
     if entry:
-        titre = f"Mot du jour Cémantix du {date_fr} : indices et solution"
+        titre = f"Indice Cémantix du jour ({date_fr}) : indices, synonymes et mot du jour"
         puzzle = entry.get("puzzle")
         word = str(entry.get("word") or "").strip()
         win = entry.get("win") is True
@@ -220,15 +221,17 @@ def build_mot_du_jour_page(entry: Optional[dict], entries: list) -> str:
         guesses = [g for g in (entry.get("top_guesses") or []) if str(g.get("word", "")) != "••••••••"]
         source_label = "Hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
         puzzle_label = f"Puzzle #{puzzle}" if puzzle else "Puzzle du jour"
+        puzzle_part = f" du puzzle #{puzzle}" if puzzle else ""
+        mots_indices = format_clue_words_list(guesses, limit=10)
+        clue_paren = f" ({mots_indices})" if mots_indices else ""
         description = (
-            f"Le mot du jour Cémantix du {date_fr} : les {min(len(guesses), 10)} indices du "
-            f"solveur avec leur score, la solution à déplier et la méthode pour trouver le "
-            f"mot secret en {tries or '--'} coups."
+            f"Indice Cémantix du jour du {date_fr} : consultez les 10 indices thermiques{clue_paren}, "
+            f"les synonymes à explorer et la solution dépliable{puzzle_part}."
         )
     else:
-        titre = "Mot du jour Cémantix : indices et solution du puzzle du jour"
+        titre = "Indice Cémantix du jour : indices, synonymes et mot du jour"
         description = (
-            "Le mot du jour Cémantix, ses indices thermiques et sa solution : publication "
+            "Indice Cémantix du jour, ses indices thermiques et sa solution : publication "
             "automatique chaque nuit à minuit (heure de Paris), sans spoiler avant demande."
         )
 

@@ -58,7 +58,7 @@ class TestPageMotDuJour(unittest.TestCase):
         self.html = build_mot_du_jour_page(ENTREE, [ENTREE])
 
     def test_le_titre_porte_le_cluster_mot_du_jour_et_la_date_francaise(self):
-        attendu = "Mot du jour Cémantix du lundi 26 octobre 2026 : indices et solution"
+        attendu = "Indice Cémantix du jour (lundi 26 octobre 2026) : indices, synonymes et mot du jour"
         self.assertIn(f"<title>{attendu}</title>", self.html)
         self.assertIn(f"<h1>{attendu}</h1>", self.html)
 
@@ -101,7 +101,7 @@ class TestPageMotDuJour(unittest.TestCase):
     def test_historique_vide_produit_quand_meme_une_page_indexable(self):
         html = build_mot_du_jour_page(None, [])
         self.assertIn(
-            "<title>Mot du jour Cémantix : indices et solution du puzzle du jour</title>", html
+            "<title>Indice Cémantix du jour : indices, synonymes et mot du jour</title>", html
         )
         self.assertIn('content="index, follow"', html)
         self.assertNotIn("🌡️", html)

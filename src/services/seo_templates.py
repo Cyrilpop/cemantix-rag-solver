@@ -26,7 +26,7 @@ ARCHIVES_MAX_PAGES = 500
 SITEMAP_MAX_URLS = 45000
 MOT_DU_JOUR_DIRNAME = "mot-du-jour"
 METHODE_DIRNAME = "methode"
-ARCHIVE_TITLE_PREFIX = "Solution Cémantix du"
+ARCHIVE_TITLE_PREFIX = "Indice Cémantix du"
 
 _MONTHS_FR = {
     1: "janvier", 2: "février", 3: "mars", 4: "avril", 5: "mai", 6: "juin",
@@ -81,18 +81,32 @@ def format_date_fr(value) -> str:
 
 
 def archive_title(value, puzzle=None) -> str:
-    """Titre SEO d'une archive : « Solution Cémantix #1700 du lundi 26 octobre 2026 ».
+    """Titre SEO d'une archive : « Indice Cémantix #1700 du lundi 26 octobre 2026 ».
 
-    Le même libellé sert de `<title>`, de `<h1>`, de texte d'ancre dans l'index des
+    Le même libellé sert de base de `<title>`, de `<h1>`, de texte d'ancre dans l'index des
     archives et de `headline` JSON-LD : un seul motif, répété, qui cible la requête
-    « solution cemantix #XXX du <date> » sans dupliquer de contenu.
+    « indice cemantix #XXX du <date> » sans dupliquer de contenu.
     """
     if puzzle:
         p_clean = str(puzzle).lstrip("#").strip()
-        prefix = f"Solution Cémantix #{p_clean} du"
+        prefix = f"Indice Cémantix #{p_clean} du"
     else:
         prefix = ARCHIVE_TITLE_PREFIX
     return f"{prefix} {format_date_fr(value)}"
+
+
+def format_clue_words_list(guesses: list, limit: int = 10) -> str:
+    """Extrait et formate la liste des premiers mots indices (minuscules, séparés par virgule)."""
+    words = []
+    for g in (guesses or []):
+        if not isinstance(g, dict):
+            continue
+        w = str(g.get("word") or "").strip().lower()
+        if w and w != "••••••••":
+            words.append(w)
+            if len(words) >= limit:
+                break
+    return ", ".join(words)
 
 
 def archive_anchor(value) -> str:
@@ -895,6 +909,7 @@ __all__ = [
     "PAGE_CSS",
     "parse_puzzle_date",
     "format_date_fr",
+    "format_clue_words_list",
     "archive_title",
     "archive_anchor",
     "hub_url",

@@ -29,8 +29,9 @@ from src.services.seo import (  # noqa: E402
 )
 
 DATE_ISO = "2026-10-26"
-TITRE_ATTENDU = "Solution Cémantix du lundi 26 octobre 2026"
-TITRE_PUZZLE_ATTENDU = "Solution Cémantix #1700 du lundi 26 octobre 2026"
+TITRE_ATTENDU = "Indice Cémantix du lundi 26 octobre 2026"
+TITRE_PUZZLE_ATTENDU = "Indice Cémantix #1700 du lundi 26 octobre 2026"
+TITRE_PAGE_ATTENDU = "Indice Cémantix #1700 du lundi 26 octobre 2026 : 10 indices, synonymes et solution"
 DATE_ISO_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
@@ -58,7 +59,7 @@ class TestTitreArchive(unittest.TestCase):
     def test_la_date_est_en_francais_long(self):
         self.assertEqual(archive_title(DATE_ISO), TITRE_ATTENDU)
         self.assertEqual(archive_title(DATE_ISO, puzzle=1700), TITRE_PUZZLE_ATTENDU)
-        self.assertEqual(ARCHIVE_TITLE_PREFIX, "Solution Cémantix du")
+        self.assertEqual(ARCHIVE_TITLE_PREFIX, "Indice Cémantix du")
         # Jour de semaine + quantième + mois + année : la requête du chercheur.
         self.assertEqual(format_date_fr(DATE_ISO), "lundi 26 octobre 2026")
 
@@ -86,16 +87,18 @@ class TestPageArchive(unittest.TestCase):
         return match.group(1)
 
     def test_title_h1_et_open_graph_portent_le_titre(self):
-        self.assertIn(f"<title>{TITRE_PUZZLE_ATTENDU}</title>", self.html)
-        self.assertIn(f"<h1>{TITRE_PUZZLE_ATTENDU}</h1>", self.html)
-        self.assertIn(f'property="og:title" content="{TITRE_PUZZLE_ATTENDU}"', self.html)
-        self.assertIn(f'name="twitter:title" content="{TITRE_PUZZLE_ATTENDU}"', self.html)
+        self.assertIn(f"<title>{TITRE_PAGE_ATTENDU}</title>", self.html)
+        self.assertIn(f"<h1>{TITRE_PAGE_ATTENDU}</h1>", self.html)
+        self.assertIn(f'property="og:title" content="{TITRE_PAGE_ATTENDU}"', self.html)
+        self.assertIn(f'name="twitter:title" content="{TITRE_PAGE_ATTENDU}"', self.html)
 
     def test_la_description_cible_la_solution(self):
         description = self._extrait(r'<meta name="description" content="([^"]+)"')
-        self.assertTrue(description.startswith(TITRE_PUZZLE_ATTENDU), description)
-        self.assertIn("le mot secret", description)
-        self.assertIn("Puzzle #1700", description)
+        self.assertTrue(description.startswith("Indices Cémantix #1700 du lundi 26 octobre 2026"), description)
+        self.assertIn("aide sans spoiler", description)
+        self.assertIn("cabane, abri", description)
+        self.assertIn("synonymes", description)
+        self.assertIn("9 coups", description)
         # Google tronque la snippet au-delà de ~160 caractères : marge de sécurité.
         self.assertLessEqual(len(description), 175)
 
@@ -104,7 +107,7 @@ class TestPageArchive(unittest.TestCase):
         donnees = json.loads(bloc)
         article = next(n for n in donnees["@graph"] if n["@type"] == "Article")
         fil = next(n for n in donnees["@graph"] if n["@type"] == "BreadcrumbList")
-        self.assertEqual(article["headline"], TITRE_PUZZLE_ATTENDU)
+        self.assertEqual(article["headline"], TITRE_PAGE_ATTENDU)
         self.assertEqual(article["datePublished"][:10], DATE_ISO)
         self.assertEqual(
             [e["name"] for e in fil["itemListElement"]],
@@ -131,7 +134,7 @@ class TestPageArchive(unittest.TestCase):
             _entry(win=False, word="", tries=None, top_guesses=[]), None, None
         )
         self.assertIn('content="noindex, follow"', html)
-        self.assertIn(f"<title>{TITRE_PUZZLE_ATTENDU}</title>", html)
+        self.assertIn(f"<title>{TITRE_PAGE_ATTENDU}</title>", html)
 
 
 class TestIndexDesArchives(unittest.TestCase):
@@ -143,7 +146,7 @@ class TestIndexDesArchives(unittest.TestCase):
         # La tendance Google place « mot du jour » sur 5 requêtes sur 10 et « indice »
         # sur les deux premières : l'index des archives doit porter ce cluster, le mot
         # « solution » restant la spécialité des pages datées (SEO-13).
-        self.assertIn("<title>Cémantix du jour : mot du jour, indices et solutions", self.html)
+        self.assertIn("<title>Indice Cémantix du jour : archives des mots du jour, indices et solutions par date</title>", self.html)
         self.assertIn(
             "<h1>Archives Cémantix du jour : le mot du jour, ses indices et sa solution</h1>",
             self.html,
@@ -166,7 +169,7 @@ class TestIndexDesArchives(unittest.TestCase):
     def test_la_page_2_est_titree_et_canonique(self):
         html = build_archives_index_page(self.entrees, 2, 2)
         self.assertIn(
-            "<title>Cémantix du jour : archives des indices et solutions, page 2</title>", html
+            "<title>Indice Cémantix du jour : archives des indices et solutions, page 2</title>", html
         )
         self.assertIn(f'{SITE_ORIGIN}/puzzles/page/2/"', html)
 
