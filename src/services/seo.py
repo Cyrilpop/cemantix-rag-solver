@@ -292,11 +292,15 @@ def ensure_seo_published(web_root: Path = None) -> Optional[dict]:
 
     Invoqué automatiquement au lancement des conteneurs (`cemantix_web` et
     `cemantix_worker`) afin de recréer immédiatement `volumes/web/sitemap.xml`,
-    `volumes/web/.well-known/{ai-catalog,ard,agent-card}.json`, `/puzzles/` et le
-    pré-rendu SEO après un `git pull`, un déploiement vierge ou un redémarrage.
+    `volumes/web/.well-known/{ai-catalog,ard,agent-card}.json`, `/puzzles/`, le
+    layout unifié (Header & Nav-tabs) et le pré-rendu SEO.
     """
     from .daemon import PARIS_TZ, load_history
+    from .layout_sync import sync_all_pages
     try:
+        # Synchronisation automatique du layout unifié (Header & Nav-tabs) sur toutes les vues
+        sync_all_pages(web_root=web_root)
+
         try:
             history = load_history()
         except Exception as db_exc:

@@ -83,7 +83,11 @@ def _faq_json_ld(faq, anchor: str) -> dict:
 
 def _hub_breadcrumbs(label: str) -> str:
     """Fil d'Ariane d'une page hub (profondeur 1 : `../` mène à l'accueil)."""
-    return f'<a href="{escape(_rel_index(""), quote=True)}">Accueil</a> › <span>{escape(label)}</span>'
+    return (
+        f'<a href="{escape(_rel_index(""), quote=True)}">Accueil</a>'
+        f'<span class="crumb-sep">›</span>'
+        f"<span>{escape(label)}</span>"
+    )
 
 
 def _hub_breadcrumb_json_ld(label: str, canonical: str) -> dict:

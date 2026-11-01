@@ -101,7 +101,7 @@ class TestSeoCharacterization(unittest.TestCase):
         # Structure globale
         self.assertIn("<!DOCTYPE html>", html)
         self.assertIn('<html lang="fr" data-theme="dark">', html)
-        self.assertIn("<title>Solution Cémantix du vendredi 30 octobre 2026</title>", html)
+        self.assertIn("<title>Solution Cémantix #1703 du vendredi 30 octobre 2026</title>", html)
         self.assertIn('<link rel="canonical" href="https://cemantix.cyril-randon.fr/puzzles/2026-10-30/">', html)
         self.assertIn('<meta name="robots" content="index, follow">', html)
 
@@ -144,13 +144,15 @@ class TestSeoCharacterization(unittest.TestCase):
         html_p1 = seo.build_archives_index_page(MOCK_ENTRIES, page=1, total_pages=2)
         self.assertIn("<title>Cémantix du jour : mot du jour, indices et solutions par date</title>", html_p1)
         self.assertIn('<link rel="canonical" href="https://cemantix.cyril-randon.fr/puzzles/">', html_p1)
-        self.assertIn('href="../page/2/"', html_p1)
+        self.assertIn('href="page/2/"', html_p1)
+        self.assertIn('Suivant ›', html_p1)
 
         # Page 2
         html_p2 = seo.build_archives_index_page(MOCK_ENTRIES, page=2, total_pages=2)
         self.assertIn("<title>Cémantix du jour : archives des indices et solutions, page 2", html_p2)
         self.assertIn('<link rel="canonical" href="https://cemantix.cyril-randon.fr/puzzles/page/2/">', html_p2)
-        self.assertIn('href="../"', html_p2)
+        self.assertIn('href="../../"', html_p2)
+        self.assertIn('‹ Précédent', html_p2)
 
     def test_mot_du_jour_page_with_and_without_entry(self):
         # Avec entrée

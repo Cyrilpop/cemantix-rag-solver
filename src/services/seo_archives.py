@@ -37,7 +37,8 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
     source_label = "Hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
 
     puzzle_label = f"Puzzle #{puzzle}" if puzzle else "Puzzle du jour"
-    title = archive_title(date_str)
+    puzzle_ref = f" #{puzzle}" if puzzle else ""
+    title = archive_title(date_str, puzzle=puzzle)
     description = (
         f"{title} : le mot secret et les {min(len(guesses), 10)} mots les plus proches, "
         f"trouvés en {tries or '--'} coups par le solveur {source_label} ({puzzle_label})."
@@ -45,8 +46,10 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
     canonical = archive_url(date_str)
 
     breadcrumbs = (
-        f'<a href="{escape(_rel(""), quote=True)}">Accueil</a> › '
-        f'<a href="{escape(_rel("puzzles/"), quote=True)}">Archives</a> › '
+        f'<a href="{escape(_rel(""), quote=True)}">Accueil</a>'
+        f'<span class="crumb-sep">›</span>'
+        f'<a href="{escape(_rel("puzzles/"), quote=True)}">Archives</a>'
+        f'<span class="crumb-sep">›</span>'
         f"<span>{escape(date_fr)}</span>"
     )
 
@@ -130,7 +133,7 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
     solution_html = ""
     if word:
         solution_html = f"""      <details class="reveal">
-        <summary>👁️ Afficher la solution du Cémantix du {escape(date_fr)}</summary>
+        <summary>👁️ Afficher la solution du Cémantix{puzzle_ref} du {escape(date_fr)}</summary>
         <p class="reveal-word">{escape(word.upper())}</p>
         <p>Le solveur a atteint ce mot en {escape(str(tries or '--'))} coups
         ({escape(duration)}) grâce à la régression Ridge sur l'espace vectoriel frWac.</p>
@@ -140,20 +143,18 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
     older_link = newer_link = ""
     if older:
         older_link = (
-            f'<a href="{escape(_archive_href(older), quote=True)}" rel="prev">'
-            f"← {escape(format_date_fr(older.get('date')))}</a>"
+            f'<a href="{escape(_archive_href(older), quote=True)}" class="btn-nav-date" rel="prev">'
+            f"⬅️ {escape(format_date_fr(older.get('date')))}</a>"
         )
     if newer:
         newer_link = (
-            f'<a href="{escape(_archive_href(newer), quote=True)}" rel="next">'
-            f"{escape(format_date_fr(newer.get('date')))} →</a>"
+            f'<a href="{escape(_archive_href(newer), quote=True)}" class="btn-nav-date" rel="next">'
+            f"{escape(format_date_fr(newer.get('date')))} ➡️</a>"
         )
-    pagination = ""
-    if older_link or newer_link:
-        pagination = f"""      <nav class="pager" aria-label="Navigation entre les archives">
-        {older_link}
-        <a href="{escape(_rel('puzzles/'), quote=True)}">Toutes les archives</a>
-        {newer_link}
+    date_nav_html = f"""      <nav class="date-navigation" aria-label="Navigation entre les énigmes">
+        {older_link or '<span class="btn-nav-date disabled">Premier puzzle</span>'}
+        <a href="{escape(_rel('puzzles/'), quote=True)}" class="btn-nav-date btn-all-archives">📚 Toutes les archives</a>
+        {newer_link or '<span class="btn-nav-date disabled">Dernier puzzle</span>'}
       </nav>
 """
 
@@ -164,7 +165,7 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
 {chr(10).join('          ' + item for item in meta_items)}
         </ul>
       </div>
-{clues_html}{solution_html}      <section class="card">
+{solution_html}{date_nav_html}{clues_html}      <section class="card">
         <h2>ℹ️ À propos de cette archive</h2>
         <p>Cette page est générée automatiquement chaque nuit à minuit (heure de Paris)
         par le solveur Cémantix. Elle conserve la trace des indices explorés par
@@ -174,8 +175,7 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
         comment lire ces scores. Pour jouer immédiatement, direction le
         <a href="{escape(_rel('play/'), quote=True)}">mode solo illimité</a> ou le
         <a href="{escape(_rel('battle/'), quote=True)}">mode Battle contre l'IA</a>.</p>
-      </section>
-{pagination}"""
+      </section>"""
 
     # Protection anti "thin content" (SEO-01b) : si aucun indice / trajectoire n'est disponible, noindex
     robots_meta = "index, follow"
@@ -192,6 +192,71 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
         resolve=_rel,
         robots_meta=robots_meta,
     )
+
+
+def _pager_href(from_page: int, to_page: int) -> str:
+    """Calcule le chemin relatif exact entre la page actuelle et la page cible."""
+    if from_page == 1:
+        return "./" if to_page == 1 else f"page/{to_page}/"
+    else:
+        return "../../" if to_page == 1 else f"../{to_page}/"
+
+
+def _build_pager(page: int, total_pages: int) -> str:
+    """Génère la navigation paginée complète avec Précédent, Suivant et ellipses."""
+    if total_pages <= 1:
+        return '<span class="current" aria-current="page">1</span>'
+
+    links = []
+
+    # 1. Bouton Précédent
+    if page > 1:
+        prev_href = _pager_href(page, page - 1)
+        links.append(
+            f'<a href="{escape(prev_href, quote=True)}" class="pager-nav pager-prev" rel="prev">‹ Précédent</a>'
+        )
+    else:
+        links.append('<span class="pager-nav pager-prev disabled" aria-disabled="true">‹ Précédent</span>')
+
+    # 2. Fenêtre de numéros de pages avec ellipses
+    visible = {1, total_pages}
+    for p in range(page - 2, page + 3):
+        if 1 <= p <= total_pages:
+            visible.add(p)
+    if page <= 3:
+        for p in range(1, min(5, total_pages + 1)):
+            visible.add(p)
+    if page >= total_pages - 2:
+        for p in range(max(1, total_pages - 3), total_pages + 1):
+            visible.add(p)
+
+    sorted_pages = sorted(visible)
+    last_p = 0
+    for p in sorted_pages:
+        if last_p and p > last_p + 1:
+            links.append('<span class="pager-gap" aria-hidden="true">…</span>')
+        if p == page:
+            links.append(f'<span class="current" aria-current="page">{p}</span>')
+        else:
+            rel = ' rel="start"' if p == 1 else (
+                ' rel="prev"' if p == page - 1 else (
+                    ' rel="next"' if p == page + 1 else ""
+                )
+            )
+            href = _pager_href(page, p)
+            links.append(f'<a href="{escape(href, quote=True)}"{rel}>{p}</a>')
+        last_p = p
+
+    # 3. Bouton Suivant
+    if page < total_pages:
+        next_href = _pager_href(page, page + 1)
+        links.append(
+            f'<a href="{escape(next_href, quote=True)}" class="pager-nav pager-next" rel="next">Suivant ›</a>'
+        )
+    else:
+        links.append('<span class="pager-nav pager-next disabled" aria-disabled="true">Suivant ›</span>')
+
+    return "\n        ".join(links)
 
 
 def build_archives_index_page(entries: list, page: int, total_pages: int) -> str:
@@ -213,7 +278,21 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
     canonical = (
         f"{SITE_ORIGIN}/puzzles/" if page == 1 else f"{SITE_ORIGIN}/puzzles/page/{page}/"
     )
-    breadcrumbs = f'<a href="{escape(_rel_index(""), quote=True)}">Accueil</a> › <span>Archives</span>'
+    depth = "../" if page == 1 else "../../../"
+
+    def _resolve(href: str) -> str:
+        return f"{depth}{href}"
+
+    if page > 1:
+        breadcrumbs = (
+            f'<a href="{escape(_resolve(""), quote=True)}">Accueil</a>'
+            f'<span class="crumb-sep">›</span>'
+            f'<a href="{escape(_resolve("puzzles/"), quote=True)}">Archives</a>'
+            f'<span class="crumb-sep">›</span>'
+            f"<span>Page {page}</span>"
+        )
+    else:
+        breadcrumbs = ""
 
     json_ld = _json_ld_block({
         "@context": "https://schema.org",
@@ -232,7 +311,7 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
         tries = entry.get("tries")
         suffix = f"{tries} coups" if tries else "non résolu"
         items.append(
-            f'          <li><a href="{escape(_rel_index(f"puzzles/{date_str}/"), quote=True)}">'
+            f'          <li><a href="{escape(_resolve(f"puzzles/{date_str}/"), quote=True)}">'
             f"<span>{escape(archive_anchor(date_str))}</span>"
             f"<span>{escape(suffix)}</span></a></li>"
         )
@@ -240,26 +319,14 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
         '          <li><span>Aucun puzzle résolu pour le moment.</span></li>'
     )
 
-    links = []
-    for candidate in range(1, total_pages + 1):
-        if candidate == page:
-            links.append(f'<span class="current" aria-current="page">{candidate}</span>')
-        elif candidate == 1 or candidate == total_pages or abs(candidate - page) <= 2:
-            href = "../" if candidate == 1 else f"../page/{candidate}/"
-            rel = ' rel="start"' if candidate == 1 else (
-                ' rel="prev"' if candidate == page - 1 else (
-                    ' rel="next"' if candidate == page + 1 else ""
-                )
-            )
-            links.append(f'<a href="{escape(href, quote=True)}"{rel}>{candidate}</a>')
-    pager = "\n        ".join(links)
+    pager = _build_pager(page, total_pages)
 
     body = f"""      <h1>Archives Cémantix du jour : le mot du jour, ses indices et sa solution</h1>
       <p>Chaque jour à minuit (heure de Paris), le solveur résout le mot secret de
       Cémantix et publie l'archive datée du puzzle : numéro, nombre de coups, durée de
       calcul, top des mots les plus proches et solution dépliable. Le puzzle en cours se
-      suit sur la page <a href="{escape(_rel_index('mot-du-jour/'), quote=True)}">mot du jour Cémantix</a> ;
-      pour apprendre à lire les scores, la <a href="{escape(_rel_index('methode/'), quote=True)}">méthode des indices Cémantix</a>
+      suit sur la page <a href="{escape(_resolve('mot-du-jour/'), quote=True)}">mot du jour Cémantix</a> ;
+      pour apprendre à lire les scores, la <a href="{escape(_resolve('methode/'), quote=True)}">méthode des indices Cémantix</a>
       explique le thermomètre, les pour mille et les synonymes à tester.</p>
       <div class="card">
         <h2>{len(entries)} puzzles indexés — page {page} sur {total_pages}</h2>
@@ -279,7 +346,7 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
         json_ld=json_ld,
         body=body,
         breadcrumbs=breadcrumbs,
-        resolve=_rel_index,
+        resolve=_resolve,
     )
 
 

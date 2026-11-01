@@ -70,6 +70,11 @@ CRITICAL_PAGES = {
         "../",
         ["variables.css", "base.css", "layout.css", "game.css", "multi.css"],
     ),
+    "defi": (
+        WEB_DIR / "defi" / "index.html",
+        "../",
+        ["variables.css", "base.css", "layout.css", "game.css"],
+    ),
 }
 
 URL_RE = re.compile(r"url\(\s*['\"]?(?!data:)", re.I)

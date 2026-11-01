@@ -405,7 +405,7 @@ cemantix.cyril-randon.fr {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
-        Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
         Cross-Origin-Opener-Policy "same-origin"
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
@@ -419,9 +419,9 @@ cemantix.cyril-randon.fr {
         Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
     }
 
-    # Pages d'archives : contenu statique, aucun script ni connexion sortante.
+    # Pages d'archives : contenu statique et script inline de bascule de thème.
     header /puzzles/* {
-        Content-Security-Policy "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     }
 
     # 1. Polices web immuables (cache 1 an)
