@@ -115,8 +115,8 @@ def main():
         return
 
     if getattr(args, "backfill_hints", False):
-        from src.services.hints import backfill_puzzle_hints
-        backfill_puzzle_hints()
+        from src.services.hints import bootstrap_database
+        bootstrap_database()
         return
 
     if getattr(args, "force_solve", False):
@@ -128,12 +128,12 @@ def main():
     if getattr(args, "api", False):
         from src.engine import VocabStore
         from src.api import start_api_server
-        from src.services.hints import backfill_puzzle_hints
+        from src.services.hints import bootstrap_database
         store = VocabStore(with_chroma=False)
         try:
-            backfill_puzzle_hints(store)
+            bootstrap_database(store)
         except Exception as e:
-            log(f"⚠️  [API] Rattrapage des indices non effectué : {e}")
+            log(f"⚠️  [API] Initialisation/rattrapage de la base non effectué : {e}")
         server = start_api_server(store, host=args.api_host, port=args.api_port)
         try:
             server.serve_forever()

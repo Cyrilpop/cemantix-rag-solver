@@ -360,12 +360,12 @@ def run_daemon_loop(args) -> None:
     # SEC-27 : purge RGPD des défis au bot périmés dès le démarrage du worker.
     challenge_maintenance()
 
-    # Rattrapage idempotent des indices de puzzles quotidiens (Jalon M6)
+    # Initialisation et rattrapage idempotent complet (DDL, JSON -> SQL, RAG -> hints)
     try:
-        from .hints import backfill_puzzle_hints
-        backfill_puzzle_hints(getattr(args, "store", None))
+        from .hints import bootstrap_database
+        bootstrap_database(getattr(args, "store", None))
     except Exception as e:
-        log(f"⚠️  [DÉMON] Erreur lors du rattrapage des indices : {e}")
+        log(f"⚠️  [DÉMON] Erreur lors de l'initialisation/rattrapage de la base : {e}")
     now = datetime.now(PARIS_TZ)
     log(f"📅  Heure locale (Europe/Paris) : {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
     log(f"💾  Fichier historique          : {DAILY_HISTORY_FILE}")

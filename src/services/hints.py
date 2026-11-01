@@ -143,3 +143,33 @@ def backfill_puzzle_hints(store: Optional["VocabStore"] = None) -> int:
     log(f"✨  [HINTS] Rattrapage achevé : {total_hints} indices enregistrés pour {count_puzzles} puzzle(s).")
     return count_puzzles
 
+
+def bootstrap_database(store: Optional["VocabStore"] = None, history_file: Optional[object] = None) -> dict:
+    """Initialisation complète et strictement idempotente de la base de données.
+
+    Exécutée à chaque démarrage de conteneur (worker ou API web) :
+    1. init_db() : garantit que toutes les tables et index SQL (PG_SCHEMA / SQLITE_SCHEMA)
+       sont créés / mis à jour sans nécessiter d'intervention manuelle.
+    2. backfill_daily_puzzles_from_json() : importe de façon idempotente les puzzles
+       depuis daily_history.json vers la table daily_puzzles si des puzzles manquent en base.
+    3. backfill_puzzle_hints(store) : calcule et persiste les indices dans
+       daily_puzzle_hints pour tous les puzzles quotidiens qui n'en ont pas encore.
+    """
+    from ..db import init_db, backfill_daily_puzzles_from_json
+
+    # 1. Schéma DDL multi-dialecte (Postgres / SQLite)
+    init_db()
+
+    # 2. Rattrapage JSON -> daily_puzzles
+    puzzles_count = backfill_daily_puzzles_from_json(history_file)
+
+    # 3. Rattrapage RAG -> daily_puzzle_hints
+    hints_puzzles_count = backfill_puzzle_hints(store)
+
+    return {
+        "puzzles_backfilled": puzzles_count,
+        "hints_puzzles_backfilled": hints_puzzles_count,
+    }
+
+
+

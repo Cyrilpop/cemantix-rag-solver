@@ -34,6 +34,7 @@ from .challenges import (
 )
 from .connection import db, get_db_type, init_db
 from .daily import (
+    backfill_daily_puzzles_from_json,
     get_all_daily_puzzles,
     get_daily_hints,
     get_daily_puzzle,
@@ -64,6 +65,7 @@ __all__ = [
     "db",
     "init_db",
     "get_db_type",
+    "backfill_daily_puzzles_from_json",
     "save_daily_puzzle",
     "get_daily_puzzle",
     "get_latest_daily_puzzle",

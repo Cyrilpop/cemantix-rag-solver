@@ -15,8 +15,8 @@ if str(TESTS_DIR) not in sys.path:
 import _context  # noqa: F401 — isole sur SQLite temporaire
 
 from src.db.connection import db
-from src.db.daily import save_daily_puzzle, get_daily_hints
-from src.services.hints import generate_hints_for_word, backfill_puzzle_hints, DEFAULT_TIER_TARGETS
+from src.db.daily import save_daily_puzzle, get_daily_hints, backfill_daily_puzzles_from_json
+from src.services.hints import generate_hints_for_word, backfill_puzzle_hints, bootstrap_database, DEFAULT_TIER_TARGETS
 
 
 class MockVocabStore:
@@ -89,6 +89,81 @@ class TestHintsService(unittest.TestCase):
         # Les indices existants sont inchangés
         hints_after = get_daily_hints("2026-11-01", revealed_only=False)
         self.assertEqual(len(hints), len(hints_after))
+
+    def test_backfill_daily_puzzles_from_json(self):
+        import tempfile
+        import json
+
+        dummy_history = [
+            {
+                "date": "2026-10-30",
+                "puzzle": 1798,
+                "word": "chaud",
+                "tries": 8,
+                "attempts": 8,
+                "source": "rag",
+            },
+            {
+                "date": "2026-10-31",
+                "puzzle": 1799,
+                "word": "proche",
+                "tries": 5,
+                "attempts": 5,
+                "source": "rag",
+            }
+        ]
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".json", delete=False) as f:
+            json.dump(dummy_history, f)
+            temp_path = Path(f.name)
+
+        try:
+            # Premier passage : 2 puzzles importés
+            imported = backfill_daily_puzzles_from_json(temp_path)
+            self.assertEqual(imported, 2)
+
+            # Deuxième passage (idempotence) : 0 puzzle importé
+            imported2 = backfill_daily_puzzles_from_json(temp_path)
+            self.assertEqual(imported2, 0)
+        finally:
+            if temp_path.exists():
+                temp_path.unlink()
+
+    def test_bootstrap_database(self):
+        import tempfile
+        import json
+
+        dummy_history = [
+            {
+                "date": "2026-10-31",
+                "puzzle": 1799,
+                "word": "proche",
+                "tries": 5,
+                "attempts": 5,
+                "source": "rag",
+            }
+        ]
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".json", delete=False) as f:
+            json.dump(dummy_history, f)
+            temp_path = Path(f.name)
+
+        try:
+            # Bootstrap avec magasin vectoriel mocké et fichier d'historique dédié
+            res = bootstrap_database(store=self.store, history_file=temp_path)
+            self.assertIsInstance(res, dict)
+            self.assertEqual(res["puzzles_backfilled"], 1)
+            self.assertEqual(res["hints_puzzles_backfilled"], 1)
+
+            # Vérifier que les indices ont bien été générés
+            hints = get_daily_hints("2026-10-31", revealed_only=False)
+            self.assertTrue(len(hints) > 0)
+
+            # Deuxième appel : idempotence totale
+            res2 = bootstrap_database(store=self.store, history_file=temp_path)
+            self.assertEqual(res2["puzzles_backfilled"], 0)
+            self.assertEqual(res2["hints_puzzles_backfilled"], 0)
+        finally:
+            if temp_path.exists():
+                temp_path.unlink()
 
 
 if __name__ == "__main__":

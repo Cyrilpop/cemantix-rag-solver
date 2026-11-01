@@ -18,12 +18,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.services.hints import backfill_puzzle_hints
+from src.services.hints import bootstrap_database
 
 
 def main():
-    count = backfill_puzzle_hints()
-    print(f"Rattrapage terminé : {count} puzzle(s) mis à jour.")
+    res = bootstrap_database()
+    print(f"Bootstrap terminé : {res}")
     return 0
 
 

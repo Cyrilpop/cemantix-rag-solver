@@ -31,6 +31,7 @@ from .web import (
 from .hints import (
     DEFAULT_TIER_TARGETS,
     backfill_puzzle_hints,
+    bootstrap_database,
     generate_hints_for_word,
 )
 from .seo import (
