@@ -4,6 +4,33 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-01 · Jalon M6 : Unification du Layout, Navigation Universelle & Architecture Modulaire en 4 Briques (Universal Layout, Navigation & 4-Block Modular Architecture)
+
+### Ajouté & Amélioré
+- **Architecture modulaire en 4 briques & Synchronisation automatique (`src/services/layout_sync.py`, `tools/sync_layout.py`)** :
+  - Découpage strict et universel en 4 composants : En-tête (`.app-header`), Menu (`.nav-tabs`), Contenu (`main`), et Pied de page (`.app-footer`).
+  - Balises de synchronisation d'en-tête `<!-- APP-HEADER:START/END -->` et d'onglets `<!-- NAV-TABS:START/END -->` sur l'ensemble des 5 vues applicatives.
+  - Synchronisation automatique au démarrage des conteneurs web et worker (`ensure_seo_published`) garantissant l'alignement immédiat des vues.
+- **Identité visuelle universelle & Logo haute définition (`volumes/web/icons/favicon.png`, `favicon.ico`)** :
+  - Déploiement du logo officiel transparent dans le header en remplacement de l'émoji générique.
+  - Balises de favicon canoniques (`favicon.png`, `favicon.ico`, `apple-touch-icon.png`) sur toutes les pages HTML.
+- **Normalisation de la navigation par onglets (`layout.css`, `.nav-tabs`)** :
+  - Ordre canonique harmonisé sur les 6 vues : Tableau de Bord, Jouer Solo, Mode Battle (Versus IA), Mode Multijoueur (1v1 Ami), Défier le Bot (Live), Archives.
+  - Hauteur uniforme verrouillée à 42px et prévention des sauts de défilement inter-onglets (`scrollbar-gutter: stable`).
+- **Harmonisation des gabarits d'archives & Hubs SEO (`src/services/seo_templates.py`, `seo_archives.py`)** :
+  - Intégration du header et footer universels sur les pages d'archives `/puzzles/` avec conteneur centré à 1200px.
+  - Bascule de thème sombre/clair dynamique et immédiate sans appel réseau (`localStorage`).
+  - Navigation par dates repositionnée sous la solution avec des boutons d'action ergonomiques.
+  - Inclusion du numéro de puzzle (`#XXX`) dans les titres d'archives et méta-données SEO.
+- **Pagination par 10 de l'index des archives et de l'historique du tableau de bord** :
+  - Pagination côté serveur de l'index `/puzzles/` par tranches de 10 puzzles avec contrôles complets (Précédent, Suivant, liens relatifs fiabilisés).
+  - Pagination dynamique côté client de l'historique du tableau de bord (`volumes/web/js/dashboard.js`, `dashboard.css`) avec navigation par 10.
+- **Sécurité HTTP & Déploiement** :
+  - Retrait de la directive obsolète `interest-cohort` dans l'en-tête `Permissions-Policy` (`server.py`, `cemantix.local.conf`, `README.md`).
+  - Rédaction du guide de déploiement VPS sous Docker et Caddy dans `README.md` et `docs/roadmap/2026-10-07-unification-layout-ux/`.
+
+---
+
 ## [Non publié] - 2026-10-31 · Jalon M5.1 : Correction de la Révélation du Mot Secret & Accessibilité Clavier (Dashboard Secret Word Reveal Bugfix)
 
 ### Corrigé
