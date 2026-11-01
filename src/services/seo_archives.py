@@ -18,6 +18,7 @@ from .seo_templates import (
     archive_anchor,
     archive_title,
     archive_url,
+    extract_clue_guesses,
     format_clue_words_list,
     format_date_fr,
     format_duration_fr,
@@ -34,13 +35,13 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
     win = entry.get("win") is True
     tries = entry.get("tries")
     duration = format_duration_fr(entry.get("duration_seconds"))
-    guesses = [g for g in (entry.get("top_guesses") or []) if str(g.get("word", "")) != "••••••••"]
+    guesses = extract_clue_guesses(entry)
     source_label = "Hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
 
     puzzle_label = f"Puzzle #{puzzle}" if puzzle else "Puzzle du jour"
     puzzle_ref = f" #{puzzle}" if puzzle else ""
     title = f"{archive_title(date_str, puzzle=puzzle)} : 10 indices, synonymes et solution"
-    mots_indices = format_clue_words_list(guesses, limit=10)
+    mots_indices = format_clue_words_list(guesses, limit=10, secret_word=word)
     clue_paren = f" ({mots_indices})" if mots_indices else ""
     puzzle_prefix = f"Indices Cémantix #{puzzle}" if puzzle else "Indices Cémantix"
     tries_part = f" en {tries} coups" if tries else ""
@@ -129,7 +130,7 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
             <tr><th scope="col">#</th><th scope="col">Mot</th><th scope="col">Score</th><th scope="col">Similarité</th></tr>
           </thead>
           <tbody>
-{_clue_rows(guesses)}
+{_clue_rows(guesses, limit=10, secret_word=word)}
           </tbody>
         </table>
       </section>

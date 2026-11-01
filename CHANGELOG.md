@@ -20,7 +20,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Synchronisation stricte des propriétés Schema.org JSON-LD (`Article.headline`, `Article.description`, `CollectionPage.headline`, `CollectionPage.description`).
 - **Sanctuaire de tests & Non-régression (`tests/test_seo_*.py`)** :
   - Adaptation complète des assertions de titrage, de description et de structure JSON-LD dans `test_seo_archives.py`, `test_seo_characterization.py`, `test_seo_hubs.py` et `test_seo_backward_compat.py`.
-  - 326 tests unitaires validés avec succès sous Docker Python 3.12 (0 régression).
+  - 331 tests unitaires validés avec succès sous Docker Python 3.12 (0 régression).
+
+### Corrigé
+- **Préservation et désérialisation garantie des indices du mot du jour (`src/db/daily.py`, `src/services/seo_templates.py`, `src/services/seo_hubs.py`, `src/services/seo.py`)** :
+  - `_row_to_entry` : désérialisation JSON sécurisée (`json.loads`) des colonnes `top_guesses` et `trajectory` lorsqu'elles sont renvoyées sous forme de chaînes de caractères par SQLite, empêchant la perte silencieuse des listes d'indices.
+  - `extract_clue_guesses` : chaîne de repli robuste garantissant l'extraction d'indices pour chaque puzzle (`top_guesses` -> `trajectory` ordonnée -> table relationnelle `daily_puzzle_hints`).
+  - Filtrage anti-spoiler systématique : exclusion rigoureuse du mot secret (par comparaison insensible à la casse ou score maximal 100°C / 1000‰) et des leurres masqués (`••••••••`) de la liste descriptive des métadonnées et du tableau HTML d'indices.
+  - Nettoyage automatique (`tearDown`) dans `TestHintsService` pour éviter toute pollution de la base SQLite locale par des puzzles de test sans indices.
+  - Nouvelle suite de tests unitaires dédiée : `tests/test_seo_clues_preservation.py` (5 tests validés).
 
 ---
 

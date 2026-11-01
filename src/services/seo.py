@@ -54,6 +54,7 @@ from .seo_templates import (
     archive_anchor,
     archive_title,
     archive_url,
+    extract_clue_guesses,
     format_clue_words_list,
     format_date_fr,
     format_duration_fr,
@@ -108,13 +109,14 @@ def _daily_summary(entry: dict) -> str:
     """Paragraphe de résumé du jour, sans révéler le mot secret."""
     date_fr = format_date_fr(entry.get("date"))
     puzzle = entry.get("puzzle")
+    word = str(entry.get("word") or "").strip()
     tries = entry.get("tries")
     duration = format_duration_fr(entry.get("duration_seconds"))
-    guesses = [g for g in (entry.get("top_guesses") or []) if str(g.get("word", "")) != "••••••••"]
+    guesses = extract_clue_guesses(entry)
     source_label = "hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
     puzzle_label = f"le puzzle #{puzzle}" if puzzle else "le puzzle du jour"
 
-    clue_words = format_clue_words_list(guesses, limit=10)
+    clue_words = format_clue_words_list(guesses, limit=10, secret_word=word)
     clue_part = (
         f" Les 10 mots indices et synonymes les plus proches observés étaient {clue_words}."
         if clue_words
@@ -340,6 +342,7 @@ __all__ = [
     "parse_puzzle_date",
     "format_date_fr",
     "format_clue_words_list",
+    "extract_clue_guesses",
     "archive_title",
     "archive_anchor",
     "hub_url",

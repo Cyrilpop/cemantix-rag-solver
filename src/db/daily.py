@@ -4,6 +4,7 @@ Cémantix Solver — Persistance des Puzzles Quotidiens (daily_puzzles)
 Gère la persistance relationnelle et la consultation des résolutions
 du mot du jour par le solveur RAG / Démon 24h/24.
 """
+import json
 import os
 from datetime import datetime, timezone
 from typing import Optional
@@ -18,6 +19,22 @@ HISTORY_DEFAULT_LIMIT = int(os.getenv("HISTORY_LIMIT", "400"))
 
 def _row_to_entry(row: dict) -> dict:
     """Harmonise le format de la ligne SQL avec le format historique attendu par web.py et daemon.py."""
+    raw_guesses = row.get("top_guesses")
+    if isinstance(raw_guesses, str):
+        try:
+            raw_guesses = json.loads(raw_guesses)
+        except Exception:
+            raw_guesses = []
+    top_guesses = raw_guesses if isinstance(raw_guesses, list) else []
+
+    raw_trajectory = row.get("trajectory")
+    if isinstance(raw_trajectory, str):
+        try:
+            raw_trajectory = json.loads(raw_trajectory)
+        except Exception:
+            raw_trajectory = []
+    trajectory = raw_trajectory if isinstance(raw_trajectory, list) else []
+
     return {
         "date": str(row["date"]),
         "puzzle": row["puzzle_id"],
@@ -27,8 +44,8 @@ def _row_to_entry(row: dict) -> dict:
         "source": row.get("source", "rag"),
         "win": bool(row.get("win", True)),
         "duration_seconds": float(row["duration_seconds"]) if row.get("duration_seconds") is not None else 0.0,
-        "top_guesses": row.get("top_guesses") if isinstance(row.get("top_guesses"), list) else [],
-        "trajectory": row.get("trajectory") if isinstance(row.get("trajectory"), list) else [],
+        "top_guesses": top_guesses,
+        "trajectory": trajectory,
         "is_revealed": bool(row.get("is_revealed", False)),
         "timestamp": str(row["solved_at"]) if row.get("solved_at") else "",
     }
