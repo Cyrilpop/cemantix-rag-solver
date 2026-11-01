@@ -48,6 +48,8 @@ def main():
                     help="régénère data.json dans ./cemantix_data (jamais dans le webroot Caddy) et publie les pages SEO")
     ap.add_argument("--publish-seo", action="store_true",
                     help="régénère uniquement les pages d'archives /puzzles/<date>/, l'index paginé et sitemap.xml depuis l'historique")
+    ap.add_argument("--backfill-hints", action="store_true",
+                    help="exécute le rattrapage idempotent des indices de tous les puzzles quotidiens (M6)")
     ap.add_argument("--force-solve", action="store_true",
                     help="force la résolution immédiate du mot du jour et régénère l'historique complet avec trajectoire dans data.json")
     ap.add_argument("--api", action="store_true",
@@ -112,6 +114,11 @@ def main():
         publish_seo_pages(history=load_history(), generated_at=datetime.now(PARIS_TZ))
         return
 
+    if getattr(args, "backfill_hints", False):
+        from src.services.hints import backfill_puzzle_hints
+        backfill_puzzle_hints()
+        return
+
     if getattr(args, "force_solve", False):
         from src.services import run_daily_solver
         args.rag_only = True
@@ -121,7 +128,12 @@ def main():
     if getattr(args, "api", False):
         from src.engine import VocabStore
         from src.api import start_api_server
+        from src.services.hints import backfill_puzzle_hints
         store = VocabStore(with_chroma=False)
+        try:
+            backfill_puzzle_hints(store)
+        except Exception as e:
+            log(f"⚠️  [API] Rattrapage des indices non effectué : {e}")
         server = start_api_server(store, host=args.api_host, port=args.api_port)
         try:
             server.serve_forever()
