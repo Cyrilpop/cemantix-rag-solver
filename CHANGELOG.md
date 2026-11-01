@@ -4,6 +4,26 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-01 · Jalon M7 : Optimisation SEO des Métadonnées (Indices, Synonymes et Mots Proches)
+
+### Ajouté
+- **Enrichissement sémantique des métadonnées avec les 10 mots indices du jour (`src/services/seo_templates.py`, `seo_archives.py`, `seo_hubs.py`, `seo.py`)** :
+  - Fonction utilitaire `format_clue_words_list` extrayant et normalisant les 10 premiers mots indices du thermomètre (minuscules, séparés par des virgules, filtrage du masque `••••••••`).
+  - Injection automatique de la liste descriptive des 10 indices thermiques dans les balises `<meta name="description">`, `og:description` et `twitter:description` des pages d'archives quotidiennes (`/puzzles/AAAA-MM-JJ/`) et du hub Mot du jour (`/mot-du-jour/`).
+  - Intégration des indices et synonymes dans le résumé statique pré-rendu du tableau de bord (`_daily_summary`, `prerender_dashboard`).
+
+### Modifié
+- **Réalignement des balises `<title>`, `<h1>` et métadonnées sur les intentions de recherche cibles** :
+  - Balises `<title>` et `<h1>` des archives orientées vers la longue traîne : « Indice Cémantix #{puzzle} du {date_fr} : 10 indices, synonymes et solution ».
+  - Titre du hub Mot du jour actualisé : « Indice Cémantix du jour ({date_fr}) : indices, synonymes et mot du jour ».
+  - Titres de l'index paginé des archives axés sur les indices : « Indice Cémantix du jour : archives des mots du jour, indices et solutions par date » (page 1) et « ...page {page} » (page N).
+  - Synchronisation stricte des propriétés Schema.org JSON-LD (`Article.headline`, `Article.description`, `CollectionPage.headline`, `CollectionPage.description`).
+- **Sanctuaire de tests & Non-régression (`tests/test_seo_*.py`)** :
+  - Adaptation complète des assertions de titrage, de description et de structure JSON-LD dans `test_seo_archives.py`, `test_seo_characterization.py`, `test_seo_hubs.py` et `test_seo_backward_compat.py`.
+  - 326 tests unitaires validés avec succès sous Docker Python 3.12 (0 régression).
+
+---
+
 ## [Non publié] - 2026-11-01 · Jalon M6 : Persistance Relationnelle des Paliers d'Indices & Bootstrap Idempotent (daily_puzzle_hints)
 
 ### Ajouté & Amélioré
