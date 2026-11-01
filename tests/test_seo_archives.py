@@ -30,6 +30,7 @@ from src.services.seo import (  # noqa: E402
 
 DATE_ISO = "2026-10-26"
 TITRE_ATTENDU = "Solution Cémantix du lundi 26 octobre 2026"
+TITRE_PUZZLE_ATTENDU = "Solution Cémantix #1700 du lundi 26 octobre 2026"
 DATE_ISO_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
@@ -56,16 +57,19 @@ def _entry(date: str = DATE_ISO, **sur):
 class TestTitreArchive(unittest.TestCase):
     def test_la_date_est_en_francais_long(self):
         self.assertEqual(archive_title(DATE_ISO), TITRE_ATTENDU)
+        self.assertEqual(archive_title(DATE_ISO, puzzle=1700), TITRE_PUZZLE_ATTENDU)
         self.assertEqual(ARCHIVE_TITLE_PREFIX, "Solution Cémantix du")
         # Jour de semaine + quantième + mois + année : la requête du chercheur.
         self.assertEqual(format_date_fr(DATE_ISO), "lundi 26 octobre 2026")
 
     def test_le_titre_ne_contient_jamais_la_date_iso(self):
         self.assertFalse(DATE_ISO_RE.search(archive_title(DATE_ISO)))
+        self.assertFalse(DATE_ISO_RE.search(archive_title(DATE_ISO, puzzle=1700)))
 
     def test_le_titre_reste_court_pour_la_serp(self):
-        # Google tronque au-delà de ~60 caractères : 40 ici, marge gardée.
+        # Google tronque au-delà de ~60 caractères : 40 ici sans numéro, 47 avec, marge gardée.
         self.assertLessEqual(len(archive_title(DATE_ISO)), 60)
+        self.assertLessEqual(len(archive_title(DATE_ISO, puzzle=1700)), 60)
 
     def test_une_date_invalide_ne_sonne_pas_comme_une_date_valide(self):
         self.assertEqual(archive_title("2026-13-45"), f"{ARCHIVE_TITLE_PREFIX} 2026-13-45")
@@ -82,14 +86,14 @@ class TestPageArchive(unittest.TestCase):
         return match.group(1)
 
     def test_title_h1_et_open_graph_portent_le_titre(self):
-        self.assertIn(f"<title>{TITRE_ATTENDU}</title>", self.html)
-        self.assertIn(f"<h1>{TITRE_ATTENDU}</h1>", self.html)
-        self.assertIn(f'property="og:title" content="{TITRE_ATTENDU}"', self.html)
-        self.assertIn(f'name="twitter:title" content="{TITRE_ATTENDU}"', self.html)
+        self.assertIn(f"<title>{TITRE_PUZZLE_ATTENDU}</title>", self.html)
+        self.assertIn(f"<h1>{TITRE_PUZZLE_ATTENDU}</h1>", self.html)
+        self.assertIn(f'property="og:title" content="{TITRE_PUZZLE_ATTENDU}"', self.html)
+        self.assertIn(f'name="twitter:title" content="{TITRE_PUZZLE_ATTENDU}"', self.html)
 
     def test_la_description_cible_la_solution(self):
         description = self._extrait(r'<meta name="description" content="([^"]+)"')
-        self.assertTrue(description.startswith(TITRE_ATTENDU), description)
+        self.assertTrue(description.startswith(TITRE_PUZZLE_ATTENDU), description)
         self.assertIn("le mot secret", description)
         self.assertIn("Puzzle #1700", description)
         # Google tronque la snippet au-delà de ~160 caractères : marge de sécurité.
@@ -100,7 +104,7 @@ class TestPageArchive(unittest.TestCase):
         donnees = json.loads(bloc)
         article = next(n for n in donnees["@graph"] if n["@type"] == "Article")
         fil = next(n for n in donnees["@graph"] if n["@type"] == "BreadcrumbList")
-        self.assertEqual(article["headline"], TITRE_ATTENDU)
+        self.assertEqual(article["headline"], TITRE_PUZZLE_ATTENDU)
         self.assertEqual(article["datePublished"][:10], DATE_ISO)
         self.assertEqual(
             [e["name"] for e in fil["itemListElement"]],
@@ -127,7 +131,7 @@ class TestPageArchive(unittest.TestCase):
             _entry(win=False, word="", tries=None, top_guesses=[]), None, None
         )
         self.assertIn('content="noindex, follow"', html)
-        self.assertIn(f"<title>{TITRE_ATTENDU}</title>", html)
+        self.assertIn(f"<title>{TITRE_PUZZLE_ATTENDU}</title>", html)
 
 
 class TestIndexDesArchives(unittest.TestCase):

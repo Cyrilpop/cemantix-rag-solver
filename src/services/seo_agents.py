@@ -51,7 +51,7 @@ def _agent_dynamic_block(entries: list) -> str:
             "- **Dernière date résolue** : inconnue. N'invente pas de date.\n"
         )
     latest, oldest = resolus[0], resolus[-1]
-    latest_fr = escape(archive_title(latest.get("date")))
+    latest_fr = escape(archive_title(latest.get("date"), puzzle=latest.get("puzzle")))
     return (
         f"- **Archive la plus récente** : [{latest_fr}]({archive_url(latest.get('date'))})\n"
         f"- **Dernière date résolue** : `{latest.get('date')}` "
