@@ -157,3 +157,44 @@ def get_all_daily_puzzles(
             f"SELECT {cols} FROM daily_puzzles ORDER BY date DESC, puzzle_id DESC;"
         )
     return [_row_to_entry(r) for r in rows]
+
+
+def save_daily_hints(puzzle_date: str, hints: list[dict]) -> int:
+    """Insère ou met à jour un lot d'indices."""
+    query = """
+    INSERT INTO daily_puzzle_hints (puzzle_date, tier, word, score, is_revealed)
+    VALUES (%s, %s, %s, %s, %s)
+    ON CONFLICT (puzzle_date, word) DO UPDATE SET
+        score = EXCLUDED.score,
+        tier = EXCLUDED.tier,
+        is_revealed = EXCLUDED.is_revealed;
+    """
+    inserted = 0
+    with db.transaction() as conn:
+        for hint in hints:
+            q, p = db._format_query(query, (
+                str(puzzle_date),
+                str(hint["tier"]),
+                str(hint["word"]),
+                float(hint["score"]),
+                bool(hint.get("is_revealed", False))
+            ), db._determine_engine())
+            conn.execute(q, p)
+            inserted += 1
+    return inserted
+
+
+def get_daily_hints(puzzle_date: str, revealed_only: bool = True) -> list[dict]:
+    """Récupère les indices d'un puzzle quotidien, triés par score décroissant."""
+    if revealed_only:
+        query = "SELECT * FROM daily_puzzle_hints WHERE puzzle_date = %s AND is_revealed = %s ORDER BY score DESC;"
+        return db.fetch_all(query, (str(puzzle_date), True))
+    query = "SELECT * FROM daily_puzzle_hints WHERE puzzle_date = %s ORDER BY score DESC;"
+    return db.fetch_all(query, (str(puzzle_date),))
+
+
+def reveal_daily_hint_tier(puzzle_date: str, tier: str) -> int:
+    """Passe is_revealed à True pour un palier spécifique."""
+    query = "UPDATE daily_puzzle_hints SET is_revealed = %s WHERE puzzle_date = %s AND tier = %s;"
+    return db.execute(query, (True, str(puzzle_date), str(tier)))
+
