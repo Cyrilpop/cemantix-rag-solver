@@ -106,7 +106,7 @@ pip install -r requirements.txt
 ### Option B : Déploiement avec Docker (Architecture 3-Tiers Découplée)
 
 Le déploiement s'appuie sur une **architecture 3-tiers découplée et durcie** définie dans `docker-compose.yml` :
-- `cemantix_db` : Base de données relationnelle PostgreSQL 16 Alpine pour la persistance transactionnelle ACID (`daily_puzzles`, `solo_sessions`, `multi_rooms`).
+- `cemantix_db` : Base de données relationnelle PostgreSQL 16 Alpine pour la persistance transactionnelle ACID (`daily_puzzles`, `daily_puzzle_hints`, `solo_sessions`, `multi_rooms`).
 - `cemantix_worker` : Démon planificateur d'arrière-plan 24h/24 (calcul vectoriel lourd ChromaDB, résolution quotidienne à 00h00 heure de Paris et publication SEO).
 - `cemantix_web` : API REST HTTP haute performance (< 200 Mo RAM) servant le frontend web, le jeu Solo, le mode Battle, le Multijoueur 1v1, le mot du jour et la génération automatique de `sitemap.xml` au démarrage.
 - `cemantix` : Conteneur CLI éphémère (profil `cli`) pour les commandes interactives, les benchmarks et les tests unitaires.
@@ -137,8 +137,9 @@ docker compose down
 ```
 
 > [!NOTE]
-> - **Persistance relationnelle & ACID** : Chaque puzzle résolu est persisté de façon transactionnelle dans PostgreSQL (`daily_puzzles`) avec calcul SQL direct des métriques et miroir dans `./cemantix_data/daily_history.json`.
-> - **Rattrapage au démarrage** : Si le mot d'aujourd'hui n'a pas encore été résolu, le worker le trouve dès son lancement avant de se mettre en sommeil jusqu'au prochain minuit.
+> - **Persistance relationnelle & ACID** : Chaque puzzle résolu est persisté de façon transactionnelle dans PostgreSQL (`daily_puzzles`) avec calcul SQL direct des métriques et miroir dans `./cemantix_data/daily_history.json`. Les indices thermiques par paliers sont enregistrés dans `daily_puzzle_hints`.
+> - **Amorçage & Rattrapage automatique idempotent (`bootstrap_database`)** : À chaque démarrage de `cemantix_worker` et `cemantix_web`, le conteneur applique automatiquement le DDL (`init_db()`), synchronise de manière idempotente les puzzles historiques depuis `daily_history.json` vers `daily_puzzles` (`ON CONFLICT DO UPDATE`), et génère via le RAG local les indices manquants dans `daily_puzzle_hints`. Aucune commande SQL manuelle n'est requise.
+> - **Rattrapage du jour** : Si le mot d'aujourd'hui n'a pas encore été résolu, le worker le trouve dès son lancement avant de se mettre en sommeil jusqu'au prochain minuit.
 > - **Génération automatique de `sitemap.xml` au démarrage** : Non versionnés sous Git (`.gitignore`) pour éviter tout conflit lors d'un `git pull`, `volumes/web/sitemap.xml` et les pages d'archives `/puzzles/` sont régénérés automatiquement et de manière atomique à chaque démarrage de `cemantix_web` et `cemantix_worker` (`ensure_seo_published()`).
 
 > [!IMPORTANT]
@@ -825,9 +826,10 @@ cemantix-rag-solver/
 ├── README.md                # Documentation complète du projet
 ├── CHANGELOG.md             # Historique des versions et refactorings
 ├── database/                # Schémas SQL relationnels
-│   └── init.sql             # DDL PostgreSQL officiel (daily_puzzles, multi_rooms, solo_sessions)
+│   └── init.sql             # DDL PostgreSQL officiel (daily_puzzles, daily_puzzle_hints, multi_rooms, solo_sessions)
 ├── scripts/                 # Scripts d'exploitation et de migration
-│   └── migrate_json_to_pg.py# Migration d'historique daily_history.json vers PostgreSQL
+│   ├── backfill_daily_hints.py # Amorçage et rattrapage idempotent des indices RAG
+│   └── migrate_json_to_pg.py   # Migration d'historique daily_history.json vers PostgreSQL
 ├── volumes/                 # Volumes partagés
 │   ├── db/data/             # Données persistantes PostgreSQL
 │   └── web/                 # Application web servie par Caddy (mot du jour, jeu & API)
@@ -886,6 +888,7 @@ cemantix-rag-solver/
     └── services/            # Services d'arrière-plan & synchronisation (Background Services)
         ├── __init__.py      # Point d'entrée des services
         ├── daemon.py        # Démon planificateur 24h/24 (veille, heartbeat threadé et résolution quotidienne)
+        ├── hints.py         # Service sémantique RAG, calcul des paliers d'indices et bootstrap_database()
         ├── web.py           # Générateur et exportateur de données web avec masquage anti-spoiler
         └── seo.py           # Génération atomique des archives /puzzles/, sitemap.xml et manifestes ARD .well-known/
 ```
