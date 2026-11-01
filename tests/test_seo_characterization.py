@@ -80,7 +80,7 @@ class TestSeoCharacterization(unittest.TestCase):
 
     def test_formatters_deterministic_output(self):
         self.assertEqual(seo.format_date_fr("2026-10-30"), "vendredi 30 octobre 2026")
-        self.assertEqual(seo.archive_title("2026-10-30"), "Solution Cémantix du vendredi 30 octobre 2026")
+        self.assertEqual(seo.archive_title("2026-10-30"), "Indice Cémantix du vendredi 30 octobre 2026")
         self.assertEqual(
             seo.archive_anchor("2026-10-30"),
             "Indices et solution du Cémantix du vendredi 30 octobre 2026"
@@ -101,7 +101,7 @@ class TestSeoCharacterization(unittest.TestCase):
         # Structure globale
         self.assertIn("<!DOCTYPE html>", html)
         self.assertIn('<html lang="fr" data-theme="dark">', html)
-        self.assertIn("<title>Solution Cémantix #1703 du vendredi 30 octobre 2026</title>", html)
+        self.assertIn("<title>Indice Cémantix #1703 du vendredi 30 octobre 2026 : 10 indices, synonymes et solution</title>", html)
         self.assertIn('<link rel="canonical" href="https://cemantix.cyril-randon.fr/puzzles/2026-10-30/">', html)
         self.assertIn('<meta name="robots" content="index, follow">', html)
 
@@ -113,7 +113,7 @@ class TestSeoCharacterization(unittest.TestCase):
         parts = html.split('<details class="reveal">')
         before_reveal = parts[0]
         after_reveal = parts[1].split("</details>")[1]
-        self.assertNotIn("lumiere", before_reveal.lower().replace("solution cémantix", ""))
+        self.assertNotIn("lumiere", before_reveal.lower().replace("solution cémantix", "").replace("indice cémantix", ""))
         self.assertNotIn("lumiere", after_reveal.lower())
 
         # Le mot masqué "••••••••" ne doit pas être affiché dans le tableau d'indices
@@ -142,14 +142,14 @@ class TestSeoCharacterization(unittest.TestCase):
     def test_archives_index_pagination_structure(self):
         # Page 1
         html_p1 = seo.build_archives_index_page(MOCK_ENTRIES, page=1, total_pages=2)
-        self.assertIn("<title>Cémantix du jour : mot du jour, indices et solutions par date</title>", html_p1)
+        self.assertIn("<title>Indice Cémantix du jour : archives des mots du jour, indices et solutions par date</title>", html_p1)
         self.assertIn('<link rel="canonical" href="https://cemantix.cyril-randon.fr/puzzles/">', html_p1)
         self.assertIn('href="page/2/"', html_p1)
         self.assertIn('Suivant ›', html_p1)
 
         # Page 2
         html_p2 = seo.build_archives_index_page(MOCK_ENTRIES, page=2, total_pages=2)
-        self.assertIn("<title>Cémantix du jour : archives des indices et solutions, page 2", html_p2)
+        self.assertIn("<title>Indice Cémantix du jour : archives des indices et solutions, page 2", html_p2)
         self.assertIn('<link rel="canonical" href="https://cemantix.cyril-randon.fr/puzzles/page/2/">', html_p2)
         self.assertIn('href="../../"', html_p2)
         self.assertIn('‹ Précédent', html_p2)
@@ -157,14 +157,14 @@ class TestSeoCharacterization(unittest.TestCase):
     def test_mot_du_jour_page_with_and_without_entry(self):
         # Avec entrée
         html = seo.build_mot_du_jour_page(MOCK_ENTRIES[0], MOCK_ENTRIES)
-        self.assertIn("Mot du jour Cémantix", html)
+        self.assertIn("Indice Cémantix du jour", html)
         self.assertIn("https://cemantix.cyril-randon.fr/mot-du-jour/", html)
         self.assertIn('<details class="reveal">', html)
         self.assertIn("Clarté", html)
 
         # Sans entrée (historique vide)
         html_empty = seo.build_mot_du_jour_page(None, [])
-        self.assertIn("Mot du jour Cémantix", html_empty)
+        self.assertIn("Indice Cémantix du jour", html_empty)
         self.assertIn("Première publication à minuit", html_empty)
 
     def test_methode_page_structure(self):
@@ -211,7 +211,7 @@ class TestSeoCharacterization(unittest.TestCase):
         # Doit s'exécuter sans lever d'exception
         html = seo.build_archive_page(malformed, older=None, newer=None)
         self.assertIn("<!DOCTYPE html>", html)
-        self.assertIn("Solution Cémantix", html)
+        self.assertIn("Indice Cémantix", html)
 
 
 class TestSeoFilesystemPublication(unittest.TestCase):

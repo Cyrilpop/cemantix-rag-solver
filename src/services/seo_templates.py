@@ -26,7 +26,7 @@ ARCHIVES_MAX_PAGES = 500
 SITEMAP_MAX_URLS = 45000
 MOT_DU_JOUR_DIRNAME = "mot-du-jour"
 METHODE_DIRNAME = "methode"
-ARCHIVE_TITLE_PREFIX = "Solution Cémantix du"
+ARCHIVE_TITLE_PREFIX = "Indice Cémantix du"
 
 _MONTHS_FR = {
     1: "janvier", 2: "février", 3: "mars", 4: "avril", 5: "mai", 6: "juin",
@@ -81,18 +81,125 @@ def format_date_fr(value) -> str:
 
 
 def archive_title(value, puzzle=None) -> str:
-    """Titre SEO d'une archive : « Solution Cémantix #1700 du lundi 26 octobre 2026 ».
+    """Titre SEO d'une archive : « Indice Cémantix #1700 du lundi 26 octobre 2026 ».
 
-    Le même libellé sert de `<title>`, de `<h1>`, de texte d'ancre dans l'index des
+    Le même libellé sert de base de `<title>`, de `<h1>`, de texte d'ancre dans l'index des
     archives et de `headline` JSON-LD : un seul motif, répété, qui cible la requête
-    « solution cemantix #XXX du <date> » sans dupliquer de contenu.
+    « indice cemantix #XXX du <date> » sans dupliquer de contenu.
     """
     if puzzle:
         p_clean = str(puzzle).lstrip("#").strip()
-        prefix = f"Solution Cémantix #{p_clean} du"
+        prefix = f"Indice Cémantix #{p_clean} du"
     else:
         prefix = ARCHIVE_TITLE_PREFIX
     return f"{prefix} {format_date_fr(value)}"
+
+
+def format_clue_words_list(guesses: list, limit: int = 10, secret_word: Optional[str] = None) -> str:
+    """Extrait et formate la liste des premiers mots indices (minuscules, séparés par virgule).
+
+    Exclut rigoureusement le mot secret cible (anti-spoiler) et les leurres masqués ('••••••••').
+    Gère les éléments sous forme de dictionnaire (clé 'word' ou 'name'), tuple/liste ou chaîne.
+    """
+    words = []
+    secret_norm = str(secret_word or "").strip().lower()
+    for g in (guesses or []):
+        if isinstance(g, dict):
+            score = g.get("score")
+            permille = g.get("permille")
+            if (isinstance(score, (int, float)) and score >= 100.0) or (isinstance(permille, (int, float)) and permille >= 1000):
+                continue
+            w = str(g.get("word") or g.get("name") or "").strip().lower()
+        elif isinstance(g, (list, tuple)) and len(g) > 0:
+            w = str(g[0]).strip().lower()
+        elif isinstance(g, str):
+            w = g.strip().lower()
+        else:
+            continue
+
+        if not w or w == "••••••••":
+            continue
+        if secret_norm and w == secret_norm:
+            continue
+        if w not in words:
+            words.append(w)
+            if len(words) >= limit:
+                break
+    return ", ".join(words)
+
+
+def extract_clue_guesses(entry: Optional[dict]) -> list[dict]:
+    """Extrait la liste ordonnée des mots indices d'une entrée, sans spoiler.
+
+    Recherche dans l'ordre :
+    1. entry['top_guesses']
+    2. entry['trajectory'] (trié par score / permille)
+    3. daily_puzzle_hints (table SQL de rattrapage M6 si la date est renseignée)
+
+    Filtre rigoureusement le mot secret cible et les leurres masqués ('••••••••').
+    """
+    if not entry or not isinstance(entry, dict):
+        return []
+
+    word = str(entry.get("word") or "").strip().lower()
+
+    # 1. Source directe : top_guesses
+    raw_guesses = entry.get("top_guesses")
+    if isinstance(raw_guesses, list) and raw_guesses:
+        candidates = raw_guesses
+    else:
+        candidates = []
+
+    # 2. Repli sur la trajectoire si top_guesses est absent
+    if not candidates and isinstance(entry.get("trajectory"), list):
+        traj = [
+            t for t in entry["trajectory"]
+            if isinstance(t, dict) and t.get("word") and str(t.get("word")).strip() != "••••••••"
+        ]
+        traj.sort(
+            key=lambda item: (
+                float(item.get("score") if item.get("score") is not None else -999.0),
+                float(item.get("permille") if item.get("permille") is not None else -999.0),
+            ),
+            reverse=True,
+        )
+        candidates = traj
+
+    # 3. Repli sur daily_puzzle_hints si disponible
+    if not candidates and entry.get("date"):
+        try:
+            from ..db import get_daily_hints
+            hints = get_daily_hints(str(entry.get("date")), revealed_only=False)
+            if hints:
+                candidates = [
+                    {"word": h["word"], "score": float(h["score"]), "permille": int(h["score"])}
+                    for h in hints
+                ]
+        except Exception:
+            pass
+
+    # Filtrage anti-spoiler rigoureux : exclure le mot secret et les doublons
+    cleaned = []
+    seen = set()
+    for g in candidates:
+        if not isinstance(g, dict):
+            continue
+        w = str(g.get("word") or "").strip()
+        w_lower = w.lower()
+        if not w or w == "••••••••":
+            continue
+        if word and w_lower == word:
+            continue
+        score = g.get("score")
+        permille = g.get("permille")
+        if (isinstance(score, (int, float)) and score >= 100.0) or (isinstance(permille, (int, float)) and permille >= 1000):
+            continue
+        if w_lower in seen:
+            continue
+        seen.add(w_lower)
+        cleaned.append(g)
+
+    return cleaned
 
 
 def archive_anchor(value) -> str:
@@ -855,23 +962,32 @@ def _tier_class(score) -> str:
     return "tier-fire"
 
 
-def _clue_rows(guesses: list, limit: int = 10) -> str:
+def _clue_rows(guesses: list, limit: int = 10, secret_word: Optional[str] = None) -> str:
     """Lignes de tableau des mots les plus proches (indices sans spoiler)."""
     rows = []
-    for idx, guess in enumerate(guesses[:limit], start=1):
+    secret_norm = str(secret_word or "").strip().lower()
+    count = 0
+    for guess in (guesses or []):
         word = str(guess.get("word") or "").strip()
         if not word or word == "••••••••":
             continue
+        if secret_norm and word.lower() == secret_norm:
+            continue
         score = guess.get("score")
         permille = guess.get("permille")
+        if (isinstance(score, (int, float)) and score >= 100.0) or (isinstance(permille, (int, float)) and permille >= 1000):
+            continue
+        count += 1
         score_txt = f"{float(score):+.2f} °C" if isinstance(score, (int, float)) else "--"
         perm_txt = f"{int(permille)} ‰" if isinstance(permille, (int, float)) else "--"
         rows.append(
-            f'          <tr><td class="num">{idx}</td>'
+            f'          <tr><td class="num">{count}</td>'
             f'<td><strong>{escape(word.capitalize())}</strong></td>'
             f'<td class="num {escape(_tier_class(score))}">{escape(score_txt)}</td>'
             f'<td class="num">{escape(perm_txt)}</td></tr>'
         )
+        if count >= limit:
+            break
     return "\n".join(rows)
 
 
@@ -895,6 +1011,8 @@ __all__ = [
     "PAGE_CSS",
     "parse_puzzle_date",
     "format_date_fr",
+    "format_clue_words_list",
+    "extract_clue_guesses",
     "archive_title",
     "archive_anchor",
     "hub_url",

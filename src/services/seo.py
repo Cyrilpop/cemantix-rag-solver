@@ -54,6 +54,8 @@ from .seo_templates import (
     archive_anchor,
     archive_title,
     archive_url,
+    extract_clue_guesses,
+    format_clue_words_list,
     format_date_fr,
     format_duration_fr,
     hub_url,
@@ -107,17 +109,18 @@ def _daily_summary(entry: dict) -> str:
     """Paragraphe de résumé du jour, sans révéler le mot secret."""
     date_fr = format_date_fr(entry.get("date"))
     puzzle = entry.get("puzzle")
+    word = str(entry.get("word") or "").strip()
     tries = entry.get("tries")
     duration = format_duration_fr(entry.get("duration_seconds"))
-    guesses = [g for g in (entry.get("top_guesses") or []) if str(g.get("word", "")) != "••••••••"]
+    guesses = extract_clue_guesses(entry)
     source_label = "hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
     puzzle_label = f"le puzzle #{puzzle}" if puzzle else "le puzzle du jour"
 
-    clue_names = ", ".join(
-        str(g.get("word", "")).capitalize() for g in guesses[:5] if g.get("word")
-    )
+    clue_words = format_clue_words_list(guesses, limit=10, secret_word=word)
     clue_part = (
-        f" Les mots les plus proches observés étaient {clue_names}." if clue_names else ""
+        f" Les 10 mots indices et synonymes les plus proches observés étaient {clue_words}."
+        if clue_words
+        else ""
     )
     status = "résolu" if entry.get("win") is True else "non résolu"
     return (
@@ -153,8 +156,8 @@ def prerender_dashboard(entry: Optional[dict], web_root: Path = None) -> bool:
     if entry:
         date_fr = format_date_fr(entry.get("date"))
         replacements = {
-            "resume-title": f"Cémantix du {date_fr} : indices et résumé du mot du jour",
-            "resume-subtitle": "Indices, thermomètre et performance du solveur IA du jour",
+            "resume-title": f"Indice Cémantix du jour ({date_fr}) : indices, synonymes et mot du jour",
+            "resume-subtitle": "Indices thermiques, synonymes et performance du solveur IA du jour",
             "resume-body": _daily_summary(entry),
             "resume-link": (
                 "Le <a href=\"mot-du-jour/\">mot du jour Cémantix</a> reprend ces indices "
@@ -166,8 +169,8 @@ def prerender_dashboard(entry: Optional[dict], web_root: Path = None) -> bool:
         }
     else:
         replacements = {
-            "resume-title": "Cémantix du jour : indices et résumé de la résolution",
-            "resume-subtitle": "Indices, thermomètre et performance du solveur IA",
+            "resume-title": "Indice Cémantix du jour : indices, synonymes et mot du jour",
+            "resume-subtitle": "Indices thermiques, synonymes et performance du solveur IA",
             "resume-body": (
                 "Le résumé du puzzle du jour sera publié automatiquement après la "
                 "résolution de minuit."
@@ -338,6 +341,8 @@ __all__ = [
     # Templates & formatters
     "parse_puzzle_date",
     "format_date_fr",
+    "format_clue_words_list",
+    "extract_clue_guesses",
     "archive_title",
     "archive_anchor",
     "hub_url",

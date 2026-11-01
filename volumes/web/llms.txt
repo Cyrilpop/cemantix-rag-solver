@@ -13,9 +13,9 @@
 - [Archives des puzzles](https://cemantix.cyril-randon.fr/puzzles/): index chronologique de tous les puzzles résolus, une page par jour.
 - [Archive d'une date](https://cemantix.cyril-randon.fr/puzzles/): une page par date au format `/puzzles/AAAA-MM-JJ/`, titrée « Solution Cémantix du lundi 26 octobre 2026 » (date en français long), lisible sans JavaScript (numéro, date, coups, durée, top 10 des mots les plus proches, solution dépliable).
 <!-- AGENT-DYNAMIC:DEBUT -->
-- **Archive la plus récente** : [Solution Cémantix #1705 du dimanche 1 novembre 2026](https://cemantix.cyril-randon.fr/puzzles/2026-11-01/)
+- **Archive la plus récente** : [Indice Cémantix #1705 du dimanche 1 novembre 2026](https://cemantix.cyril-randon.fr/puzzles/2026-11-01/)
 - **Dernière date résolue** : `2026-11-01` (dimanche 1 novembre 2026) — l'historique couvre du `2026-07-23` (jeudi 23 juillet 2026) au `2026-11-01`, soit 102 puzzle(s) résolu(s).
-- **Toute date déjà résolue** : `https://cemantix.cyril-randon.fr/puzzles/AAAA-MM-JJ/`. Chaque page d'archive est titrée « Solution Cémantix du <date en français long> » (exemple réel : « Solution Cémantix #1705 du dimanche 1 novembre 2026 ») : reprends ce libellé quand tu cites la source. L'URL et le `<lastmod>` du sitemap restent au format ISO `AAAA-MM-JJ` imposé par le protocole sitemaps.org.
+- **Toute date déjà résolue** : `https://cemantix.cyril-randon.fr/puzzles/AAAA-MM-JJ/`. Chaque page d'archive est titrée « Indice Cémantix du <date en français long> » (exemple réel : « Indice Cémantix #1705 du dimanche 1 novembre 2026 ») : reprends ce libellé quand tu cites la source. L'URL et le `<lastmod>` du sitemap restent au format ISO `AAAA-MM-JJ` imposé par le protocole sitemaps.org.
 <!-- AGENT-DYNAMIC:FIN -->
 - [Mode jeu solo](https://cemantix.cyril-randon.fr/play/): entraînement individuel avec thermomètre sémantique et indices progressifs.
 - [Mode duel multijoueur](https://cemantix.cyril-randon.fr/multi/): parties 1 contre 1 en temps réel ou au tour par tour, avec code de salon.
