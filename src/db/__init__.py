@@ -34,10 +34,14 @@ from .challenges import (
 )
 from .connection import db, get_db_type, init_db
 from .daily import (
+    backfill_daily_puzzles_from_json,
     get_all_daily_puzzles,
+    get_daily_hints,
     get_daily_puzzle,
     get_history_summary,
     get_latest_daily_puzzle,
+    reveal_daily_hint_tier,
+    save_daily_hints,
     save_daily_puzzle,
 )
 from .multi import (
@@ -61,11 +65,15 @@ __all__ = [
     "db",
     "init_db",
     "get_db_type",
+    "backfill_daily_puzzles_from_json",
     "save_daily_puzzle",
     "get_daily_puzzle",
     "get_latest_daily_puzzle",
     "get_all_daily_puzzles",
     "get_history_summary",
+    "save_daily_hints",
+    "get_daily_hints",
+    "reveal_daily_hint_tier",
     "save_room",
     "get_room",
     "delete_room",

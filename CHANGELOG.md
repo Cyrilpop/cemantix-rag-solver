@@ -4,6 +4,31 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-01 · Jalon M6 : Persistance Relationnelle des Paliers d'Indices & Bootstrap Idempotent (daily_puzzle_hints)
+
+### Ajouté & Amélioré
+- **Schéma relationnel multi-dialecte (`database/init.sql`, `src/db/connection.py`)** :
+  - Création de la table `daily_puzzle_hints` sous PostgreSQL et SQLite avec intégrité référentielle en cascade (`REFERENCES daily_puzzles(date) ON DELETE CASCADE`), contrainte d'unicité composite `UNIQUE(puzzle_date, word)` et index optimisé `idx_daily_hints_date`.
+  - Types multi-dialectes stricts (`SERIAL`/`AUTOINCREMENT`, `BOOLEAN`, `TIMESTAMPTZ`/`TEXT`, `NUMERIC(6,2)`/`REAL`).
+- **Couche CRUD & Gestion du cycle de vie des indices (`src/db/daily.py`, `src/db/__init__.py`)** :
+  - `save_daily_hints(puzzle_date, hints)` : insertion par lot avec gestion des conflits (`ON CONFLICT (puzzle_date, word) DO UPDATE`).
+  - `get_daily_hints(puzzle_date, only_revealed=False)` : extraction ordonnée par score avec filtrage optionnel des indices révélés.
+  - `reveal_daily_hint_tier(puzzle_date, tier)` : mise à jour transactionnelle du statut de révélation pour un palier donné.
+- **Service RAG sémantique & Extraction des paliers (`src/services/hints.py`)** :
+  - Algorithme `generate_hints_for_word(secret_word, store)` calculant les similarités cosinus et attribuant les mots candidats aux paliers thermiques cibles (800, 900, 950, 990).
+  - Filtrage linguistique strict : exclusion du mot secret, stopwords, mots < 4 lettres, séparateurs, et lemmatisation par radical commun (stemming anti-triche).
+  - Rattrapage idempotent (`backfill_puzzle_hints()`) détectant les puzzles sans indices en base pour les générer via le RAG local.
+- **Bootstrap universel et idempotent au démarrage des conteneurs (`src/services/hints.py`, `daemon.py`, `cemantix_rag.py`)** :
+  - Fonction universelle `bootstrap_database()` exécutée au démarrage de `cemantix_worker` et `cemantix_web`.
+  - Exécution automatique de `init_db()` pour garantir la présence des tables et index sans aucune intervention manuelle `psql`.
+  - `backfill_daily_puzzles_from_json()` : rattrapage automatique et idempotent des puzzles historiques depuis `daily_history.json` vers `daily_puzzles` (`ON CONFLICT DO UPDATE`).
+  - Script CLI dédié `scripts/backfill_daily_hints.py` et option `--backfill-hints` dans `cemantix_rag.py`.
+- **Validation unitaire et résilience (`tests/test_db.py`, `tests/test_hints_service.py`)** :
+  - Tests unitaires complets sous SQLite du cycle CRUD, des conflits, de l'intégrité référentielle et du bootstrap.
+  - Suite de 326 tests au vert sous Docker Python 3.12.
+
+---
+
 ## [Non publié] - 2026-11-01 · Jalon M6 : Unification du Layout, Navigation Universelle & Architecture Modulaire en 4 Briques (Universal Layout, Navigation & 4-Block Modular Architecture)
 
 ### Ajouté & Amélioré

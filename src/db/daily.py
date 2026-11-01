@@ -157,3 +157,93 @@ def get_all_daily_puzzles(
             f"SELECT {cols} FROM daily_puzzles ORDER BY date DESC, puzzle_id DESC;"
         )
     return [_row_to_entry(r) for r in rows]
+
+
+def save_daily_hints(puzzle_date: str, hints: list[dict]) -> int:
+    """Insère ou met à jour un lot d'indices."""
+    query = """
+    INSERT INTO daily_puzzle_hints (puzzle_date, tier, word, score, is_revealed)
+    VALUES (%s, %s, %s, %s, %s)
+    ON CONFLICT (puzzle_date, word) DO UPDATE SET
+        score = EXCLUDED.score,
+        tier = EXCLUDED.tier,
+        is_revealed = EXCLUDED.is_revealed;
+    """
+    inserted = 0
+    with db.transaction() as conn:
+        for hint in hints:
+            q, p = db._format_query(query, (
+                str(puzzle_date),
+                str(hint["tier"]),
+                str(hint["word"]),
+                float(hint["score"]),
+                bool(hint.get("is_revealed", False))
+            ), db._determine_engine())
+            conn.execute(q, p)
+            inserted += 1
+    return inserted
+
+
+def get_daily_hints(puzzle_date: str, revealed_only: bool = True) -> list[dict]:
+    """Récupère les indices d'un puzzle quotidien, triés par score décroissant."""
+    if revealed_only:
+        query = "SELECT * FROM daily_puzzle_hints WHERE puzzle_date = %s AND is_revealed = %s ORDER BY score DESC;"
+        return db.fetch_all(query, (str(puzzle_date), True))
+    query = "SELECT * FROM daily_puzzle_hints WHERE puzzle_date = %s ORDER BY score DESC;"
+    return db.fetch_all(query, (str(puzzle_date),))
+
+
+def reveal_daily_hint_tier(puzzle_date: str, tier: str) -> int:
+    """Passe is_revealed à True pour un palier spécifique."""
+    query = "UPDATE daily_puzzle_hints SET is_revealed = %s WHERE puzzle_date = %s AND tier = %s;"
+    return db.execute(query, (True, str(puzzle_date), str(tier)))
+
+
+def backfill_daily_puzzles_from_json(filepath: Optional[object] = None) -> int:
+    """Rattrapage idempotent de daily_puzzles depuis l'historique JSON.
+
+    Charge le fichier JSON (par défaut cemantix_data/daily_history.json)
+    et insère tous les puzzles absents de la table daily_puzzles.
+    Retourne le nombre de puzzles nouvellement insérés.
+    """
+    import json
+    from pathlib import Path
+    from ..config import DATA_DIR, log
+
+    json_path = Path(str(filepath)) if filepath else (DATA_DIR / "daily_history.json")
+    if not json_path.exists():
+        return 0
+
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            entries = json.load(f)
+        if not isinstance(entries, list):
+            return 0
+    except Exception as e:
+        log(f"⚠️  [DB] Impossible de lire {json_path} pour le rattrapage : {e}")
+        return 0
+
+    try:
+        rows = db.fetch_all("SELECT date FROM daily_puzzles;")
+        existing_dates = {str(r["date"]) for r in rows}
+    except Exception as e:
+        log(f"⚠️  [DB] Erreur lecture daily_puzzles pour vérification : {e}")
+        existing_dates = set()
+
+    missing = [
+        e for e in entries
+        if str(e.get("date")) not in existing_dates and (e.get("word") or "").strip()
+    ]
+    if not missing:
+        return 0
+
+    log(f"🧩  [DB] Rattrapage SQL de {len(missing)} puzzle(s) depuis {json_path.name}...")
+    inserted_count = 0
+    for entry in missing:
+        if save_daily_puzzle(entry):
+            inserted_count += 1
+
+    log(f"✨  [DB] Rattrapage SQL achevé : {inserted_count} puzzle(s) importé(s) dans daily_puzzles.")
+    return inserted_count
+
+

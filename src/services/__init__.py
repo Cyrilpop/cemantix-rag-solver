@@ -28,6 +28,12 @@ from .web import (
     build_web_data,
     export_web_data,
 )
+from .hints import (
+    DEFAULT_TIER_TARGETS,
+    backfill_puzzle_hints,
+    bootstrap_database,
+    generate_hints_for_word,
+)
 from .seo import (
     SITE_ORIGIN,
     build_agent_card,
@@ -74,4 +80,7 @@ __all__ = [
     "prerender_dashboard",
     "publish_ard_manifests",
     "publish_seo_pages",
+    "DEFAULT_TIER_TARGETS",
+    "generate_hints_for_word",
+    "backfill_puzzle_hints",
 ]

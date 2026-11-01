@@ -18,6 +18,18 @@ CREATE TABLE IF NOT EXISTS daily_puzzles (
     solved_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS daily_puzzle_hints (
+    id SERIAL PRIMARY KEY,
+    puzzle_date DATE NOT NULL REFERENCES daily_puzzles(date) ON DELETE CASCADE,
+    tier VARCHAR(8) NOT NULL,
+    word VARCHAR(100) NOT NULL,
+    score NUMERIC(6, 2) NOT NULL,
+    is_revealed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(puzzle_date, word)
+);
+CREATE INDEX IF NOT EXISTS idx_daily_hints_date ON daily_puzzle_hints(puzzle_date);
+
 -- 2. Table des salons multijoueurs 1v1 (avec index d'expiration)
 CREATE TABLE IF NOT EXISTS multi_rooms (
     room_id VARCHAR(16) PRIMARY KEY,

@@ -273,6 +273,19 @@ def run_daily_solver(args) -> dict:
     except Exception as e:
         log(f"⚠️  Erreur sauvegarde base relationnelle : {e}")
 
+    # Persistance des indices par paliers dans daily_puzzle_hints (Jalon M6)
+    try:
+        from .hints import generate_hints_for_word
+        from ..db import save_daily_hints
+        store = getattr(args, "store", None) or getattr(solver, "store", None)
+        if store and result.get("word"):
+            hints = generate_hints_for_word(result["word"], store)
+            if hints:
+                save_daily_hints(today_str, hints)
+                log(f"🧩  {len(hints)} indices générés et persistés dans daily_puzzle_hints.")
+    except Exception as e:
+        log(f"⚠️  Erreur sauvegarde indices quotidiens : {e}")
+
     history = load_history()
     # Remplacer toute entrée précédente pour la même date pour garantir l'enregistrement de la trajectoire
     history = [h for h in history if h.get("date") != today_str]
@@ -346,6 +359,13 @@ def run_daemon_loop(args) -> None:
     log("=" * 60)
     # SEC-27 : purge RGPD des défis au bot périmés dès le démarrage du worker.
     challenge_maintenance()
+
+    # Initialisation et rattrapage idempotent complet (DDL, JSON -> SQL, RAG -> hints)
+    try:
+        from .hints import bootstrap_database
+        bootstrap_database(getattr(args, "store", None))
+    except Exception as e:
+        log(f"⚠️  [DÉMON] Erreur lors de l'initialisation/rattrapage de la base : {e}")
     now = datetime.now(PARIS_TZ)
     log(f"📅  Heure locale (Europe/Paris) : {now.strftime('%Y-%m-%d %H:%M:%S %Z')}")
     log(f"💾  Fichier historique          : {DAILY_HISTORY_FILE}")
