@@ -21,6 +21,7 @@ from .seo_templates import (
     extract_clue_guesses,
     format_clue_words_list,
     format_date_fr,
+    format_date_short_fr,
     format_duration_fr,
     render_page,
 )
@@ -38,16 +39,16 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
     guesses = extract_clue_guesses(entry)
     source_label = "Hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
 
-    puzzle_label = f"Puzzle #{puzzle}" if puzzle else "Puzzle du jour"
-    puzzle_ref = f" #{puzzle}" if puzzle else ""
-    title = f"{archive_title(date_str, puzzle=puzzle)} : 10 indices, synonymes et solution"
-    mots_indices = format_clue_words_list(guesses, limit=10, secret_word=word)
-    clue_paren = f" ({mots_indices})" if mots_indices else ""
-    puzzle_prefix = f"Indices Cémantix #{puzzle}" if puzzle else "Indices Cémantix"
-    tries_part = f" en {tries} coups" if tries else ""
+    puzzle_label = f"Puzzle {str(puzzle).lstrip('#').strip()}" if puzzle else "Puzzle du jour"
+    puzzle_ref = f" {str(puzzle).lstrip('#').strip()}" if puzzle else ""
+    title = archive_title(date_str, puzzle=puzzle)
+    date_court = format_date_short_fr(date_str)
+    puzzle_part = f" {str(puzzle).lstrip('#').strip()}" if puzzle else ""
+    clues_text = format_clue_words_list(guesses, limit=3, secret_word=word)
+    clues_snippet = f" ({clues_text})" if clues_text else ""
     description = (
-        f"{puzzle_prefix} du {date_fr} : aide sans spoiler avec les 10 mots les plus proches{clue_paren} "
-        f"et synonymes pour trouver le mot secret{tries_part}."
+        f"Retrouvez les indices thermiques{clues_snippet} et la solution du Cémantix{puzzle_part} du {date_court} "
+        f"afin de deviner plus facilement le mot du jour sans spoiler."
     )
     canonical = archive_url(date_str)
 
@@ -110,6 +111,11 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
         f"<li>Résolu en <strong>{escape(str(tries or '--'))} coups</strong></li>",
         f"<li>Durée de calcul&nbsp;: <strong>{escape(duration)}</strong></li>",
         f"<li>Méthode&nbsp;: <strong>{escape(source_label)}</strong></li>",
+        (
+            f'<li class="meta-item-today"><a href="{escape(_rel("mot-du-jour/"), quote=True)}" '
+            f'class="meta-link-today" title="Consulter les indices et la solution du mot du jour Cémantix en cours">'
+            f'🎯 Mot du jour Cémantix →</a></li>'
+        ),
     ]
     win_badge = (
         '<span class="badge badge-win">✓ Trouvé</span>'
@@ -273,9 +279,9 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
     newest_fr = format_date_fr(newest.get("date")) if newest else ""
 
     if page == 1:
-        title = "Indice Cémantix du jour : archives des mots du jour, indices et solutions par date"
+        title = "Cémantix : archives des indices, mots du jour et solutions par date"
     else:
-        title = f"Indice Cémantix du jour : archives des indices et solutions, page {page}"
+        title = f"Cémantix : archives des indices et solutions, page {page}"
     description = (
         f"Le mot du jour Cémantix et ses indices, date par date ({len(entries)} puzzles "
         f"résolus) : thermomètre sémantique, nombre de coups et solution dépliable. "

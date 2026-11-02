@@ -25,24 +25,28 @@ Dans chaque contexte d'affichage d'un puzzle résolu, extraire les 10 premiers �
 - Cas limite : si la liste contient moins de 10 mots, utiliser l'intégralité des mots disponibles sans lever d'erreur. Si la liste est vide, omettre la parenthèse descriptive.
 
 ### 2.2 Balises `<title>` et `<h1>`
+- **Alignement d'élite (modèle Gamewave calibré, sans `#` et date sans jour)** :
 - **Pages d'archives (`/puzzles/AAAA-MM-JJ/`) :**
     - Avec numéro de puzzle :  
-      `Indice Cémantix #{puzzle} du {date_fr} : 10 indices, synonymes et solution`
+      `Cémantix {puzzle} : indices et solution, quel est le mot du {date_court} ?`
     - Sans numéro de puzzle :  
-      `Indice Cémantix du {date_fr} : 10 indices, synonymes et solution`
+      `Cémantix du {date_court} : indices et solution, quel est le mot du jour ?`
 - **Page Hub Mot du jour (`/mot-du-jour/`) :**  
-  `Indice Cémantix du jour ({date_fr}) : indices, synonymes et mot du jour`
-  *(En l'absence de puzzle résolu : `Indice Cémantix du jour : indices, synonymes et mot du jour`).*
+  `Cémantix {puzzle} : indices et solution, quel est le mot du {date_court} ?`  
+  *(En l'absence de puzzle résolu : `Cémantix : indices, synonymes et solution du mot du jour`).*
 - **Index paginé des archives (`/puzzles/`) :**
-    - Page 1 : `Indice Cémantix du jour : archives des mots du jour, indices et solutions par date`
-    - Page N : `Indice Cémantix du jour : archives des indices et solutions, page {page}`
+    - Page 1 : `Cémantix : archives des indices, mots du jour et solutions par date`
+    - Page N : `Cémantix : archives des indices et solutions, page {page}`
 
 ### 2.3 Balises `<meta name="description">`, `og:description` et `twitter:description`
-- **Pages d'archives (`/puzzles/AAAA-MM-JJ/`) :**
-  `Indices Cémantix #{puzzle} du {date_fr} : aide sans spoiler avec les 10 mots les plus proches ({mots_indices}) et synonymes pour trouver le mot secret en {tries} coups.`  
-  *(Si le nombre de coups ou le numéro de puzzle n'est pas renseigné, adapter la formulation sans rompre la grammaire).*
-- **Page Hub Mot du jour (`/mot-du-jour/`) :**  
-  `Indice Cémantix du jour du {date_fr} : consultez les 10 indices thermiques ({mots_indices}), les synonymes à explorer et la solution dépliable du puzzle #{puzzle}.`
+- **Pages d'archives (`/puzzles/AAAA-MM-JJ/`) et Hub Mot du jour (`/mot-du-jour/`) :**
+  `Retrouvez les indices thermiques ({clues}) et la solution du Cémantix {puzzle} du {date_court} afin de deviner plus facilement le mot du jour sans spoiler.`  
+  *(Si aucun indice n'est extrait, omettre proprement la parenthèse des indices sans rompre la syntaxe).*
+
+### 2.4 Maillage Interne Permanent (Pilule Mot du Jour dans les Archives)
+- Ajout systématique d'une pilule de maillage interne descendant permanent dans le bloc `.meta-list` de chaque archive quotidienne :
+  `<li class="meta-item-today"><a href="../../mot-du-jour/" class="meta-link-today" title="Consulter les indices et la solution du mot du jour Cémantix en cours">🎯 Mot du jour Cémantix →</a></li>`
+  Permet de canaliser l'autorité et le PageRank interne de l'ensemble des archives (>100 pages) vers la page hub chaude `/mot-du-jour/` avec une ancre stable et optimisée sans régénération nocturne intempestive de la date affichée.
 
 ### 2.4 Synchronisation Schema.org JSON-LD
 Les propriétés `headline` et `description` des objets JSON-LD (`Article`, `CollectionPage`) dans `seo_archives.py` et `seo_hubs.py` doivent reprendre strictement les chaînes générées pour les balises HTML correspondantes.

@@ -18,6 +18,7 @@ from .seo_templates import (
     extract_clue_guesses,
     format_clue_words_list,
     format_date_fr,
+    format_date_short_fr,
     format_duration_fr,
     hub_url,
     render_page,
@@ -113,7 +114,7 @@ def _render_hub_page(*, titre, description, canonical, json_ld, entry, entries, 
         if guesses is None:
             guesses = extract_clue_guesses(entry)
         source_label = "Hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
-        puzzle_label = f"Puzzle #{puzzle}" if puzzle else "Puzzle du jour"
+        puzzle_label = f"Puzzle {str(puzzle).lstrip('#').strip()}" if puzzle else "Puzzle du jour"
         meta_items = [
             f"<li>{escape(puzzle_label)}</li>",
             f"<li>Mot du jour du <strong>{escape(date_fr)}</strong></li>",
@@ -213,29 +214,32 @@ def build_mot_du_jour_page(entry: Optional[dict], entries: list) -> str:
     """Page hub `/mot-du-jour/` : la requête dominante de la tendance Google."""
     canonical = hub_url(MOT_DU_JOUR_DIRNAME)
     date_fr = format_date_fr(entry.get("date")) if entry else ""
+    date_court = format_date_short_fr(entry.get("date")) if entry else ""
     if entry:
-        titre = f"Indice Cémantix du jour ({date_fr}) : indices, synonymes et mot du jour"
         puzzle = entry.get("puzzle")
+        p_clean = str(puzzle).lstrip("#").strip() if puzzle else ""
+        p_prefix = f"Cémantix {p_clean} : " if p_clean else "Cémantix : "
+        titre = f"{p_prefix}indices et solution, quel est le mot du {date_court} ?"
         word = str(entry.get("word") or "").strip()
         win = entry.get("win") is True
         tries = entry.get("tries")
         duration = format_duration_fr(entry.get("duration_seconds"))
         guesses = extract_clue_guesses(entry)
         source_label = "Hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
-        puzzle_label = f"Puzzle #{puzzle}" if puzzle else "Puzzle du jour"
-        puzzle_part = f" du puzzle #{puzzle}" if puzzle else ""
-        mots_indices = format_clue_words_list(guesses, limit=10, secret_word=word)
-        clue_paren = f" ({mots_indices})" if mots_indices else ""
+        puzzle_label = f"Puzzle {p_clean}" if p_clean else "Puzzle du jour"
+        puzzle_part = f" {p_clean}" if p_clean else ""
+        clues_text = format_clue_words_list(guesses, limit=3, secret_word=word)
+        clues_snippet = f" ({clues_text})" if clues_text else ""
         description = (
-            f"Indice Cémantix du jour du {date_fr} : consultez les 10 indices thermiques{clue_paren}, "
-            f"les synonymes à explorer et la solution dépliable{puzzle_part}."
+            f"Retrouvez les indices thermiques{clues_snippet} et la solution du Cémantix{puzzle_part} "
+            f"du {date_court} afin de deviner plus facilement le mot du jour sans spoiler."
         )
     else:
         guesses = []
-        titre = "Indice Cémantix du jour : indices, synonymes et mot du jour"
+        titre = "Cémantix : indices, synonymes et solution du mot du jour"
         description = (
-            "Indice Cémantix du jour, ses indices thermiques et sa solution : publication "
-            "automatique chaque nuit à minuit (heure de Paris), sans spoiler avant demande."
+            "Cémantix : retrouvez les indices thermiques et la solution du mot du jour. "
+            "Publication automatique chaque nuit à minuit (heure de Paris), sans spoiler."
         )
 
     json_ld = _json_ld_block({

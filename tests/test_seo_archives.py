@@ -29,9 +29,9 @@ from src.services.seo import (  # noqa: E402
 )
 
 DATE_ISO = "2026-10-26"
-TITRE_ATTENDU = "Indice Cémantix du lundi 26 octobre 2026"
-TITRE_PUZZLE_ATTENDU = "Indice Cémantix #1700 du lundi 26 octobre 2026"
-TITRE_PAGE_ATTENDU = "Indice Cémantix #1700 du lundi 26 octobre 2026 : 10 indices, synonymes et solution"
+TITRE_ATTENDU = "Cémantix du 26 octobre 2026 : indices et solution, quel est le mot du jour ?"
+TITRE_PUZZLE_ATTENDU = "Cémantix 1700 : indices et solution, quel est le mot du 26 octobre 2026 ?"
+TITRE_PAGE_ATTENDU = "Cémantix 1700 : indices et solution, quel est le mot du 26 octobre 2026 ?"
 DATE_ISO_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
@@ -68,13 +68,13 @@ class TestTitreArchive(unittest.TestCase):
         self.assertFalse(DATE_ISO_RE.search(archive_title(DATE_ISO, puzzle=1700)))
 
     def test_le_titre_reste_court_pour_la_serp(self):
-        # Google tronque au-delà de ~60 caractères : 40 ici sans numéro, 47 avec, marge gardée.
-        self.assertLessEqual(len(archive_title(DATE_ISO)), 60)
-        self.assertLessEqual(len(archive_title(DATE_ISO, puzzle=1700)), 60)
+        # Google tronque au-delà de ~70-75 caractères : calibré style Gamewave sans #
+        self.assertLessEqual(len(archive_title(DATE_ISO)), 80)
+        self.assertLessEqual(len(archive_title(DATE_ISO, puzzle=1700)), 80)
 
     def test_une_date_invalide_ne_sonne_pas_comme_une_date_valide(self):
-        self.assertEqual(archive_title("2026-13-45"), f"{ARCHIVE_TITLE_PREFIX} 2026-13-45")
-        self.assertEqual(archive_title(None), f"{ARCHIVE_TITLE_PREFIX} ")
+        self.assertEqual(archive_title("2026-13-45"), "Cémantix du 2026-13-45 : indices et solution, quel est le mot du jour ?")
+        self.assertEqual(archive_title(None), "Cémantix du  : indices et solution, quel est le mot du jour ?")
 
 
 class TestPageArchive(unittest.TestCase):
@@ -94,13 +94,18 @@ class TestPageArchive(unittest.TestCase):
 
     def test_la_description_cible_la_solution(self):
         description = self._extrait(r'<meta name="description" content="([^"]+)"')
-        self.assertTrue(description.startswith("Indices Cémantix #1700 du lundi 26 octobre 2026"), description)
-        self.assertIn("aide sans spoiler", description)
+        self.assertTrue(description.startswith("Retrouvez les indices thermiques"), description)
+        self.assertIn("solution du Cémantix 1700 du 26 octobre 2026", description)
+        self.assertIn("sans spoiler", description)
         self.assertIn("cabane, abri", description)
-        self.assertIn("synonymes", description)
-        self.assertIn("9 coups", description)
         # Google tronque la snippet au-delà de ~160 caractères : marge de sécurité.
         self.assertLessEqual(len(description), 175)
+
+    def test_meta_list_contient_la_pilule_mot_du_jour_sans_croisillon(self):
+        self.assertIn('class="meta-item-today"', self.html)
+        self.assertIn('🎯 Mot du jour Cémantix →', self.html)
+        self.assertIn('<li>Puzzle 1700</li>', self.html)
+        self.assertNotIn('#1700', self.html)
 
     def test_json_ld_headline_et_fil_dariane_en_francais(self):
         bloc = self._extrait(r'<script type="application/ld\+json">(.+?)</script>')
@@ -146,7 +151,7 @@ class TestIndexDesArchives(unittest.TestCase):
         # La tendance Google place « mot du jour » sur 5 requêtes sur 10 et « indice »
         # sur les deux premières : l'index des archives doit porter ce cluster, le mot
         # « solution » restant la spécialité des pages datées (SEO-13).
-        self.assertIn("<title>Indice Cémantix du jour : archives des mots du jour, indices et solutions par date</title>", self.html)
+        self.assertIn("<title>Cémantix : archives des indices, mots du jour et solutions par date</title>", self.html)
         self.assertIn(
             "<h1>Archives Cémantix du jour : le mot du jour, ses indices et sa solution</h1>",
             self.html,
@@ -169,7 +174,7 @@ class TestIndexDesArchives(unittest.TestCase):
     def test_la_page_2_est_titree_et_canonique(self):
         html = build_archives_index_page(self.entrees, 2, 2)
         self.assertIn(
-            "<title>Indice Cémantix du jour : archives des indices et solutions, page 2</title>", html
+            "<title>Cémantix : archives des indices et solutions, page 2</title>", html
         )
         self.assertIn(f'{SITE_ORIGIN}/puzzles/page/2/"', html)
 

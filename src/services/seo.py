@@ -57,6 +57,7 @@ from .seo_templates import (
     extract_clue_guesses,
     format_clue_words_list,
     format_date_fr,
+    format_date_short_fr,
     format_duration_fr,
     hub_url,
     parse_puzzle_date,
@@ -154,9 +155,11 @@ def prerender_dashboard(entry: Optional[dict], web_root: Path = None) -> bool:
         return False
 
     if entry:
-        date_fr = format_date_fr(entry.get("date"))
+        date_court = format_date_short_fr(entry.get("date"))
+        p_num = str(entry.get("puzzle") or "").lstrip("#").strip()
+        p_prefix = f"Cémantix {p_num} : " if p_num else "Cémantix : "
         replacements = {
-            "resume-title": f"Indice Cémantix du jour ({date_fr}) : indices, synonymes et mot du jour",
+            "resume-title": f"{p_prefix}indices et solution, quel est le mot du {date_court} ?",
             "resume-subtitle": "Indices thermiques, synonymes et performance du solveur IA du jour",
             "resume-body": _daily_summary(entry),
             "resume-link": (
@@ -169,7 +172,7 @@ def prerender_dashboard(entry: Optional[dict], web_root: Path = None) -> bool:
         }
     else:
         replacements = {
-            "resume-title": "Indice Cémantix du jour : indices, synonymes et mot du jour",
+            "resume-title": "Cémantix : indices, synonymes et solution du mot du jour",
             "resume-subtitle": "Indices thermiques, synonymes et performance du solveur IA",
             "resume-body": (
                 "Le résumé du puzzle du jour sera publié automatiquement après la "
@@ -201,9 +204,10 @@ def prerender_dashboard(entry: Optional[dict], web_root: Path = None) -> bool:
     if entry:
         puzzle = entry.get("puzzle")
         if puzzle:
+            p_clean = str(puzzle).lstrip("#").strip()
             source = re.sub(
                 r'(<span id="puzzle-badge"[^>]*>).*?(</span>)',
-                rf"\g<1>Puzzle #{puzzle}\g<2>",
+                rf"\g<1>Puzzle {p_clean}\g<2>",
                 source,
                 count=1,
                 flags=re.DOTALL,
@@ -341,6 +345,7 @@ __all__ = [
     # Templates & formatters
     "parse_puzzle_date",
     "format_date_fr",
+    "format_date_short_fr",
     "format_clue_words_list",
     "extract_clue_guesses",
     "archive_title",

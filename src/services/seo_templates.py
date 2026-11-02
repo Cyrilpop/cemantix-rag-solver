@@ -80,19 +80,24 @@ def format_date_fr(value) -> str:
     )
 
 
-def archive_title(value, puzzle=None) -> str:
-    """Titre SEO d'une archive : « Indice Cémantix #1700 du lundi 26 octobre 2026 ».
+def format_date_short_fr(value) -> str:
+    """Formate une date `AAAA-MM-JJ` en français court (« 26 octobre 2026 »), sans jour de la semaine."""
+    parsed = parse_puzzle_date(value)
+    if not parsed:
+        return str(value or "")
+    return f"{parsed.day} {_MONTHS_FR[parsed.month]} {parsed.year}"
 
-    Le même libellé sert de base de `<title>`, de `<h1>`, de texte d'ancre dans l'index des
-    archives et de `headline` JSON-LD : un seul motif, répété, qui cible la requête
-    « indice cemantix #XXX du <date> » sans dupliquer de contenu.
+
+def archive_title(value, puzzle=None) -> str:
+    """Titre SEO d'une archive : « Cémantix 1700 : indices et solution, quel est le mot du 26 octobre 2026 ? ».
+
+    Calibré sur les intentions de recherche dominantes (CTR maximal, 0 troncature mobile, sans '#').
     """
+    date_court = format_date_short_fr(value)
     if puzzle:
         p_clean = str(puzzle).lstrip("#").strip()
-        prefix = f"Indice Cémantix #{p_clean} du"
-    else:
-        prefix = ARCHIVE_TITLE_PREFIX
-    return f"{prefix} {format_date_fr(value)}"
+        return f"Cémantix {p_clean} : indices et solution, quel est le mot du {date_court} ?"
+    return f"Cémantix du {date_court} : indices et solution, quel est le mot du jour ?"
 
 
 def format_clue_words_list(guesses: list, limit: int = 10, secret_word: Optional[str] = None) -> str:
@@ -531,6 +536,19 @@ PAGE_CSS = """
           padding: .3rem .8rem; font-size: .85rem; color: var(--text-muted);
         }
         .meta-list strong { color: var(--text-main); }
+        .meta-list li.meta-item-today {
+          border-color: var(--accent);
+          background: rgba(88, 166, 255, 0.1);
+        }
+        .meta-list .meta-link-today {
+          color: var(--accent);
+          text-decoration: none;
+          font-weight: 600;
+        }
+        .meta-list .meta-link-today:hover {
+          color: #a5d6ff;
+          text-decoration: underline;
+        }
         table { width: 100%; border-collapse: collapse; margin-top: .75rem; font-size: .9rem; }
         caption { text-align: left; color: var(--text-muted); font-size: .85rem; padding-bottom: .5rem; }
         th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--border-color); }
@@ -1011,6 +1029,7 @@ __all__ = [
     "PAGE_CSS",
     "parse_puzzle_date",
     "format_date_fr",
+    "format_date_short_fr",
     "format_clue_words_list",
     "extract_clue_guesses",
     "archive_title",
