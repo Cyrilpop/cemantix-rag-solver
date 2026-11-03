@@ -4,7 +4,7 @@
  * Le joueur propose un mot ; l'API web l'empile, le worker le résout, et cette
  * page affiche les coups **en direct** via SSE (avec repli polling).
  * Pour donner vie à la réflexion de l'IA, chaque coup est révélé en temps réel
- * avec une pause aléatoire entre 0.1 et 0.5 seconde.
+ * avec une pause aléatoire entre 0.3 et 0.5 seconde (300ms à 500ms).
  * Rendu identique à la trajectoire du mot du jour (mêmes classes CSS, même modal).
  * Toute valeur affichée passe par escapeHtml() — règle du projet.
  */
@@ -100,23 +100,32 @@ async function processQueue() {
       return;
     }
 
+    // Pause aléatoire entre 0.3 et 0.5 seconde (300ms à 500ms) pour simuler la réflexion du bot
+    const pauseMs = Math.floor(Math.random() * 200) + 300;
+    await new Promise((resolve) => setTimeout(resolve, pauseMs));
+
+    if (session !== currentSessionId) {
+      isProcessingQueue = false;
+      return;
+    }
+
     const nextStep = pendingQueue.shift();
     displayedSteps.push(nextStep);
     appendStepToView(nextStep);
     setStatus(`Le bot joue… ${displayedSteps.length} coup(s).`);
-
-    // Pause aléatoire entre 0.1 et 0.5 seconde pour simuler la réflexion du bot
-    const pauseMs = Math.floor(Math.random() * 400) + 100;
-    await new Promise((resolve) => setTimeout(resolve, pauseMs));
   }
 
   isProcessingQueue = false;
 
   // Si le résultat terminal est arrivé pendant l'animation des coups
   if (session === currentSessionId && pendingDone) {
-    const donePayload = pendingDone;
-    pendingDone = null;
-    showResult(donePayload);
+    // Laisser un court instant pour voir le coup gagnant avant d'afficher la carte de dénouement
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    if (session === currentSessionId && pendingDone) {
+      const donePayload = pendingDone;
+      pendingDone = null;
+      showResult(donePayload);
+    }
   }
 }
 
