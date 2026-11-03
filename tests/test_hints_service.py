@@ -50,6 +50,10 @@ class TestHintsService(unittest.TestCase):
         db.execute("DELETE FROM daily_puzzles;")
         self.store = MockVocabStore()
 
+    def tearDown(self):
+        db.execute("DELETE FROM daily_puzzle_hints;")
+        db.execute("DELETE FROM daily_puzzles;")
+
     def test_generate_hints_empty_or_unknown(self):
         self.assertEqual(generate_hints_for_word("", self.store), [])
         self.assertEqual(generate_hints_for_word("inconnu12345", self.store), [])

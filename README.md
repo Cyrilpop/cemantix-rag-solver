@@ -140,7 +140,7 @@ docker compose down
 > - **Persistance relationnelle & ACID** : Chaque puzzle résolu est persisté de façon transactionnelle dans PostgreSQL (`daily_puzzles`) avec calcul SQL direct des métriques et miroir dans `./cemantix_data/daily_history.json`. Les indices thermiques par paliers sont enregistrés dans `daily_puzzle_hints`.
 > - **Amorçage & Rattrapage automatique idempotent (`bootstrap_database`)** : À chaque démarrage de `cemantix_worker` et `cemantix_web`, le conteneur applique automatiquement le DDL (`init_db()`), synchronise de manière idempotente les puzzles historiques depuis `daily_history.json` vers `daily_puzzles` (`ON CONFLICT DO UPDATE`), et génère via le RAG local les indices manquants dans `daily_puzzle_hints`. Aucune commande SQL manuelle n'est requise.
 > - **Rattrapage du jour** : Si le mot d'aujourd'hui n'a pas encore été résolu, le worker le trouve dès son lancement avant de se mettre en sommeil jusqu'au prochain minuit.
-> - **Génération automatique de `sitemap.xml` au démarrage** : Non versionnés sous Git (`.gitignore`) pour éviter tout conflit lors d'un `git pull`, `volumes/web/sitemap.xml` et les pages d'archives `/puzzles/` sont régénérés automatiquement et de manière atomique à chaque démarrage de `cemantix_web` et `cemantix_worker` (`ensure_seo_published()`).
+> - **Génération automatique du SEO & des indices au démarrage** : Non versionnés sous Git (`.gitignore`) pour éviter tout conflit lors d'un `git pull`, `volumes/web/sitemap.xml`, les pages d'archives `/puzzles/` et les hubs `/mot-du-jour/` et `/methode/` sont régénérés automatiquement et de manière atomique à chaque démarrage de `cemantix_web` et `cemantix_worker` (`ensure_seo_published()`). Les métadonnées HTML (`<title>`, `<meta name="description">`, OpenGraph, Twitter Cards) et Schema.org (`Article`, `CollectionPage`) intègrent automatiquement la liste des 10 mots indices thermiques les plus proches pour capter la longue traîne sémantique (« indices », « synonymes », « aide cemantix ») sans révéler le mot secret.
 
 > [!IMPORTANT]
 > **Permissions POSIX du volume `cemantix_data` (ChromaDB & non-root UID 1000) :**
@@ -331,8 +331,10 @@ Le projet intègre une interface web complète et réactive déposée dans le vo
 ```
 volumes/web/
 ├── index.html        # Tableau de bord du mot du jour (URL : /)
-├── puzzles/          # Archives quotidiennes indexables (générées par --publish-seo)
+├── puzzles/          # Archives quotidiennes indexables avec 10 mots indices (générées par --publish-seo)
 │   └── 2026-10-26/index.html
+├── mot-du-jour/      # Hub mot du jour, thermomètre et indices (généré hors Git)
+├── methode/          # Guide des indices, FAQ et synonymes (généré hors Git)
 ├── play/             # Interface dédiée au jeu interactif (URL propre : /play/)
 │   └── index.html    # Page de jeu (mode défi du jour, mode illimité)
 ├── battle/           # Mode Battle Joueur vs Bot IA RAG (URL propre : /battle/)
@@ -890,7 +892,7 @@ cemantix-rag-solver/
         ├── daemon.py        # Démon planificateur 24h/24 (veille, heartbeat threadé et résolution quotidienne)
         ├── hints.py         # Service sémantique RAG, calcul des paliers d'indices et bootstrap_database()
         ├── web.py           # Générateur et exportateur de données web avec masquage anti-spoiler
-        └── seo.py           # Génération atomique des archives /puzzles/, sitemap.xml et manifestes ARD .well-known/
+        └── seo.py           # Orchestrateur SEO (archives avec 10 indices, hubs, sitemap.xml et manifestes ARD)
 ```
 
 ---

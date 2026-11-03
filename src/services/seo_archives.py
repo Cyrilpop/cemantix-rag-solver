@@ -18,7 +18,10 @@ from .seo_templates import (
     archive_anchor,
     archive_title,
     archive_url,
+    extract_clue_guesses,
+    format_clue_words_list,
     format_date_fr,
+    format_date_short_fr,
     format_duration_fr,
     render_page,
 )
@@ -33,15 +36,19 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
     win = entry.get("win") is True
     tries = entry.get("tries")
     duration = format_duration_fr(entry.get("duration_seconds"))
-    guesses = [g for g in (entry.get("top_guesses") or []) if str(g.get("word", "")) != "••••••••"]
+    guesses = extract_clue_guesses(entry)
     source_label = "Hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
 
-    puzzle_label = f"Puzzle #{puzzle}" if puzzle else "Puzzle du jour"
-    puzzle_ref = f" #{puzzle}" if puzzle else ""
+    puzzle_label = f"Puzzle {str(puzzle).lstrip('#').strip()}" if puzzle else "Puzzle du jour"
+    puzzle_ref = f" {str(puzzle).lstrip('#').strip()}" if puzzle else ""
     title = archive_title(date_str, puzzle=puzzle)
+    date_court = format_date_short_fr(date_str)
+    puzzle_part = f" {str(puzzle).lstrip('#').strip()}" if puzzle else ""
+    clues_text = format_clue_words_list(guesses, limit=3, secret_word=word)
+    clues_snippet = f" ({clues_text})" if clues_text else ""
     description = (
-        f"{title} : le mot secret et les {min(len(guesses), 10)} mots les plus proches, "
-        f"trouvés en {tries or '--'} coups par le solveur {source_label} ({puzzle_label})."
+        f"Retrouvez les indices thermiques{clues_snippet} et la solution du Cémantix{puzzle_part} du {date_court} "
+        f"afin de deviner plus facilement le mot du jour sans spoiler."
     )
     canonical = archive_url(date_str)
 
@@ -104,6 +111,11 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
         f"<li>Résolu en <strong>{escape(str(tries or '--'))} coups</strong></li>",
         f"<li>Durée de calcul&nbsp;: <strong>{escape(duration)}</strong></li>",
         f"<li>Méthode&nbsp;: <strong>{escape(source_label)}</strong></li>",
+        (
+            f'<li class="meta-item-today"><a href="{escape(_rel("mot-du-jour/"), quote=True)}" '
+            f'class="meta-link-today" title="Consulter les indices et la solution du mot du jour Cémantix en cours">'
+            f'🎯 Mot du jour Cémantix →</a></li>'
+        ),
     ]
     win_badge = (
         '<span class="badge badge-win">✓ Trouvé</span>'
@@ -124,7 +136,7 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
             <tr><th scope="col">#</th><th scope="col">Mot</th><th scope="col">Score</th><th scope="col">Similarité</th></tr>
           </thead>
           <tbody>
-{_clue_rows(guesses)}
+{_clue_rows(guesses, limit=10, secret_word=word)}
           </tbody>
         </table>
       </section>
@@ -267,9 +279,9 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
     newest_fr = format_date_fr(newest.get("date")) if newest else ""
 
     if page == 1:
-        title = "Cémantix du jour : mot du jour, indices et solutions par date"
+        title = "Cémantix : archives des indices, mots du jour et solutions par date"
     else:
-        title = f"Cémantix du jour : archives des indices et solutions, page {page}"
+        title = f"Cémantix : archives des indices et solutions, page {page}"
     description = (
         f"Le mot du jour Cémantix et ses indices, date par date ({len(entries)} puzzles "
         f"résolus) : thermomètre sémantique, nombre de coups et solution dépliable. "
@@ -298,7 +310,8 @@ def build_archives_index_page(entries: list, page: int, total_pages: int) -> str
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "@id": f"{canonical}#collection",
-        "name": "Archives Cémantix du jour : mot du jour, indices et solutions",
+        "name": title,
+        "headline": title,
         "description": description,
         "inLanguage": "fr-FR",
         "isPartOf": {"@type": "WebSite", "name": "Cémantix Solver", "url": f"{SITE_ORIGIN}/"},

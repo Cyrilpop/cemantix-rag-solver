@@ -4,6 +4,36 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-01 · Jalon M7 : Optimisation SEO des Métadonnées (Indices, Synonymes et Mots Proches)
+
+### Ajouté
+- **Enrichissement sémantique des métadonnées avec les 10 mots indices du jour (`src/services/seo_templates.py`, `seo_archives.py`, `seo_hubs.py`, `seo.py`)** :
+  - Fonction utilitaire `format_clue_words_list` extrayant et normalisant les 10 premiers mots indices du thermomètre (minuscules, séparés par des virgules, filtrage du masque `••••••••`).
+  - Injection automatique de la liste descriptive des 10 indices thermiques dans les balises `<meta name="description">`, `og:description` et `twitter:description` des pages d'archives quotidiennes (`/puzzles/AAAA-MM-JJ/`) et du hub Mot du jour (`/mot-du-jour/`).
+  - Intégration des indices et synonymes dans le résumé statique pré-rendu du tableau de bord (`_daily_summary`, `prerender_dashboard`).
+
+### Modifié
+- **Réalignement d'élite des balises `<title>`, `<h1>` et métadonnées (modèle Gamewave sans `#`, date courte)** :
+  - Balises `<title>` et `<h1>` des archives et du hub mot du jour : « Cémantix {puzzle} : indices et solution, quel est le mot du {date_court} ? » (70 caractères, CTR maximal, zéro troncature SERP, sans croisillon `#`).
+  - Helper `format_date_short_fr` (« 2 novembre 2026 » sans jour de la semaine) correspondant exactement aux requêtes des joueurs (« cemantix 2 novembre »).
+  - Balises `<meta name="description">`, `og:description` et `twitter:description` combinant l'accroche d'action Gamewave et les indices thermiques sans spoiler (« Retrouvez les indices thermiques ({clues}) et la solution du Cémantix {puzzle} du {date_court} afin de deviner plus facilement le mot du jour sans spoiler. »).
+  - Titres de l'index paginé des archives épurés : « Cémantix : archives des indices, mots du jour et solutions par date » (page 1) et « Cémantix : archives des indices et solutions, page {page} » (page N).
+  - Maillage interne permanent : injection de la pilule `.meta-item-today` (`🎯 Mot du jour Cémantix →`) dans le bloc `.meta-list` des 100+ pages d'archives, canalisant le PageRank interne vers `/mot-du-jour/` sans réécriture nocturne fragile de la date.
+  - Synchronisation stricte des propriétés Schema.org JSON-LD (`Article.headline`, `Article.description`, `CollectionPage.headline`, `CollectionPage.description`).
+- **Sanctuaire de tests & Non-régression (`tests/test_seo_*.py`)** :
+  - Adaptation complète des assertions de titrage, de description et de structure JSON-LD dans `test_seo_archives.py`, `test_seo_characterization.py`, `test_seo_hubs.py` et `test_seo_backward_compat.py`.
+  - 332 tests unitaires validés avec succès sous Docker Python 3.12 (0 régression).
+
+### Corrigé
+- **Préservation et désérialisation garantie des indices du mot du jour (`src/db/daily.py`, `src/services/seo_templates.py`, `src/services/seo_hubs.py`, `src/services/seo.py`)** :
+  - `_row_to_entry` : désérialisation JSON sécurisée (`json.loads`) des colonnes `top_guesses` et `trajectory` lorsqu'elles sont renvoyées sous forme de chaînes de caractères par SQLite, empêchant la perte silencieuse des listes d'indices.
+  - `extract_clue_guesses` : chaîne de repli robuste garantissant l'extraction d'indices pour chaque puzzle (`top_guesses` -> `trajectory` ordonnée -> table relationnelle `daily_puzzle_hints`).
+  - Filtrage anti-spoiler systématique : exclusion rigoureuse du mot secret (par comparaison insensible à la casse ou score maximal 100°C / 1000‰) et des leurres masqués (`••••••••`) de la liste descriptive des métadonnées et du tableau HTML d'indices.
+  - Nettoyage automatique (`tearDown`) dans `TestHintsService` pour éviter toute pollution de la base SQLite locale par des puzzles de test sans indices.
+  - Nouvelle suite de tests unitaires dédiée : `tests/test_seo_clues_preservation.py` (5 tests validés).
+
+---
+
 ## [Non publié] - 2026-11-01 · Jalon M6 : Persistance Relationnelle des Paliers d'Indices & Bootstrap Idempotent (daily_puzzle_hints)
 
 ### Ajouté & Amélioré
