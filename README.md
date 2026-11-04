@@ -412,19 +412,47 @@ cemantix.cyril-randon.fr {
         Cross-Origin-Opener-Policy "same-origin"
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
-        # Politique de sécurité du contenu. Le site n'utilise AUCUNE ressource externe
-        # (ni CDN, ni police, ni script tiers) : la politique peut donc être
-        # restrictive. 'unsafe-inline' pour les styles est nécessaire car les feuilles
-        # de style sont locales et les style="…" posés par le JS sont des valeurs codées
-        # en dur, jamais des données utilisateur.
-        # script-src 'self' suffit : seul js/app.js (module ES local) est chargé, donc
-        # tout <script> injecté par une faille XSS est bloqué par le navigateur.
-        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+        # Politique de sécurité du contenu. Le site ne chargeait jusqu'ici aucune
+        # ressource externe ; la mesure d'audience Google Tag Manager introduit
+        # deux origines tierces (googletagmanager.com pour le conteneur,
+        # google-analytics.com pour les hits) et un <script> inline obligatoire
+        # (window.dataLayer / gtag). 'unsafe-inline' sur script-src est donc
+        # requis : la protection XSS ne repose plus sur la CSP mais sur
+        # l'absence totale de donnée utilisateur dans le HTML généré, plus les
+        # restrictions conservées (base-uri, form-action, frame-ancestors,
+        # object-src).
+        # L'ID GTM n'est JAMAIS versionné : les fichiers HTML portent le jeton Go
+        # template {{ env `GOOGLE_TAG_MANAGER_ID` }}, évalué à la livraison par la
+        # directive `templates` ci-dessous, alimentée par la variable d'environnement
+        # du conteneur Caddy (GOOGLE_TAG_MANAGER_ID défini dans .env).
+        # Variable vide ou absente = script inerte, aucun suivi, aucun HTTP 500.
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://tagassistant.google.com; style-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://fonts.googleapis.com https://tagassistant.google.com; img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com https://ssl.gstatic.com https://www.gstatic.com; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://tagassistant.google.com; font-src 'self' data: https://fonts.gstatic.com; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
     }
 
+    # Google Tag Manager : évalue le jeton Go template porté par les fichiers HTML
+    # et livre l'ID réel dans la réponse uniquement (le fichier sur disque et git
+    # reste neutre).
+    # POURQUOI `templates` et pas `replace_response` : `replace_response` n'est
+    # disponible qu'en sortie de `reverse_proxy` (sous-directive `handle_response`) ;
+    # vérifié sur Caddy 2.11.7, il est « unrecognized directive » pour des fichiers
+    # statiques servis par `file_server` — et une directive inconnue fait refuser
+    # toute la configuration par Caddy, qui ne sert alors plus rien du tout.
+    # `templates` est le seul mécanisme applicable à `file_server`. Il est compatible
+    # avec `encode` : Caddy trie les directives canoniquement (vars, headers, encode,
+    # templates, puis file_server), donc le corps est rendu AVANT la compression —
+    # substitution vérifiée à travers gzip sur une page de 60 Ko.
+    # ATTENTION : `templates` évalue TOUT séquence « {{ » ou « {% » des fichiers
+    # servis ; une action invalide (ou une variable inconnue) fait tomber la page en
+    # HTTP 500. `tools/check_seo.py` interdit donc tout délimiteur orphelin hors bloc
+    # GTM. La position de `templates` est libre : déclarée au niveau du site, elle
+    # englobe aussi le `file_server` du bloc `handle` (vérifié).
+    templates
+
     # Pages d'archives : contenu statique et script inline de bascule de thème.
+    # GTM : mêmes origines tierces et même exigence de script inline que le bloc
+    # header principal (voir le commentaire CSP ci-dessus).
     header /puzzles/* {
-        Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://tagassistant.google.com; style-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://fonts.googleapis.com https://tagassistant.google.com; img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com https://ssl.gstatic.com https://www.gstatic.com; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://tagassistant.google.com; font-src 'self' data: https://fonts.gstatic.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     }
 
     # 1. Polices web immuables (cache 1 an)
@@ -476,8 +504,17 @@ cemantix.cyril-randon.fr {
 
     # Blocage des fichiers de données et de configuration, même s'ils venaient
     # à atterrir dans le webroot par erreur (défense en profondeur).
-    @intercepted path /data.json /daily_history.json /web_sessions.json /multi_sessions.json /.env /.env.* /.git /*.py /*.pyc /*.log /*.bin
-    respond @intercepted 404
+    # LE BLOC DOIT ETRE ENVELOPPÉ DANS `route` : Caddy trie les directives
+    # canoniquement et place `respond` (static_response) APRÈS `file_server`.
+    # Écrit nu, ce bloc est du code mort : vérifié sur Caddy 2.11.7, /.env et
+    # /data.json étaient servis avec leur contenu (HTTP 200). `route` impose
+    # l'ordre d'écriture et le 404 est alors effectif.
+    # (Alternative équivalente : `file_server { hide data.json .env ... }`, mais
+    # SANS slash initial — avec slash, `hide` ne bloque rien.)
+    route {
+        @intercepted path /data.json /daily_history.json /web_sessions.json /multi_sessions.json /.env /.env.* /.git /*.py /*.pyc /*.log /*.bin
+        respond @intercepted 404
+    }
 
     # Fichiers statiques et routes propres (/play, /battle, /multi)
     handle {
@@ -807,6 +844,40 @@ Ces variables peuvent être définies dans votre shell ou dans un fichier `.env`
 | `ADMIN_API_PATH` | `/api/snap-9x` | Préfixe d'accès sécurisé pour l'API de supervision de la console. |
 | `DOCKER_GID` | `120` | GID propriétaire du socket `/var/run/docker.sock` autorisant les logs sous utilisateur non-root. |
 | `DASHBOARD_DATA_FILE` | `cemantix_data/data.json` | Emplacement de `data.json`. **Ne doit pas** pointer dans `volumes/web` (refusé par `export_web_data`). |
+| `GOOGLE_TAG_MANAGER_ID` | `—` (vide = pas de suivi) | Identifiant de conteneur Google Tag Manager (`GTM-XXXXXXXX`). **Secret d'exploitation : à ne jamais versionner.** Les pages HTML ne portent que le jeton Go template ``{{ env `GOOGLE_TAG_MANAGER_ID` }}`` ; l'ID réel est évalué à la livraison par le proxy (`templates` Caddy, `sub_filter` nginx). Variable vide ou absente = script inerte `gtm.js?id=`, sans erreur. La console `/panier-9x/` reste sans tracker. |
+
+---
+
+## 📈 Mesure d'audience Google Tag Manager
+
+Le bloc GTM (`gtm.js` + `window.dataLayer` + `gtag('js', new Date())`) est injecté dans le `<head>`
+des 5 vues applicatives et de toutes les pages SEO générées, **sans que l'identifiant ne transite
+jamais par git** :
+
+1. **Le fichier ne porte qu'un jeton.** `src/services/gtm.py` écrit
+   `gtm.js?id={{ env `GOOGLE_TAG_MANAGER_ID` }}` dans les pages ; `tools/build_css_bundles.py` et
+   `python tools/sync_layout.py` entretiennent ce bloc (idempotent, balisé
+   `<!-- GTM:START/END -->`), y compris au démarrage des conteneurs via
+   `layout_sync.sync_all_pages()`.
+2. **L'ID vient de `.env`.** `GOOGLE_TAG_MANAGER_ID` y est lu par le proxy, jamais par un build :
+   Caddy en production (directive `templates`, qui évalue l'action Go template — **pas**
+   `replace_response`, réservé à `reverse_proxy` et inconnu de `file_server`) et nginx en local
+   (`sub_filter` + `local/nginx/entrypoint-gtm.sh`, la config étant montée en `:ro`).
+3. **Variable vide = aucun suivi.** La page est livrée avec `gtm.js?id=` : le conteneur n'est pas
+   chargé, aucune erreur de démarrage. C'est le comportement par défaut en développement, en test
+   et en CI (identique côté Caddy et nginx).
+4. **Contrôle anti-fuite.** `python tools/check_seo.py` échoue si un identifiant `GTM-XXXXXXXX`
+   apparaît dans un fichier sous `volumes/web`.
+5. **Contrôle des délimiteurs.** `templates` évaluant toute séquence `{{` ou `{%` des fichiers
+   servis, une action invalide ferait renvoyer un **HTTP 500** sur toute la page :
+   `tools/check_seo.py` interdit donc tout délimiteur orphelin hors bloc GTM.
+
+> La console d'exploitation `/panier-9x/` est **exclue** du suivi : page privée `noindex, nofollow`,
+> elle ne reçoit aucun tracker, même lorsque la variable est renseignée.
+
+> La CSP doit autoriser les origines GTM et son mode prévisualisation / Tag Assistant (`script-src 'unsafe-inline' https://www.googletagmanager.com
+> https://www.google-analytics.com https://tagassistant.google.com`, `style-src` avec `fonts.googleapis.com`, `font-src` avec `fonts.gstatic.com`, plus `img-src`/`connect-src` pour les hits) : le script inline
+> `dataLayer`/`gtag` est imposé par Google. Voir le Caddyfile de la section déploiement.
 
 ---
 

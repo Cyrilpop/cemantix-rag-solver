@@ -14,6 +14,7 @@ from typing import Optional
 from urllib.parse import quote
 
 from ..config import BASE_DIR
+from .gtm import GTM_SNIPPET
 from .layout_sync import render_header, render_nav_tabs, render_footer
 
 WEB_ROOT = BASE_DIR / "volumes" / "web"
@@ -890,6 +891,10 @@ def render_page(
         if breadcrumbs
         else ""
     )
+    # Le bloc GTM est rendu avec le gabarit placeholder : l'identifiant réel
+    # (GOOGLE_TAG_MANAGER_ID, secret .env) n'est jamais écrit sur le disque. Il
+    # est évalué à la livraison par le proxy (directive `templates` de Caddy,
+    # `sub_filter` sous nginx) ou par le serveur applicatif. src/services/gtm.py.
     return f"""<!DOCTYPE html>
 <html lang="fr" data-theme="dark">
 <head>
@@ -937,6 +942,7 @@ def render_page(
       }} catch(e) {{}}
     }});
   </script>
+  {GTM_SNIPPET}
 </head>
 <body>
 {header_html}

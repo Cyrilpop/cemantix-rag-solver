@@ -6,6 +6,12 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Easter egg volontaire (private joke d'équipe) : balise meta libre, sans aucun
+       effet sur le référencement — les moteurs ignorent les noms qu'ils ne connaissent
+       pas. À NE PAS retirer lors d'un nettoyage SEO, elle est délibérée. À ne pas
+       confondre avec l'entrée « Bonus » jadis présente dans le JSON-LD FAQ de cette
+       page : celle-là déclarait un type hors schema.org, ce qui faisait perdre à
+       toute la page son rich result FAQ, et a donc dû être supprimée. -->
   <meta name="easter-egg" content="HEEEYYYYY YOUUUUUU Christophe !">
   
   <!-- ======================================================================
@@ -186,14 +192,6 @@
               "@type": "Answer",
               "text": "Partez du mot le plus chaud obtenu et explorez quatre familles : les synonymes (voiture, automobile, auto), les antonymes (chaud, froid) qui partagent le même contexte, la famille grammaticale (jardin, jardiner, jardinage) et le champ lexical concret (hôpital, médecin, lit, urgence). Le moteur est entraîné sur la presse francophone : les associations de presse sont les plus payantes."
             }
-          },
-          {
-            "@type": "Bonus",
-            "name": "Comment dire bonjour à Christophe ?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Rien de plus simple, il suffit de rentrer dans la pièce et lancer un immense HEYYYY YOUUUU"
-            }
           }
         ]
       },
@@ -227,6 +225,14 @@
     ]
   }
   </script>
+  <!-- GTM:START -->
+  <script async src="https://www.googletagmanager.com/gtm.js?id={{ env `GOOGLE_TAG_MANAGER_ID` }}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+  </script>
+  <!-- GTM:END -->
 </head>
 <body>
   <!-- Header / Navigation -->

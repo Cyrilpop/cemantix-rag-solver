@@ -4,6 +4,91 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-04 · GTM : substitution réellement effective via Caddy (`templates`)
+
+### Corrigé
+- **`replace_response` n'était pas applicable (Caddy)** : la directive documentée pour injecter
+  l'identifiant GTM dans les pages statiques n'existe qu'en sortie de `reverse_proxy` (sous-directive
+  `handle_response`). Vérifié sur Caddy 2.11.7 : `unrecognized directive: replace_response`, et une
+  directive inconnue fait **refuser toute la configuration** par Caddy, qui ne sert alors plus rien.
+  La livraison passe donc par la directive **`templates`**, seul mécanisme applicable à `file_server`.
+- **Jeton remplacé dans les fichiers** : `gtm.js?id=GOOGLE_TAG_MANAGER_ID` devient
+  ``gtm.js?id={{ env `GOOGLE_TAG_MANAGER_ID` }}`` (action Go template). Les **backticks** sont retenus
+  plutôt que les guillemets doubles pour ne pas imbriquer de guillemets dans l'attribut `src="…"`.
+  Substitution vérifiée de bout en bout sur les 5 vues avec la configuration du README, y compris à
+  travers **gzip** sur une page réelle de 71 Ko (`encode` est trié avant `templates` par l'ordre
+  canonique de Caddy, la position dans le fichier est donc indifférente).
+- **Repli sans variable aligné sur Caddy (`local/nginx/entrypoint-gtm.sh`)** : le marqueur `%%GTM_ID%%`
+  se résolvait en le mot `GOOGLE_TAG_MANAGER_ID`. Cible et remplacement différant depuis que la cible
+  est une action Go template, le navigateur aurait reçu un **faux identifiant**. Le repli est désormais
+  une chaîne vide : `gtm.js?id=`, comme Caddy (vérifié sur la vraie config du dépôt, HTTP 200, aucun
+  suivi, aucun 500).
+- **`respond @intercepted 404` inefficace (Caddyfile du README)** : Caddy trie les directives
+  canoniquement et place `static_response` **après** `file_server`. Le bloc de défense en profondeur
+  était du code mort : `/.env` et `/data.json` étaient servis **avec leur contenu** (HTTP 200). Le bloc
+  est désormais enveloppé dans `route`, qui impose l'ordre d'écriture — les deux chemins renvoient 404.
+  Note : `file_server { hide … }` est une alternative équivalente, mais **sans slash initial** (avec
+  slash, `hide` ne bloque rien). À reporter sur le Caddyfile du serveur, non versionné.
+- **Test dépendant de l'environnement (`tests/test_gtm.py`)** : `test_pas_did_ne_change_rien` passait
+  `None` à `resolve_gtm_for_delivery()`, ce qui relit l'environnement. Il échouait dès que `.env` est
+  exporté dans le shell (il ne passait en CI que par absence de la variable). Le cas est désormais
+  isolé par `mock.patch.dict`, et un test symétrique verrouille la relecture de l'environnement.
+
+### Ajouté
+- **Interdiction des délimiteurs Go orphelins (`tools/check_seo.py`)** : `templates` évaluant toute
+  séquence `{{` ou `{%` des fichiers servis, une action invalide fait tomber la page entière en
+  **HTTP 500**. Tout délimiteur hors bloc `GTM:START/END` fait désormais échouer la CI.
+- **Source de vérité unique** : `tools/check_seo.py` charge `src/services/gtm.py` par chemin (stdlib
+  seule, compatible job `docs` de la CI) et n'utilise plus le jeton en dur.
+
+---
+
+## [Non publié] - 2026-11-04 · Correction Search Console : type illicite dans la FAQ de l'accueil
+
+### Corrigé
+- **`FAQPage.mainEntity` de type `Bonus` (`volumes/web/index.html`)** : une entrée de
+  plaisanterie interne (« Comment dire bonjour à Christophe ? ») avait été déclarée avec
+  `@type: "Bonus"`, type absent de schema.org. Search Console le rejetait — « Bonus n'est
+  pas un type de cible valide connu pour la propriété mainEntity » — et l'erreur faisait
+  perdre à toute la page d'accueil son rich result FAQ (8 questions éligibles). L'entrée
+  est supprimée ; les 8 questions valides (`Question` + `acceptedAnswer: Answer`) restent
+  en place, ce qui préserve le seuil de 8 questions exigé par `tests/test_seo_hubs.py`.
+
+### Ajouté
+- **Contrôle des types JSON-LD en CI (`tools/check_seo.py`, `check_jsonld`)** : chaque bloc
+  `application/ld+json` est parsé (une syntaxe invalide fait échouer la CI) et, pour tout
+  nœud `FAQPage`, `mainEntity` doit être `Question` et `acceptedAnswer` `Answer`. Le contrôle
+  tolère les formes JSON-LD licites multiples (`@graph`, `@type` en liste, `mainEntity` objet).
+- **Verrou de non-régression (`tests/test_seo_hubs.py`)** : `test_toutes_les_faq_n_utilisent_que_le_type_question`
+  parcourt les 5 vues et l'ensemble de leurs blocs JSON-LD (vérifié : l'injection d'un type
+  illicite rend le test rouge).
+
+---
+
+## [Non publié] - 2026-11-04 · Mesure d'audience Google Tag Manager (GTM sans fuite de secret)
+
+### Ajouté
+- **Injection Google Tag Manager sur toutes les pages (`src/services/gtm.py`, nouveau module)** :
+  - Bloc de suivi (`gtm.js` + `window.dataLayer` + `gtag('js', new Date())`) injecté dans le `<head>` des 5 vues statiques (`index.html`, `/play/`, `/battle/`, `/multi/`, `/defi/`) et de toutes les pages SEO générées (archives `/puzzles/`, index paginé, hubs `/mot-du-jour/` et `/methode/`).
+  - La console d'exploitation `/panier-9x/` est **volontairement exclue** de tout suivi (page privée `noindex, nofollow`) : elle reste 100 % sans tracker.
+  - Injection idempotente délimitée par `<!-- GTM:START -->` / `<!-- GTM:END -->`, branchée dans `layout_sync.sync_all_pages()` (donc au démarrage des conteneurs) et dans `render_page()` pour les gabarits générés.
+- **Secret d'exploitation hors git (`GOOGLE_TAG_MANAGER_ID`)** :
+  - L'identifiant de conteneur vit uniquement dans `.env` (déjà couvert par le `.gitignore` `.env*`) ; `.env.example` documente la clé **vide** par défaut.
+  - Les fichiers HTML, versionnés comme générés, ne portent que le gabarit placeholder ``gtm.js?id={{ env `GOOGLE_TAG_MANAGER_ID` }}`` : l'ID réel n'est **jamais écrit sur le disque**, il est substitué à la livraison HTTP.
+  - Livraison : directive `templates` de Caddy, qui évalue l'action Go template depuis l'environnement du conteneur (README, Caddyfile de production) et `sub_filter` nginx pour le banc local (`local/nginx/cemantix.local.conf` + `local/nginx/entrypoint-gtm.sh`, la config étant montée en lecture seule). *Ces deux lignes ont été corrigées : la première version retenait `replace_response`, directive en réalité inapplicable à des fichiers statiques — voir la section « GTM : substitution réellement effective via Caddy » ci-dessus.*
+- **Contrôle anti-fuite en CI (`tools/check_seo.py`)** :
+  - Chaque page auditée doit porter le bloc placeholder ; la présence d'un identifiant réel `GTM-XXXXXXXX` dans un fichier sous `volumes/web` fait échouer la CI (`check_gtm_fuite`).
+- **Outillage** : `tools/sync_layout.py` injecte le bloc et signale l'absence de `GOOGLE_TAG_MANAGER_ID` ; `tools/build_css_bundles.py` entretient le bloc aux côtés du CSS critique et vérifie la substitution en livraison (sans jamais afficher l'ID en `--check`).
+- **Content-Security-Policy élargie** : `script-src`/`img-src`/`connect-src` autorisent `googletagmanager.com` et `google-analytics.com` (README Caddy + config nginx locale), nécessité liée au script inline `dataLayer`/`gtag` imposé par GTM.
+- **Suite de tests dédiée (`tests/test_gtm.py`, 19 tests)** : intégrité du gabarit, idempotence de l'injection, substitution à la livraison, durcissement du jeton altéré, exclusion de la console admin, absence de toute fuite d'ID sur disque, déterminisme du rendu généré avec ou sans variable d'environnement.
+
+### Modifié
+- `src/services/seo_templates.py` : `render_page` émet le bloc GTM placeholder (indépendant de l'environnement, donc diff git neutre).
+- `src/api/server.py` : journalise au démarrage l'état de la mesure d'audience (ID chargé / variable absente).
+- `tools/build_css_bundles.py` : charge `gtm.py` par chemin direct (stdlib seule) afin de rester exécutable sur un poste nu et dans le job `docs` de la CI, sans `requirements.txt`.
+
+---
+
 ## [Non publié] - 2026-11-03 · Défier le Bot : Animation Temps Réel & Simulation de Réflexion
 
 ### Ajouté
