@@ -4,6 +4,21 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-04 · Jalon M8 : Traçage relationnel & Métriques KPI des Défis Visiteurs
+
+### Ajouté
+- **Persistance analytique pérenne des défis (`bot_challenge_stats`)** : table relationnelle stockant l'issue (`won`, `lost`, `error`), le mot secret, le nombre d'essais, la durée et l'identifiant pseudonymisé du visiteur. Schémas DDL idempotents sous PostgreSQL (`database/init.sql`, `PG_SCHEMA`) et SQLite (`SQLITE_SCHEMA`).
+- **Historique normalisé des coups du solveur (`bot_challenge_guesses`)** : table 1:N liant chaque mot testé au défi associé (`step_num`, `word`, `score`, `permille`, `weather`, `is_record`, `source`), avec clé étrangère et suppression en cascade (`ON DELETE CASCADE`).
+- **Couche DAO & Agrégation des KPIs (`src/db/challenges.py`)** :
+  - `record_challenge_stat()` : insertion idempotente (`ON CONFLICT (challenge_id) DO NOTHING`).
+  - `save_challenge_guesses()` et `get_challenge_guesses()` : écriture transactionnelle et lecture chronologique des coups.
+  - `get_challenge_kpis()` : calcul des statistiques globales (taux de réussite bot vs visiteurs, distribution des coups min/max/moyenne, top mots joués, mots coriaces ayant mis le bot en échec, activité récente) et des métriques du joueur appelant.
+  - `anonymize_player_token()` et `format_player_display()` : pseudonymisation stricte RGPD (`Visiteur #a1b2`) sans exposition ni stockage d'adresse IP brute.
+- **Enregistrement automatique au terme du défi (`src/services/challenges.py`)** : déclenchement de l'archivage analytique et de la trajectoire dès la résolution ou l'arrêt d'un défi (`process_next_challenge`).
+- **Suite de tests unitaires (`tests/test_challenge_kpis.py`)** : validation de l'idempotence DDL, du dédoublonnage, du calcul des KPIs et de la conformité RGPD (358 tests au vert).
+
+---
+
 ## [Non publié] - 2026-11-04 · GTM : substitution réellement effective via Caddy (`templates`)
 
 ### Corrigé

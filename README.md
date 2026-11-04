@@ -106,7 +106,7 @@ pip install -r requirements.txt
 ### Option B : Déploiement avec Docker (Architecture 3-Tiers Découplée)
 
 Le déploiement s'appuie sur une **architecture 3-tiers découplée et durcie** définie dans `docker-compose.yml` :
-- `cemantix_db` : Base de données relationnelle PostgreSQL 16 Alpine pour la persistance transactionnelle ACID (`daily_puzzles`, `daily_puzzle_hints`, `solo_sessions`, `multi_rooms`).
+- `cemantix_db` : Base de données relationnelle PostgreSQL 16 Alpine pour la persistance transactionnelle ACID (`daily_puzzles`, `daily_puzzle_hints`, `solo_sessions`, `multi_rooms`, `bot_challenges`, `bot_challenge_stats`, `bot_challenge_guesses`).
 - `cemantix_worker` : Démon planificateur d'arrière-plan 24h/24 (calcul vectoriel lourd ChromaDB, résolution quotidienne à 00h00 heure de Paris et publication SEO).
 - `cemantix_web` : API REST HTTP haute performance (< 200 Mo RAM) servant le frontend web, le jeu Solo, le mode Battle, le Multijoueur 1v1, le mot du jour et la génération automatique de `sitemap.xml` au démarrage.
 - `cemantix` : Conteneur CLI éphémère (profil `cli`) pour les commandes interactives, les benchmarks et les tests unitaires.
@@ -382,6 +382,7 @@ Le visiteur propose **un mot secret** ; le solveur RAG du site doit le retrouver
 1. **`cemantix_web` enfile, ne calcule jamais** — `POST /api/challenge` valide le mot (regex + lexique du site, message unique « Mot non reconnu »), vérifie la whitelist d'exemption, l'anti-rafale mémoire, le **quota de 10 défis/heure persisté en base** (insensible aux redémarrages) et la file bornée, puis écrit une ligne dans `bot_challenges`. Le module de route n'importe ni solveur ni démon (`grep -n "solvers\|daemon" src/api/routes/challenge.py` est vide).
 2. **`cemantix_worker` résout** — dans sa boucle de veille, toutes les 3 s : recyclage des orphelins, claim atomique, résolution par le moteur existant (`Solver` + `MockClient(secret=…)` de l'option `--secret` du CLI) **en 100 % RAG pur, zéro LLM**, trajectoire publiée toutes les 2 s. La résolution nocturne de minuit garde la priorité ; `CHALLENGE_ENABLED=0` coupe tout sans redéploiement.
 3. **Le front affiche** — `js/defi.js` ouvre un `EventSource` sur `/api/challenge/<id>/stream` (repli polling automatique si le flux tombe) et rend chaque coup au gabarit exact de la trajectoire du mot du jour ; le bot peut **perdre** (statut `lost`), c'est une issue affichée.
+4. **Traçage analytique & KPIs communautaires (M8)** — à la clôture du défi, le worker enregistre de façon atomique et pérenne la performance dans `bot_challenge_stats` et le cheminement coup par coup dans `bot_challenge_guesses`. Les identifiants visiteurs sont pseudonymisés (`Visiteur #a1b2`, RGPD sans stockage d'IP brute), et l'API DAO agrège les indicateurs clés (taux de victoire IA/joueur, coups moyens, top mots joués, mots invaincus).
 
 Sécurité : IP hachée (HMAC-SHA256 salé, /24), purge automatique à 30 jours, identifiants de défis aléatoires 128 bits, `Cache-Control: no-store`, mot jamais révélé avant le statut terminal (et seulement si le bot a gagné), anti-XSS en trois couches, plafond de 16 flux SSE simultanés. Les IP exemptées se gèrent dans la console d'exploitation (onglet Actions).
 
@@ -899,7 +900,7 @@ cemantix-rag-solver/
 ├── README.md                # Documentation complète du projet
 ├── CHANGELOG.md             # Historique des versions et refactorings
 ├── database/                # Schémas SQL relationnels
-│   └── init.sql             # DDL PostgreSQL officiel (daily_puzzles, daily_puzzle_hints, multi_rooms, solo_sessions)
+│   └── init.sql             # DDL PostgreSQL officiel (daily_puzzles, hints, salons, défis & stats M8)
 ├── scripts/                 # Scripts d'exploitation et de migration
 │   ├── backfill_daily_hints.py # Amorçage et rattrapage idempotent des indices RAG
 │   └── migrate_json_to_pg.py   # Migration d'historique daily_history.json vers PostgreSQL
