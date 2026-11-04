@@ -1,8 +1,9 @@
 """Tests du module d'injection Google Tag Manager (src/services/gtm.py).
 
 Garanties vérifiées :
-1. Le gabarit déposé dans les fichiers ne contient QUE le placeholder
-   ``GOOGLE_TAG_MANAGER_ID`` — jamais l'ID réel (secret .env, jamais versionné).
+1. Le gabarit déposé dans les fichiers ne contient QUE le placeholder Go template
+   ``{{ env `GOOGLE_TAG_MANAGER_ID` }}`` — jamais l'ID réel (secret .env, jamais
+   versionné).
 2. L'injection est idempotente et se place avant ``</head>``.
 3. La substitution à la livraison remplace le placeholder par l'ID réel.
 4. Les pages statiques versionnées portent le bloc ; la console /panier-9x/ en
@@ -102,9 +103,25 @@ class TestDeliveryResolution(unittest.TestCase):
         self.assertNotIn(GTM_PLACEHOLDER, livree)
 
     def test_pas_did_ne_change_rien(self):
+        # « pas d'ID » doit se lire des deux façons : ID explicitement vide, et
+        # None = « relire l'environnement » dans un environnement qui n'en fournit
+        # pas. Sans patch, ce test dépendrait de l'absence réelle de
+        # GOOGLE_TAG_MANAGER_ID dans le shell : il passait en CI par construction
+        # et échouait sur tout poste où le .env est exporté.
         page = inject_gtm_block("<html><head><title>t</title></head><body></body></html>")
         self.assertEqual(resolve_gtm_for_delivery(page, ""), page)
-        self.assertEqual(resolve_gtm_for_delivery(page, None), page)
+        with mock.patch.dict(os.environ, {}, clear=True):
+            self.assertEqual(resolve_gtm_for_delivery(page, None), page)
+
+    def test_none_relit_lenvironnement(self):
+        # Symétrie du cas précédent : None ne veut pas dire « aucun ID » mais
+        # « le lire dans l'environnement ». Un shell qui exporte le .env doit donc
+        # bien donner lieu à la substitution.
+        page = inject_gtm_block("<html><head><title>t</title></head><body></body></html>")
+        with mock.patch.dict(os.environ, {GTM_ENV_VAR: ID_TEST}):
+            livree = resolve_gtm_for_delivery(page, None)
+        self.assertIn(f"gtm.js?id={ID_TEST}", livree)
+        self.assertNotIn(GTM_PLACEHOLDER, livree)
 
     def test_page_sans_bloc_nest_pas_touchee(self):
         page = "<html><head><title>t</title></head><body></body></html>"

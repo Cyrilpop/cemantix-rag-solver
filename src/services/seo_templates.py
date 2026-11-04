@@ -892,9 +892,9 @@ def render_page(
         else ""
     )
     # Le bloc GTM est rendu avec le gabarit placeholder : l'identifiant réel
-    # (GOOGLE_TAG_MANAGER_ID, secret .env) n'est jamais écrit sur le disque, il
-    # est substitué à la livraison par le proxy (Caddy `replace_response`) ou
-    # par le serveur applicatif. Voir src/services/gtm.py.
+    # (GOOGLE_TAG_MANAGER_ID, secret .env) n'est jamais écrit sur le disque. Il
+    # est évalué à la livraison par le proxy (directive `templates` de Caddy,
+    # `sub_filter` sous nginx) ou par le serveur applicatif. src/services/gtm.py.
     return f"""<!DOCTYPE html>
 <html lang="fr" data-theme="dark">
 <head>

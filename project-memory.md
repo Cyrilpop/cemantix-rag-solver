@@ -80,7 +80,7 @@ L'architecture s'organise en 3 tiers orchestrés par Docker Compose :
   - `seo_sitemap.py` : Génération conforme du sitemap XML et écriture atomique multi-conteneurs.
   - `seo_agents.py` : Manifestes ARD/A2A et documentation agentique dynamique (`llms.txt`).
   - `web.py` : Synchronisation et export de `data.json`.
-  - `gtm.py` : Injection du bloc Google Tag Manager (placeholder `GOOGLE_TAG_MANAGER_ID` hors git, substitution à la livraison par le proxy).
+  - `gtm.py` : Injection du bloc Google Tag Manager (jeton Go template ``{{ env `GOOGLE_TAG_MANAGER_ID` }}`` hors git, évalué à la livraison par `templates` Caddy / `sub_filter` nginx).
 - [src/cli/](src/cli/) : Expérience console :
   - `menu.py` : Menu interactif principal ANSI.
   - `modes.py` : Boucles de jeu terminal (solo, duel, battle, benchmark).

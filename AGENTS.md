@@ -81,7 +81,7 @@ python tools/agent_find.py --safe-html volumes/web/index.html 40 60  # Inspecte 
 | Sitemap XML & Écriture Atomique | [src/services/seo_sitemap.py](src/services/seo_sitemap.py) | L20-L65 (`build_sitemap`, `_write_file`) |
 | Manifestes ARD & Docs Agentiques | [src/services/seo_agents.py](src/services/seo_agents.py) | L70-L150 (`build_ard_manifest`, `build_agent_card`) |
 | Orchestration & Rétrocompatibilité SEO | [src/services/seo.py](src/services/seo.py) | L150-L230 (`publish_seo_pages`, `ensure_seo_published`, ré-exports) |
-| Bloc Google Tag Manager (ID hors git) | [src/services/gtm.py](src/services/gtm.py) | L60-L145 (`GTM_SNIPPET`, `inject_gtm_block`, `resolve_gtm_for_delivery`) |
+| Bloc Google Tag Manager (ID hors git) | [src/services/gtm.py](src/services/gtm.py) | L57-L190 (`GTM_PLACEHOLDER`, `GTM_SNIPPET`, `inject_gtm_block`, `resolve_gtm_for_delivery`) |
 | Frontend Javascript | [volumes/web/js/](volumes/web/js/) | `render.js` (rendu coups), `trajectory.js` (modal & timeline), `utils.js` (tiers météo) |
 | Frontend HTML (Dashboard) | [volumes/web/index.html](volumes/web/index.html) | L52-L695 (ignorer L49 CSS critique généré : 32 ko) |
 | Frontend HTML (Jeu Solo) | [volumes/web/play/index.html](volumes/web/play/index.html) | L50-L343 (ignorer L45 CSS critique généré : 27 ko) |

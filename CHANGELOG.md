@@ -4,6 +4,45 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-04 · GTM : substitution réellement effective via Caddy (`templates`)
+
+### Corrigé
+- **`replace_response` n'était pas applicable (Caddy)** : la directive documentée pour injecter
+  l'identifiant GTM dans les pages statiques n'existe qu'en sortie de `reverse_proxy` (sous-directive
+  `handle_response`). Vérifié sur Caddy 2.11.7 : `unrecognized directive: replace_response`, et une
+  directive inconnue fait **refuser toute la configuration** par Caddy, qui ne sert alors plus rien.
+  La livraison passe donc par la directive **`templates`**, seul mécanisme applicable à `file_server`.
+- **Jeton remplacé dans les fichiers** : `gtm.js?id=GOOGLE_TAG_MANAGER_ID` devient
+  ``gtm.js?id={{ env `GOOGLE_TAG_MANAGER_ID` }}`` (action Go template). Les **backticks** sont retenus
+  plutôt que les guillemets doubles pour ne pas imbriquer de guillemets dans l'attribut `src="…"`.
+  Substitution vérifiée de bout en bout sur les 5 vues avec la configuration du README, y compris à
+  travers **gzip** sur une page réelle de 71 Ko (`encode` est trié avant `templates` par l'ordre
+  canonique de Caddy, la position dans le fichier est donc indifférente).
+- **Repli sans variable aligné sur Caddy (`local/nginx/entrypoint-gtm.sh`)** : le marqueur `%%GTM_ID%%`
+  se résolvait en le mot `GOOGLE_TAG_MANAGER_ID`. Cible et remplacement différant depuis que la cible
+  est une action Go template, le navigateur aurait reçu un **faux identifiant**. Le repli est désormais
+  une chaîne vide : `gtm.js?id=`, comme Caddy (vérifié sur la vraie config du dépôt, HTTP 200, aucun
+  suivi, aucun 500).
+- **`respond @intercepted 404` inefficace (Caddyfile du README)** : Caddy trie les directives
+  canoniquement et place `static_response` **après** `file_server`. Le bloc de défense en profondeur
+  était du code mort : `/.env` et `/data.json` étaient servis **avec leur contenu** (HTTP 200). Le bloc
+  est désormais enveloppé dans `route`, qui impose l'ordre d'écriture — les deux chemins renvoient 404.
+  Note : `file_server { hide … }` est une alternative équivalente, mais **sans slash initial** (avec
+  slash, `hide` ne bloque rien). À reporter sur le Caddyfile du serveur, non versionné.
+- **Test dépendant de l'environnement (`tests/test_gtm.py`)** : `test_pas_did_ne_change_rien` passait
+  `None` à `resolve_gtm_for_delivery()`, ce qui relit l'environnement. Il échouait dès que `.env` est
+  exporté dans le shell (il ne passait en CI que par absence de la variable). Le cas est désormais
+  isolé par `mock.patch.dict`, et un test symétrique verrouille la relecture de l'environnement.
+
+### Ajouté
+- **Interdiction des délimiteurs Go orphelins (`tools/check_seo.py`)** : `templates` évaluant toute
+  séquence `{{` ou `{%` des fichiers servis, une action invalide fait tomber la page entière en
+  **HTTP 500**. Tout délimiteur hors bloc `GTM:START/END` fait désormais échouer la CI.
+- **Source de vérité unique** : `tools/check_seo.py` charge `src/services/gtm.py` par chemin (stdlib
+  seule, compatible job `docs` de la CI) et n'utilise plus le jeton en dur.
+
+---
+
 ## [Non publié] - 2026-11-04 · Correction Search Console : type illicite dans la FAQ de l'accueil
 
 ### Corrigé
@@ -35,8 +74,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Injection idempotente délimitée par `<!-- GTM:START -->` / `<!-- GTM:END -->`, branchée dans `layout_sync.sync_all_pages()` (donc au démarrage des conteneurs) et dans `render_page()` pour les gabarits générés.
 - **Secret d'exploitation hors git (`GOOGLE_TAG_MANAGER_ID`)** :
   - L'identifiant de conteneur vit uniquement dans `.env` (déjà couvert par le `.gitignore` `.env*`) ; `.env.example` documente la clé **vide** par défaut.
-  - Les fichiers HTML, versionnés comme générés, ne portent que le gabarit placeholder `gtm.js?id=GOOGLE_TAG_MANAGER_ID` : l'ID réel n'est **jamais écrit sur le disque**, il est substitué à la livraison HTTP.
-  - Livraison : directive `replace_response` de Caddy alimentée par `{env.GOOGLE_TAG_MANAGER_ID}` (README, Caddyfile de production) et `sub_filter` nginx pour le banc local (`local/nginx/cemantix.local.conf` + `local/nginx/entrypoint-gtm.sh`, la config étant montée en lecture seule).
+  - Les fichiers HTML, versionnés comme générés, ne portent que le gabarit placeholder ``gtm.js?id={{ env `GOOGLE_TAG_MANAGER_ID` }}`` : l'ID réel n'est **jamais écrit sur le disque**, il est substitué à la livraison HTTP.
+  - Livraison : directive `templates` de Caddy, qui évalue l'action Go template depuis l'environnement du conteneur (README, Caddyfile de production) et `sub_filter` nginx pour le banc local (`local/nginx/cemantix.local.conf` + `local/nginx/entrypoint-gtm.sh`, la config étant montée en lecture seule). *Ces deux lignes ont été corrigées : la première version retenait `replace_response`, directive en réalité inapplicable à des fichiers statiques — voir la section « GTM : substitution réellement effective via Caddy » ci-dessus.*
 - **Contrôle anti-fuite en CI (`tools/check_seo.py`)** :
   - Chaque page auditée doit porter le bloc placeholder ; la présence d'un identifiant réel `GTM-XXXXXXXX` dans un fichier sous `volumes/web` fait échouer la CI (`check_gtm_fuite`).
 - **Outillage** : `tools/sync_layout.py` injecte le bloc et signale l'absence de `GOOGLE_TAG_MANAGER_ID` ; `tools/build_css_bundles.py` entretient le bloc aux côtés du CSS critique et vérifie la substitution en livraison (sans jamais afficher l'ID en `--check`).

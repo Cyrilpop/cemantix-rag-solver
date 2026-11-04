@@ -13,16 +13,23 @@ Sécurité du secret (exigence « ne pas fuiter sur git ») :
     — voir ``.gitignore``). Ce qui est écrit sur le disque — fichiers statiques
     comme pages générées — n'est que le gabarit générique :
 
-        <script async src="https://www.googletagmanager.com/gtm.js?id=GOOGLE_TAG_MANAGER_ID"></script>
+        <script async src="https://www.googletagmanager.com/gtm.js?id={{ env `GOOGLE_TAG_MANAGER_ID` }}"></script>
 
-    Le jeton ``GOOGLE_TAG_MANAGER_ID`` est substitué par l'ID réel **à la
-    livraison HTTP**, jamais à la génération :
+    Le jeton ``{{ env `GOOGLE_TAG_MANAGER_ID` }}`` est substitué par l'ID réel
+    **à la livraison HTTP**, jamais à la génération :
 
     * pages servies par le proxy Caddy (les vues et les archives statiques) :
-      directive ``replace_response`` alimentée par ``{env.GOOGLE_TAG_MANAGER_ID}``
-      (voir le Caddyfile documenté dans ``README.md``) ;
+      directive ``templates``, qui évalue l'action Go template depuis
+      l'environnement du conteneur Caddy (voir le Caddyfile documenté dans
+      ``README.md``). La directive ``encode`` est compatible : Caddy applique
+      un ordre canonique des directives, ``templates`` s'exécute sur le corps
+      avant la compression ;
     * pages servies par l'API HTTP : ``resolve_gtm_for_delivery()`` appliqué sur
       la réponse.
+
+    Variable d'environnement absente ou vide : l'action Go template s'évalue en
+    chaîne vide, la page est servie avec ``gtm.js?id=`` (script inerte, aucune
+    requête de suivi, aucun HTTP 500) — vérifié sur Caddy 2.11.7.
 
     Aucun outil de build, aucun test et aucune exécution du démon n'écrit l'ID
     réel dans un fichier suivi par git ; ``tools/check_seo.py`` échoue la CI si
@@ -54,7 +61,15 @@ GTM_END = "<!-- GTM:END -->"
 # Gabarit livré dans les fichiers (statiques comme générés) : strictement
 # indépendant de l'environnement, donc identique quel que soit le poste — c'est
 # ce qui rend les contrôles `--check` reproductibles et le diff git neutre.
-GTM_PLACEHOLDER = "GOOGLE_TAG_MANAGER_ID"
+#
+# FORMAT IMPOSE PAR LE PROXY : les pages sont servies par Caddy, qui ne sait pas
+# substituer une chaine dans un fichier statique (`replace_response` n'existe
+# qu'en sortie de `reverse_proxy`, verifie sur Caddy 2.11.7 : directive
+# « unrecognized »). La substitution passe donc par la directive `templates`,
+# d'ou une action Go template. Les backticks (litteral Go valide) sont choisis
+# plutot que les guillemets doubles : le jeton vit dans un attribut HTML
+# src="..." et des guillemets imbriques corrompraient le balisage sur disque.
+GTM_PLACEHOLDER = "{{ env `" + GTM_ENV_VAR + "` }}"
 
 # Gabarit générique (placeholder) inséré dans les fichiers HTML.
 GTM_SNIPPET = f"""{GTM_START}

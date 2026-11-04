@@ -12,6 +12,9 @@ Vérifie sur l'ensemble des pages clés (index.html, play, battle, multi, defi) 
 8. Validité JSON des blocs JSON-LD et conformité des types de FAQPage : `mainEntity`
    n'accepte que `Question`, `acceptedAnswer` que `Answer` (un type hors schema.org
    fait perdre le rich result FAQ et remonte en erreur dans Search Console).
+9. Absence de délimiteur Go template (« {{ » / « {% ») hors bloc GTM : le proxy
+   rend les fichiers via la directive `templates`, une séquence orpheline ferait
+   renvoyer un HTTP 500 sur toute la page.
 
 Le contrôle audite aussi les deux pages hub produites par `src/services/seo.py`
 (`mot-du-jour`, `methode`) : elles sont régénérées à chaque publication et jamais
@@ -23,9 +26,30 @@ Usage :
 import json
 import re
 import sys
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
+
+
+def _charger_gtm():
+    """Charge src/services/gtm.py par chemin, sans dépendre du package `src`.
+
+    Le package `src` tire numpy/chromadb/requests à l'import ; or ce contrôleur
+    tourne sur un poste nu (job `docs` de la CI). gtm.py est strictement stdlib.
+    """
+    spec = spec_from_file_location(
+        "_gtm_check", RACINE / "src" / "services" / "gtm.py"
+    )
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_GTM = _charger_gtm()
+# Jeton placeholder attendu dans les fichiers (source de vérité : gtm.py).
+GTM_JETON = _GTM.GTM_PLACEHOLDER
+
 PAGES = [
     RACINE / "volumes" / "web" / "index.html",
     RACINE / "volumes" / "web" / "play" / "index.html",
@@ -41,7 +65,7 @@ def check_html(rel_path: str, html: str) -> list[str]:
     # 0. Bloc Google Tag Manager : le fichier (versionné ou généré) doit porter
     #    le gabarit placeholder géré par src/services/gtm.py, et JAMAIS l'ID réel.
     #    L'identifiant (GOOGLE_TAG_MANAGER_ID, secret réservé à .env) n'est
-    #    substitué qu'à la livraison : `replace_response` du proxy Caddy en
+    #    substitué qu'à la livraison : directive `templates` du proxy Caddy en
     #    production, resolve_gtm_for_delivery() pour les pages servies par
     #    l'API. Ainsi, aucune fuite n'est possible via git.
     #    Exception : la console d'exploitation /panier-9x/ est volontairement
@@ -49,10 +73,25 @@ def check_html(rel_path: str, html: str) -> list[str]:
     if "panier-9x" not in rel_path:
         if "<!-- GTM:START -->" not in html or "<!-- GTM:END -->" not in html:
             errors.append(f"{rel_path}: Bloc Google Tag Manager (GTM:START/END) manquant")
-        elif "gtm.js?id=GOOGLE_TAG_MANAGER_ID" not in html:
+        elif f"gtm.js?id={GTM_JETON}" not in html:
             errors.append(f"{rel_path}: Bloc GTM présent mais gabarit placeholder altéré")
     if re.search(r"googletagmanager\.com/gtm\.js\?id=GTM-[A-Z0-9]+", html):
         errors.append(f"{rel_path}: FUITE GTM : un ID réel est écrit dans le fichier (il doit rester dans .env)")
+
+    # 0bis. Délimiteurs Go template orphelins. Depuis que la substitution passe
+    #    par la directive `templates` de Caddy, toute séquence « {{ » ou « {% »
+    #    présente dans un fichier servi est ÉVALUÉE par Caddy : une action
+    #    invalide (ou une variable inconnue) fait tomber la réponse en HTTP 500,
+    #    et le fichier devient donc injouable pour les moteurs comme pour les
+    #    visiteurs. Le seul gabarit autorisé est celui du bloc GTM, exclu ici.
+    hors_gtm = re.sub(
+        r"<!-- GTM:START -->.*?<!-- GTM:END -->", "", html, flags=re.DOTALL
+    )
+    if "{{" in hors_gtm or "{%" in hors_gtm:
+        errors.append(
+            f"{rel_path}: délimiteur Go template ('{{{{' ou '{{%') hors bloc GTM — "
+            "la directive `templates` de Caddy le rendrait et renverrait un HTTP 500"
+        )
 
     # 1. Title
     title_match = re.search(r"<title>([^<]+)</title>", html, re.I)
@@ -325,8 +364,9 @@ def check_gtm_fuite() -> list[str]:
     Balaye **toutes** les pages HTML de `volumes/web` — versionnées (les 5 vues)
     comme générées (archives `/puzzles/`, hubs `/mot-du-jour/` et `/methode/`) —
     hors la console `/panier-9x/` exclue du suivi. Seul le gabarit placeholder
-    `id=GOOGLE_TAG_MANAGER_ID` est autorisé : l'ID réel (GOOGLE_TAG_MANAGER_ID
-    dans .env) n'existe qu'en mémoire, substitué à la livraison par le proxy.
+    `id={{ env `GOOGLE_TAG_MANAGER_ID` }}` est autorisé : l'ID réel (la valeur de
+    GOOGLE_TAG_MANAGER_ID dans .env) n'existe qu'en mémoire, substitué à la
+    livraison par la directive `templates` du proxy.
     """
     errors = []
     web_root = RACINE / "volumes" / "web"
