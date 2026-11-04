@@ -98,7 +98,7 @@ export function updateThemeIcon() {
   if (!themeToggle) return;
   const icon = themeToggle.querySelector(".theme-icon");
   if (icon) {
-    const nextIcon = themeState.theme === "dark" ? "☀️" : "🌙";
+    const nextIcon = themeState.theme === "dark" ? "☼" : "☽";
     if (icon.textContent !== nextIcon) {
       icon.textContent = nextIcon;
     }
@@ -126,7 +126,7 @@ export function updateSpoilerState() {
   if (spoilerToggle) {
     const icon = spoilerToggle.querySelector(".spoiler-icon");
     if (icon) {
-      const nextIcon = themeState.globalSpoiler ? "🛡️" : "👁️";
+      const nextIcon = themeState.globalSpoiler ? "🔒" : "🔓";
       if (icon.textContent !== nextIcon) {
         icon.textContent = nextIcon;
       }
