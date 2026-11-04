@@ -17,6 +17,7 @@ import hmac
 import json
 import os
 import secrets
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -314,4 +315,272 @@ def remove_whitelist_ip(ip_address: str) -> bool:
         "DELETE FROM bot_challenge_whitelist WHERE ip_address = %s;",
         (str(ip_address),),
     ))
+
+
+# --------------------------------------------------------------------------- #
+# Traçage pérenne & KPIs analytiques des défis (M8, DEFI-02 / SEC-27)
+# --------------------------------------------------------------------------- #
+def anonymize_player_token(ip_hash_value: str) -> str:
+    """Dérive un identifiant visiteur pseudonymisé et stable (ex: 'joueur_a1b2c3d4')."""
+    token = hashlib.sha256(f"player_token|{ip_hash_value}".encode("utf-8")).hexdigest()[:10]
+    return f"joueur_{token}"
+
+
+def format_player_display(player_anon_id: str) -> str:
+    """Formate un identifiant pseudonymisé pour l'affichage (ex: 'Visiteur #a1b2')."""
+    raw = str(player_anon_id or "").replace("joueur_", "")
+    token = raw[:4] if raw else "0000"
+    return f"Visiteur #{token}"
+
+
+def record_challenge_stat(
+    challenge_id: str,
+    secret_word: str,
+    ip_hash_value: str,
+    outcome: str,
+    tries_count: int,
+    duration_seconds: Optional[float] = None,
+    created_at: Optional[datetime] = None,
+) -> bool:
+    """Enregistre un défi terminé dans les statistiques. Idempotent via ON CONFLICT DO NOTHING."""
+    player_anon_id = anonymize_player_token(ip_hash_value)
+    # Mapping outcome : 'solved' -> 'won', 'lost' -> 'lost', 'error' -> 'error'
+    norm_outcome = "won" if outcome == "solved" else outcome
+    created_val = created_at or _utcnow()
+
+    query = """
+    INSERT INTO bot_challenge_stats (
+        challenge_id, secret_word, player_anon_id, outcome,
+        tries_count, duration_seconds, created_at
+    )
+    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ON CONFLICT (challenge_id) DO NOTHING;
+    """
+    db.execute(
+        query,
+        (
+            str(challenge_id),
+            str(secret_word),
+            str(player_anon_id),
+            str(norm_outcome),
+            int(tries_count),
+            float(duration_seconds) if duration_seconds is not None else None,
+            created_val,
+        ),
+    )
+    return True
+
+
+def save_challenge_guesses(challenge_id: str, guesses: list[dict]) -> int:
+    """Enregistre les coups du chemin en base relationnelle avec ON CONFLICT DO NOTHING."""
+    if not guesses:
+        return 0
+    query = """
+    INSERT INTO bot_challenge_guesses (
+        challenge_id, step_num, word, score, permille, weather, is_record, source
+    )
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    ON CONFLICT (challenge_id, step_num) DO NOTHING;
+    """
+    inserted = 0
+    with db.transaction() as conn:
+        with closing(conn.cursor()) as cur:
+            for idx, g in enumerate(guesses, start=1):
+                step_num = g.get("step") if g.get("step") is not None else (g.get("step_num") if g.get("step_num") is not None else idx)
+                q, p = db._format_query(query, (
+                    str(challenge_id),
+                    int(step_num),
+                    str(g.get("word") or ""),
+                    float(g.get("score") or 0.0),
+                    int(g["permille"]) if g.get("permille") is not None else None,
+                    str(g.get("weather") or "")[:8] or None,
+                    bool(g.get("is_record", False)),
+                    str(g.get("source") or "rag")[:16],
+                ), db._determine_engine())
+                cur.execute(q, p)
+                inserted += 1
+    return inserted
+
+
+def get_challenge_guesses(challenge_id: str) -> list[dict]:
+    """Relit le cheminement complet ordonné pour un défi donné."""
+    query = "SELECT * FROM bot_challenge_guesses WHERE challenge_id = %s ORDER BY step_num ASC;"
+    return db.fetch_all(query, (str(challenge_id),))
+
+
+def get_challenge_stat(challenge_id: str) -> Optional[dict]:
+    """Relit la ligne de statistique d'un défi par son identifiant."""
+    return db.fetch_one("SELECT * FROM bot_challenge_stats WHERE challenge_id = %s;", (str(challenge_id),))
+
+
+def get_challenge_kpis(player_ip_hash: Optional[str] = None) -> dict:
+    """Retourne la synthèse des KPIs globaux et les stats de la session courante."""
+    row_counts = db.fetch_one(
+        """
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN outcome = 'won' THEN 1 ELSE 0 END) AS bot_wins,
+            SUM(CASE WHEN outcome = 'lost' THEN 1 ELSE 0 END) AS bot_losses
+        FROM bot_challenge_stats;
+        """
+    ) or {}
+    total_challenges = int(row_counts.get("total") or 0)
+    bot_wins = int(row_counts.get("bot_wins") or 0)
+    bot_losses = int(row_counts.get("bot_losses") or 0)
+
+    total_completed = bot_wins + bot_losses
+    bot_win_rate_pct = round((bot_wins / total_completed) * 100, 1) if total_completed > 0 else 0.0
+    player_win_rate_pct = round((bot_losses / total_completed) * 100, 1) if total_completed > 0 else 0.0
+
+    row_tries = db.fetch_one(
+        """
+        SELECT
+            AVG(tries_count) AS avg_tries,
+            MIN(tries_count) AS min_tries,
+            MAX(tries_count) AS max_tries
+        FROM bot_challenge_stats
+        WHERE outcome = 'won';
+        """
+    ) or {}
+    if row_tries.get("avg_tries") is None and total_challenges > 0:
+        row_tries = db.fetch_one(
+            """
+            SELECT
+                AVG(tries_count) AS avg_tries,
+                MIN(tries_count) AS min_tries,
+                MAX(tries_count) AS max_tries
+            FROM bot_challenge_stats;
+            """
+        ) or {}
+
+    avg_tries = round(float(row_tries.get("avg_tries")), 1) if row_tries.get("avg_tries") is not None else 0.0
+    min_tries = int(row_tries.get("min_tries")) if row_tries.get("min_tries") is not None else 0
+    max_tries = int(row_tries.get("max_tries")) if row_tries.get("max_tries") is not None else 0
+
+    rows_top = db.fetch_all(
+        """
+        SELECT
+            secret_word AS word,
+            COUNT(*) AS count,
+            SUM(CASE WHEN outcome = 'won' THEN 1 ELSE 0 END) AS bot_wins
+        FROM bot_challenge_stats
+        GROUP BY secret_word
+        ORDER BY count DESC, bot_wins DESC
+        LIMIT 5;
+        """
+    )
+    top_words = [
+        {
+            "word": str(r["word"]),
+            "count": int(r["count"]),
+            "bot_wins": int(r.get("bot_wins") or 0),
+        }
+        for r in rows_top
+    ]
+
+    rows_tough = db.fetch_all(
+        """
+        SELECT
+            secret_word AS word,
+            tries_count AS tries,
+            created_at AS date
+        FROM bot_challenge_stats
+        WHERE outcome = 'lost'
+        ORDER BY created_at DESC
+        LIMIT 5;
+        """
+    )
+    tough_words = [
+        {
+            "word": str(r["word"]),
+            "tries": int(r["tries"]),
+            "date": str(r["date"])[:10],
+        }
+        for r in rows_tough
+    ]
+
+    rows_recent = db.fetch_all(
+        """
+        SELECT
+            player_anon_id,
+            secret_word AS word,
+            outcome,
+            tries_count AS tries,
+            duration_seconds,
+            created_at AS date
+        FROM bot_challenge_stats
+        ORDER BY created_at DESC
+        LIMIT 10;
+        """
+    )
+    recent_activity = []
+    for r in rows_recent:
+        created_raw = r.get("date")
+        if isinstance(created_raw, datetime):
+            date_str = created_raw.isoformat()
+        else:
+            date_str = str(created_raw or "")
+        dur = r.get("duration_seconds")
+        recent_activity.append({
+            "player": format_player_display(r["player_anon_id"]),
+            "word": str(r["word"]),
+            "outcome": str(r["outcome"]),
+            "tries": int(r["tries"]),
+            "duration_seconds": round(float(dur), 1) if dur is not None else None,
+            "date": date_str,
+        })
+
+    if player_ip_hash:
+        player_anon_id = anonymize_player_token(player_ip_hash)
+        row_player = db.fetch_one(
+            """
+            SELECT
+                COUNT(*) AS total_played,
+                SUM(CASE WHEN outcome = 'lost' THEN 1 ELSE 0 END) AS player_wins,
+                SUM(CASE WHEN outcome = 'won' THEN 1 ELSE 0 END) AS player_losses
+            FROM bot_challenge_stats
+            WHERE player_anon_id = %s;
+            """,
+            (player_anon_id,),
+        ) or {}
+        p_total = int(row_player.get("total_played") or 0)
+        p_wins = int(row_player.get("player_wins") or 0)
+        p_losses = int(row_player.get("player_losses") or 0)
+        p_rate = round((p_wins / p_total) * 100, 1) if p_total > 0 else 0.0
+        player_data = {
+            "identified": True,
+            "display_name": format_player_display(player_anon_id),
+            "total_played": p_total,
+            "player_wins": p_wins,
+            "player_losses": p_losses,
+            "player_win_rate_pct": p_rate,
+        }
+    else:
+        player_data = {
+            "identified": False,
+            "display_name": None,
+            "total_played": 0,
+            "player_wins": 0,
+            "player_losses": 0,
+            "player_win_rate_pct": 0.0,
+        }
+
+    return {
+        "status": "ok",
+        "global": {
+            "total_challenges": total_challenges,
+            "bot_wins": bot_wins,
+            "bot_losses": bot_losses,
+            "bot_win_rate_pct": bot_win_rate_pct,
+            "player_win_rate_pct": player_win_rate_pct,
+            "avg_tries": avg_tries,
+            "min_tries": min_tries,
+            "max_tries": max_tries,
+            "top_words": top_words,
+            "tough_words": tough_words,
+            "recent_activity": recent_activity,
+        },
+        "player": player_data,
+    }
+
 

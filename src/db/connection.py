@@ -134,6 +134,37 @@ CREATE TABLE IF NOT EXISTS bot_challenge_whitelist (
     description VARCHAR(100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS bot_challenge_stats (
+    id SERIAL PRIMARY KEY,
+    challenge_id VARCHAR(32) NOT NULL UNIQUE,
+    secret_word VARCHAR(64) NOT NULL,
+    player_anon_id VARCHAR(32) NOT NULL,
+    outcome VARCHAR(16) NOT NULL,
+    tries_count INT NOT NULL DEFAULT 0,
+    duration_seconds NUMERIC(8, 2),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_word ON bot_challenge_stats(secret_word);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_player ON bot_challenge_stats(player_anon_id);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_outcome ON bot_challenge_stats(outcome);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_created ON bot_challenge_stats(created_at);
+
+CREATE TABLE IF NOT EXISTS bot_challenge_guesses (
+    id SERIAL PRIMARY KEY,
+    challenge_id VARCHAR(32) NOT NULL REFERENCES bot_challenge_stats(challenge_id) ON DELETE CASCADE,
+    step_num INT NOT NULL,
+    word VARCHAR(64) NOT NULL,
+    score NUMERIC(6, 2) NOT NULL,
+    permille INT,
+    weather VARCHAR(8),
+    is_record BOOLEAN DEFAULT FALSE,
+    source VARCHAR(16) DEFAULT 'rag',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(challenge_id, step_num)
+);
+CREATE INDEX IF NOT EXISTS idx_bcg_challenge ON bot_challenge_guesses(challenge_id);
+CREATE INDEX IF NOT EXISTS idx_bcg_word ON bot_challenge_guesses(word);
 """
 
 SQLITE_SCHEMA = """
@@ -215,6 +246,37 @@ CREATE TABLE IF NOT EXISTS bot_challenge_whitelist (
     description VARCHAR(100),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS bot_challenge_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    challenge_id TEXT NOT NULL UNIQUE,
+    secret_word TEXT NOT NULL,
+    player_anon_id TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    tries_count INTEGER NOT NULL DEFAULT 0,
+    duration_seconds REAL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_word ON bot_challenge_stats(secret_word);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_player ON bot_challenge_stats(player_anon_id);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_outcome ON bot_challenge_stats(outcome);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_created ON bot_challenge_stats(created_at);
+
+CREATE TABLE IF NOT EXISTS bot_challenge_guesses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    challenge_id TEXT NOT NULL REFERENCES bot_challenge_stats(challenge_id) ON DELETE CASCADE,
+    step_num INTEGER NOT NULL,
+    word TEXT NOT NULL,
+    score REAL NOT NULL,
+    permille INTEGER,
+    weather TEXT,
+    is_record BOOLEAN DEFAULT 0,
+    source TEXT DEFAULT 'rag',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(challenge_id, step_num)
+);
+CREATE INDEX IF NOT EXISTS idx_bcg_challenge ON bot_challenge_guesses(challenge_id);
+CREATE INDEX IF NOT EXISTS idx_bcg_word ON bot_challenge_guesses(word);
 """
 
 
