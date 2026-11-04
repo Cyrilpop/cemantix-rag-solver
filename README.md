@@ -426,7 +426,7 @@ cemantix.cyril-randon.fr {
         # directive `templates` ci-dessous, alimentée par la variable d'environnement
         # du conteneur Caddy (GOOGLE_TAG_MANAGER_ID défini dans .env).
         # Variable vide ou absente = script inerte, aucun suivi, aucun HTTP 500.
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google-analytics.com; connect-src 'self' https://www.google-analytics.com; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://tagassistant.google.com; style-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://fonts.googleapis.com https://tagassistant.google.com; img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com https://ssl.gstatic.com https://www.gstatic.com; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://tagassistant.google.com; font-src 'self' data: https://fonts.gstatic.com; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
     }
 
     # Google Tag Manager : évalue le jeton Go template porté par les fichiers HTML
@@ -452,7 +452,7 @@ cemantix.cyril-randon.fr {
     # GTM : mêmes origines tierces et même exigence de script inline que le bloc
     # header principal (voir le commentaire CSP ci-dessus).
     header /puzzles/* {
-        Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google-analytics.com; connect-src 'self' https://www.google-analytics.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://tagassistant.google.com; style-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://fonts.googleapis.com https://tagassistant.google.com; img-src 'self' data: https://www.googletagmanager.com https://www.google-analytics.com https://ssl.gstatic.com https://www.gstatic.com; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://tagassistant.google.com; font-src 'self' data: https://fonts.gstatic.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     }
 
     # 1. Polices web immuables (cache 1 an)
@@ -875,8 +875,8 @@ jamais par git** :
 > La console d'exploitation `/panier-9x/` est **exclue** du suivi : page privée `noindex, nofollow`,
 > elle ne reçoit aucun tracker, même lorsque la variable est renseignée.
 
-> La CSP doit autoriser les origines GTM (`script-src 'unsafe-inline' https://www.googletagmanager.com
-> https://www.google-analytics.com`, plus `img-src`/`connect-src` pour les hits) : le script inline
+> La CSP doit autoriser les origines GTM et son mode prévisualisation / Tag Assistant (`script-src 'unsafe-inline' https://www.googletagmanager.com
+> https://www.google-analytics.com https://tagassistant.google.com`, `style-src` avec `fonts.googleapis.com`, `font-src` avec `fonts.gstatic.com`, plus `img-src`/`connect-src` pour les hits) : le script inline
 > `dataLayer`/`gtag` est imposé par Google. Voir le Caddyfile de la section déploiement.
 
 ---
