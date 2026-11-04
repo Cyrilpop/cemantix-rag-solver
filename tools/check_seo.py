@@ -1,12 +1,17 @@
 """Contrôle de validation du balisage SEO et AEO sur les pages statiques (QUAL-07).
 
-Vérifie sur l'ensemble des pages clés (index.html, play, battle, multi) :
-1. Présence d'un <title> unique et non vide.
-2. Présence d'une <meta name="description"> avec contenu substantiel.
-3. Présence d'un <link rel="canonical"> absolu.
-4. Présence de balises Open Graph (og:title, og:description, og:image, og:url).
-5. Présence d'un bloc de métadonnées structurées JSON-LD valide.
-6. Absence de meta obsolète (keywords).
+Vérifie sur l'ensemble des pages clés (index.html, play, battle, multi, defi) :
+1. Présence du bloc Google Tag Manager placeholder, et absence de tout identifiant
+   GTM réel (le secret vit dans .env, substitué à la livraison par le proxy).
+2. Présence d'un <title> unique et non vide.
+3. Présence d'une <meta name="description"> avec contenu substantiel.
+4. Présence d'un <link rel="canonical"> absolu.
+5. Présence de balises Open Graph (og:title, og:description, og:image, og:url).
+6. Présence d'un bloc de métadonnées structurées JSON-LD valide.
+7. Absence de meta obsolète (keywords).
+8. Validité JSON des blocs JSON-LD et conformité des types de FAQPage : `mainEntity`
+   n'accepte que `Question`, `acceptedAnswer` que `Answer` (un type hors schema.org
+   fait perdre le rich result FAQ et remonte en erreur dans Search Console).
 
 Le contrôle audite aussi les deux pages hub produites par `src/services/seo.py`
 (`mot-du-jour`, `methode`) : elles sont régénérées à chaque publication et jamais
@@ -77,7 +82,70 @@ def check_html(rel_path: str, html: str) -> list[str]:
     if re.search(r'<meta\s+name=["\']keywords["\']', html, re.I):
         errors.append(f"{rel_path}: Balise obsolète <meta name='keywords'> détectée")
 
+    # 7. Conformité des blocs JSON-LD (types schema.org)
+    errors.extend(check_jsonld(rel_path, html))
+
     return errors
+
+
+# Google n'accepte respectivement que `Question` pour FAQPage.mainEntity et
+# `Answer` pour son acceptedAnswer. Un autre type (une blague interne en avait
+# glissé un) est signalé en erreur dans Search Console — « type de cible non
+# valide » — et la page perd son rich result FAQ.
+def check_jsonld(rel_path: str, html: str) -> list[str]:
+    """Valide la syntaxe JSON et les types schema.org des blocs JSON-LD.
+
+    Contrôle ciblé sur FAQPage : `mainEntity` n'accepte que des `Question` et
+    `acceptedAnswer` que des `Answer`. Les autres types ne sont pas devinables
+    de façon fiable, mais un type inconnu de schema.org dans une FAQ est le
+    défaut déjà rencontré et le seul à casser l'affichage du rich result.
+    """
+    errors = []
+    for bloc in re.findall(
+        r'<script\s+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+        html,
+        re.DOTALL | re.IGNORECASE,
+    ):
+        try:
+            data = json.loads(bloc.strip())
+        except json.JSONDecodeError as exc:
+            errors.append(f"{rel_path}: Bloc JSON-LD invalide ({exc})")
+            continue
+
+        noeuds = data.get("@graph", [data]) if isinstance(data, dict) else data
+        if not isinstance(noeuds, list):
+            continue
+        for noeud in noeuds:
+            if not isinstance(noeud, dict) or "FAQPage" not in _types(noeud):
+                continue
+            main = noeud.get("mainEntity", [])
+            for entite in (main if isinstance(main, list) else [main]):
+                if not isinstance(entite, dict):
+                    continue
+                types_entite = _types(entite)
+                if "Question" not in types_entite:
+                    errors.append(
+                        f"{rel_path}: FAQPage.mainEntity de type illicite "
+                        f"{sorted(types_entite) or 'aucun'} (question « {entite.get('name', '?')} ») : "
+                        "seul Question est accepté par Google"
+                    )
+                reponse = entite.get("acceptedAnswer")
+                if isinstance(reponse, dict) and "Answer" not in _types(reponse):
+                    errors.append(
+                        f"{rel_path}: FAQPage.acceptedAnswer de type illicite "
+                        f"{sorted(_types(reponse)) or 'aucun'} : seul Answer est accepté"
+                    )
+    return errors
+
+
+def _types(noeud: dict) -> set:
+    """Types déclarés par un nœud JSON-LD, que `@type` soit une chaîne ou une liste."""
+    t = noeud.get("@type")
+    if isinstance(t, str):
+        return {t}
+    if isinstance(t, list):
+        return {x for x in t if isinstance(x, str)}
+    return set()
 
 
 def check_page(path: Path) -> list[str]:

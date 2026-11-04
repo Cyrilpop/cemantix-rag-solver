@@ -213,6 +213,41 @@ class TestLibellesDesPagesApplicatives(unittest.TestCase):
         for mot in ("mot du jour", "indice", "synonyme"):
             self.assertIn(mot, questions)
 
+    def test_toutes_les_faq_n_utilisent_que_le_type_question(self):
+        """`FAQPage.mainEntity` n'accepte que `Question` (et `Answer` en réponse).
+
+        Un type hors schema.org — une entrée « Bonus » y avait été glissée en
+        plaisantant — est signalé en erreur dans Search Console (« Bonus n'est
+        pas un type de cible valide connu pour la propriété mainEntity ») et
+        fait perdre le rich result FAQ de toute la page. `tools/check_seo.py`
+        audite le même point en CI ; ce test le verrouille dans la suite.
+
+        Tous les blocs JSON-LD de chaque vue sont parcourus : `_graphes` ne lit
+        que le premier, qui est ici le graphe Site/EducationOccupation.
+        """
+        pages = self.PAGES + ("defi/index.html",)
+        blocs = 0
+        for nom in pages:
+            html = (_context.RACINE / "volumes" / "web" / nom).read_text(encoding="utf-8")
+            for brut in re.findall(
+                r'<script type="application/ld\+json">(.*?)</script>', html, re.S
+            ):
+                for graphe in json.loads(brut).get("@graph", []):
+                    blocs += 1
+                    if graphe.get("@type") != "FAQPage":
+                        continue
+                    for entite in graphe["mainEntity"]:
+                        self.assertEqual(
+                            entite.get("@type"), "Question",
+                            f"{nom} : type illicite {entite.get('@type')!r} dans "
+                            f"FAQPage.mainEntity (« {entite.get('name', '?')} »)",
+                        )
+                        self.assertEqual(
+                            entite["acceptedAnswer"].get("@type"), "Answer",
+                            f"{nom} : type illicite dans acceptedAnswer",
+                        )
+        self.assertGreater(blocs, 5, "Le parcours des blocs JSON-LD ne trouve rien à auditer")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

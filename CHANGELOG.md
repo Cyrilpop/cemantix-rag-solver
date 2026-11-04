@@ -4,6 +4,28 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-04 · Correction Search Console : type illicite dans la FAQ de l'accueil
+
+### Corrigé
+- **`FAQPage.mainEntity` de type `Bonus` (`volumes/web/index.html`)** : une entrée de
+  plaisanterie interne (« Comment dire bonjour à Christophe ? ») avait été déclarée avec
+  `@type: "Bonus"`, type absent de schema.org. Search Console le rejetait — « Bonus n'est
+  pas un type de cible valide connu pour la propriété mainEntity » — et l'erreur faisait
+  perdre à toute la page d'accueil son rich result FAQ (8 questions éligibles). L'entrée
+  est supprimée ; les 8 questions valides (`Question` + `acceptedAnswer: Answer`) restent
+  en place, ce qui préserve le seuil de 8 questions exigé par `tests/test_seo_hubs.py`.
+
+### Ajouté
+- **Contrôle des types JSON-LD en CI (`tools/check_seo.py`, `check_jsonld`)** : chaque bloc
+  `application/ld+json` est parsé (une syntaxe invalide fait échouer la CI) et, pour tout
+  nœud `FAQPage`, `mainEntity` doit être `Question` et `acceptedAnswer` `Answer`. Le contrôle
+  tolère les formes JSON-LD licites multiples (`@graph`, `@type` en liste, `mainEntity` objet).
+- **Verrou de non-régression (`tests/test_seo_hubs.py`)** : `test_toutes_les_faq_n_utilisent_que_le_type_question`
+  parcourt les 5 vues et l'ensemble de leurs blocs JSON-LD (vérifié : l'injection d'un type
+  illicite rend le test rouge).
+
+---
+
 ## [Non publié] - 2026-11-04 · Mesure d'audience Google Tag Manager (GTM sans fuite de secret)
 
 ### Ajouté
