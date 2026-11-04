@@ -2,11 +2,13 @@
  * Cémantix Solver — Mode « Défier le Bot » (DEFI-15/16)
  * ======================================================
  * Le joueur propose un mot ; l'API web l'empile, le worker le résout, et cette
- * page affiche les coups **en direct** via SSE, avec repli polling si le flux
- * tombe. Rendu identique à la trajectoire du mot du jour (mêmes classes CSS,
- * même modal). Toute valeur affichée passe par escapeHtml() — règle du projet.
+ * page affiche les coups **en direct** via SSE (avec repli polling).
+ * Pour donner vie à la réflexion de l'IA, chaque coup est révélé en temps réel
+ * avec une pause aléatoire entre 0.3 et 0.5 seconde (300ms à 500ms).
+ * Rendu identique à la trajectoire du mot du jour (mêmes classes CSS, même modal).
+ * Toute valeur affichée passe par escapeHtml() — règle du projet.
  */
-import { escapeHtml, getTierClass, getTierWeatherIcon } from "./utils.js";
+import { escapeHtml } from "./utils.js";
 import { initTrajectoryModal, openTrajectoryModal, buildTrajectoryStepHtml } from "./trajectory.js";
 
 const API = "/api/challenge";
@@ -14,7 +16,12 @@ const POLL_MS = 2000;
 const MAX_RECONNECTS = 3;
 
 let currentId = null;
-let steps = [];
+let currentSessionId = 0;
+let displayedSteps = [];
+let pendingQueue = [];
+let pendingDone = null;
+let isProcessingQueue = false;
+
 let stream = null;
 let pollTimer = null;
 let chronoTimer = null;
@@ -63,40 +70,111 @@ function waitingMessage(payload) {
   return `Le bot cherche… ${payload.tries_count || 0} coup(s) joué(s).`;
 }
 
-function renderSteps() {
+function resetStepsView(emptyText = "En attente d'un défi.") {
+  const box = el("defi-guesses");
+  if (box) {
+    box.innerHTML = `<div class="clues-empty"><span>${escapeHtml(emptyText)}</span></div>`;
+  }
+}
+
+function appendStepToView(step) {
   const box = el("defi-guesses");
   if (!box) return;
-  if (!steps.length) {
-    box.innerHTML = '<div class="clues-empty"><span>En attente des premiers coups du bot.</span></div>';
-    return;
+  const stepHtml = buildTrajectoryStepHtml(step, { showGauge: false });
+  if (displayedSteps.length === 1) {
+    box.innerHTML = stepHtml;
+  } else {
+    box.insertAdjacentHTML("beforeend", stepHtml);
   }
-  box.innerHTML = steps.map((s) => buildTrajectoryStepHtml(s, { showGauge: false })).join("");
   box.scrollTop = box.scrollHeight;
 }
 
-function mergeSteps(incoming) {
+async function processQueue() {
+  if (isProcessingQueue) return;
+  isProcessingQueue = true;
+  const session = currentSessionId;
+
+  while (pendingQueue.length > 0) {
+    if (session !== currentSessionId) {
+      isProcessingQueue = false;
+      return;
+    }
+
+    // Pause aléatoire entre 0.3 et 0.5 seconde (300ms à 500ms) pour simuler la réflexion du bot
+    const pauseMs = Math.floor(Math.random() * 200) + 300;
+    await new Promise((resolve) => setTimeout(resolve, pauseMs));
+
+    if (session !== currentSessionId) {
+      isProcessingQueue = false;
+      return;
+    }
+
+    const nextStep = pendingQueue.shift();
+    displayedSteps.push(nextStep);
+    appendStepToView(nextStep);
+    setStatus(`Le bot joue… ${displayedSteps.length} coup(s).`);
+  }
+
+  isProcessingQueue = false;
+
+  // Si le résultat terminal est arrivé pendant l'animation des coups
+  if (session === currentSessionId && pendingDone) {
+    // Laisser un court instant pour voir le coup gagnant avant d'afficher la carte de dénouement
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    if (session === currentSessionId && pendingDone) {
+      const donePayload = pendingDone;
+      pendingDone = null;
+      showResult(donePayload);
+    }
+  }
+}
+
+function enqueueSteps(incoming) {
   if (!Array.isArray(incoming)) return;
-  incoming.forEach((s) => {
-    if (s && !steps.some((e) => e.step === s.step)) steps.push(s);
-  });
-  steps.sort((a, b) => (a.step || 0) - (b.step || 0));
-  renderSteps();
+  let added = false;
+  for (const s of incoming) {
+    if (!s) continue;
+    const stepNum = s.step;
+    const alreadyDisplayed = displayedSteps.some((e) => e.step === stepNum);
+    const alreadyQueued = pendingQueue.some((e) => e.step === stepNum);
+    if (!alreadyDisplayed && !alreadyQueued) {
+      pendingQueue.push(s);
+      added = true;
+    }
+  }
+  if (added) {
+    pendingQueue.sort((a, b) => (a.step || 0) - (b.step || 0));
+    processQueue();
+  }
+}
+
+function handleDone(donePayload) {
+  pendingDone = donePayload;
+  // Si aucune animation n'est en cours et que la file est vide, dénouement immédiat
+  if (!isProcessingQueue && pendingQueue.length === 0) {
+    const payload = pendingDone;
+    pendingDone = null;
+    showResult(payload);
+  }
 }
 
 function showResult(done) {
   stopChrono();
   closeStream();
   lastDone = done;
+  const elapsedSec = startedAt > 0 ? (Date.now() - startedAt) / 1000 : (done.duration_seconds || 0);
+  const displayDuration = Math.max(elapsedSec, Number(done.duration_seconds || 0)).toFixed(1);
+
   const card = el("defi-result");
   const title = el("defi-result-title");
   const line = el("defi-result-line");
   if (!card || !title || !line) return;
   if (done.status === "solved") {
     title.textContent = "🏆 Le bot a trouvé votre mot !";
-    line.textContent = `« ${done.word || ""} » retrouvé en ${done.tries_count} coups (${(done.duration_seconds || 0).toFixed(1)} s).`;
+    line.textContent = `« ${done.word || ""} » retrouvé en ${done.tries_count} coups (${displayDuration} s).`;
   } else if (done.status === "lost") {
     title.textContent = "😅 Le bot a perdu — beau jeu !";
-    line.textContent = `Pas trouvé en ${done.tries_count} coups (${(done.duration_seconds || 0).toFixed(1)} s). Votre mot lui a résisté.`;
+    line.textContent = `Pas trouvé en ${done.tries_count} coups (${displayDuration} s). Votre mot lui a résisté.`;
   } else {
     title.textContent = "⚠️ Défi interrompu";
     line.textContent = done.error || "Le bot n'a pas pu mener ce défi au bout.";
@@ -117,7 +195,7 @@ function openFullTrajectory() {
     tries: lastDone.tries_count,
     duration_seconds: lastDone.duration_seconds,
     source: "rag",
-    trajectory: steps,
+    trajectory: displayedSteps,
   };
   openTrajectoryModal("Défi", { current: entry }, lastDone.word || null);
 }
@@ -148,16 +226,16 @@ function openStream(id) {
       return;
     }
     if (payload.event === "step" && payload.step) {
-      mergeSteps([payload.step]);
-      setStatus(`Le bot joue… ${steps.length} coup(s).`);
+      enqueueSteps([payload.step]);
     } else if (payload.event === "done") {
       stream = null;
       source.close();
-      showResult(payload);
+      handleDone(payload);
     } else if (payload.event === "status" || payload.event === "ping") {
-      // Battement du serveur : le flux est vivant. Rien à dessiner, mais c'est
-      // lui qui empêche un proxy intermédiaire de fermer une attente silencieuse.
-      if (!steps.length) setStatus(waitingMessage(payload));
+      // Battement du serveur : le flux est vivant
+      if (!displayedSteps.length && !pendingQueue.length) {
+        setStatus(waitingMessage(payload));
+      }
     } else if (payload.event === "gone" || payload.event === "timeout") {
       stream = null;
       source.close();
@@ -165,9 +243,8 @@ function openStream(id) {
     }
   };
   source.onerror = () => {
-    // Un flux coupé (proxy, veille de réseau, redémarrage du web) n'est pas une
-    // fin de défi : on le rouvre, avec repli polling seulement après épuisement.
-    if (stream !== source) return;  // une réouverture est déjà en cours
+    // Un flux coupé n'est pas une fin de défi : reconnexion puis repli polling
+    if (stream !== source) return;
     stream = null;
     source.close();
     if (reconnects < MAX_RECONNECTS) {
@@ -185,23 +262,29 @@ function openStream(id) {
 
 function startPolling(id) {
   if (pollTimer) return;
+  const session = currentSessionId;
   const read = () => {
+    if (session !== currentSessionId) return;
     fetch(`${API}/${id}?detail=1`, { headers: { Accept: "application/json" } })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!data) return;
+        if (!data || session !== currentSessionId) return;
         if (Array.isArray(data.trajectory) && data.trajectory.length) {
-          mergeSteps(data.trajectory);
+          enqueueSteps(data.trajectory);
         }
         if (["solved", "lost", "error"].includes(data.status)) {
-          showResult({
+          if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+          handleDone({
             status: data.status,
             tries_count: data.tries_count,
             duration_seconds: data.duration_seconds,
             word: data.word,
             error: data.error,
           });
-        } else {
+        } else if (!displayedSteps.length && !pendingQueue.length) {
           setStatus(waitingMessage(data));
         }
       })
@@ -215,10 +298,15 @@ async function submitChallenge(word) {
   const submit = el("defi-submit");
   if (submit) submit.disabled = true;
   closeStream();
-  steps = [];
+  stopChrono();
+  currentSessionId += 1;
+  displayedSteps = [];
+  pendingQueue = [];
+  pendingDone = null;
+  isProcessingQueue = false;
   reconnects = 0;
   lastDone = null;
-  renderSteps();
+  resetStepsView("En attente des premiers coups du bot.");
   el("defi-result").style.display = "none";
 
   try {
@@ -263,12 +351,21 @@ export function initDefi() {
   const retry = el("defi-retry");
   if (retry) {
     retry.addEventListener("click", () => {
+      currentSessionId += 1;
+      displayedSteps = [];
+      pendingQueue = [];
+      pendingDone = null;
+      isProcessingQueue = false;
+      closeStream();
+      stopChrono();
+      resetStepsView("En attente d'un défi.");
       el("defi-result").style.display = "none";
       const input = el("defi-word");
       if (input) {
         input.value = "";
         input.focus();
       }
+      setStatus("Le bot attend votre mot. Un seul mot français du dictionnaire Cémantix, 3 à 24 lettres.");
     });
   }
 
@@ -283,4 +380,3 @@ if (document.getElementById("defi-form")) {
     initDefi();
   }
 }
-

@@ -4,6 +4,25 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-03 · Défier le Bot : Animation Temps Réel & Simulation de Réflexion
+
+### Ajouté
+- **Animation temps réel coup par coup (`volumes/web/js/defi.js`)** :
+  - File d'attente asynchrone des coups reçus (`pendingQueue`) découplée de la réception réseau (flux SSE ou repli polling).
+  - Rendu progressif unitaire avec insertion DOM optimisée (`appendStepToView`) et défilement automatique vers le dernier coup (`box.scrollTop = box.scrollHeight`).
+  - Simulation réaliste de réflexion de l'IA avec pause aléatoire entre 0.3s et 0.5s (300 ms à 500 ms) avant chaque coup joué.
+
+### Modifié
+- **Temporisation et dénouement différé (`volumes/web/js/defi.js`)** :
+  - Mise en attente de la carte de résultat (`pendingDone`) jusqu'à épuisement complet de la file d'animation des coups.
+  - Temporisation de 350 ms sur le coup victorieux (1000 ‰) pour laisser au joueur le temps d'observer le mot cible trouvé avant l'apparition de la carte `#defi-result`.
+  - Durée affichée dans la carte de résultat (`displayDuration`) synchronisée avec le temps écoulé réel du chronomètre pour une cohérence visuelle parfaite.
+- **Gestion des sessions et annulations (`volumes/web/js/defi.js`)** :
+  - Jeton de session incrémental (`currentSessionId`) stoppant immédiatement toute animation active lors du lancement d'un nouveau défi ou lors d'un réessai (`defi-retry`).
+  - Réinitialisation propre du conteneur et du message d'attente (`resetStepsView`).
+
+---
+
 ## [Non publié] - 2026-11-01 · Jalon M7 : Optimisation SEO des Métadonnées (Indices, Synonymes et Mots Proches)
 
 ### Ajouté
