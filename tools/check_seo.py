@@ -33,6 +33,22 @@ PAGES = [
 def check_html(rel_path: str, html: str) -> list[str]:
     errors = []
 
+    # 0. Bloc Google Tag Manager : le fichier (versionné ou généré) doit porter
+    #    le gabarit placeholder géré par src/services/gtm.py, et JAMAIS l'ID réel.
+    #    L'identifiant (GOOGLE_TAG_MANAGER_ID, secret réservé à .env) n'est
+    #    substitué qu'à la livraison : `replace_response` du proxy Caddy en
+    #    production, resolve_gtm_for_delivery() pour les pages servies par
+    #    l'API. Ainsi, aucune fuite n'est possible via git.
+    #    Exception : la console d'exploitation /panier-9x/ est volontairement
+    #    exclue de tout suivi (page privée noindex, nofollow).
+    if "panier-9x" not in rel_path:
+        if "<!-- GTM:START -->" not in html or "<!-- GTM:END -->" not in html:
+            errors.append(f"{rel_path}: Bloc Google Tag Manager (GTM:START/END) manquant")
+        elif "gtm.js?id=GOOGLE_TAG_MANAGER_ID" not in html:
+            errors.append(f"{rel_path}: Bloc GTM présent mais gabarit placeholder altéré")
+    if re.search(r"googletagmanager\.com/gtm\.js\?id=GTM-[A-Z0-9]+", html):
+        errors.append(f"{rel_path}: FUITE GTM : un ID réel est écrit dans le fichier (il doit rester dans .env)")
+
     # 1. Title
     title_match = re.search(r"<title>([^<]+)</title>", html, re.I)
     if not title_match or not title_match.group(1).strip():
@@ -67,6 +83,8 @@ def check_html(rel_path: str, html: str) -> list[str]:
 def check_page(path: Path) -> list[str]:
     if not path.exists():
         return [f"Fichier manquant : {path}"]
+    # Les pages statiques versionnées portent TOUJOURS le placeholder : la
+    # substitution par l'ID réel n'intervient qu'au rendu HTTP (server.py).
     return check_html(str(path.relative_to(RACINE)), path.read_text(encoding="utf-8"))
 
 
@@ -233,6 +251,29 @@ def check_agentique() -> list[str]:
     return errors
 
 
+def check_gtm_fuite() -> list[str]:
+    """Anti-fuite GTM : aucun identifiant réel ne doit être écrit sur le disque.
+
+    Balaye **toutes** les pages HTML de `volumes/web` — versionnées (les 5 vues)
+    comme générées (archives `/puzzles/`, hubs `/mot-du-jour/` et `/methode/`) —
+    hors la console `/panier-9x/` exclue du suivi. Seul le gabarit placeholder
+    `id=GOOGLE_TAG_MANAGER_ID` est autorisé : l'ID réel (GOOGLE_TAG_MANAGER_ID
+    dans .env) n'existe qu'en mémoire, substitué à la livraison par le proxy.
+    """
+    errors = []
+    web_root = RACINE / "volumes" / "web"
+    gtm_real_re = re.compile(r"googletagmanager\.com/gtm\.js\?id=GTM-[A-Z0-9]+")
+    for html_file in sorted(web_root.rglob("*.html")):
+        if "panier-9x" in html_file.parts:
+            continue
+        if gtm_real_re.search(html_file.read_text(encoding="utf-8", errors="replace")):
+            errors.append(
+                f"{html_file.relative_to(RACINE)} : FUITE GTM — un ID réel est "
+                "écrit sur le disque (il doit rester dans .env)"
+            )
+    return errors
+
+
 def main() -> int:
     total_errors = []
     for page in PAGES:
@@ -240,6 +281,7 @@ def main() -> int:
         total_errors.extend(errs)
     total_errors.extend(check_pages_generees())
     total_errors.extend(check_agentique())
+    total_errors.extend(check_gtm_fuite())
 
     if total_errors:
         print("[!] Erreurs SEO detectees :")
@@ -250,6 +292,7 @@ def main() -> int:
     print(f"[OK] Audit SEO reussi sur {len(PAGES)} pages principales (title, description, canonical, OG, JSON-LD).")
     print("[OK] Audit des pages hub generees reussi (mot-du-jour, methode).")
     print("[OK] Audit agentique reussi (llms.txt H1 + liens, catalogue ARD conforme).")
+    print("[OK] Anti-fuite GTM : aucun ID reel commité dans volumes/web (placeholder uniquement).")
     return 0
 
 

@@ -400,6 +400,13 @@ def start_api_server(
     if should_publish_seo:
         from ..services.seo import ensure_seo_published
         ensure_seo_published()
+    # Avertissement d'exploitation : sans GOOGLE_TAG_MANAGER_ID dans .env, le
+    # gabarit placeholder est livré tel quel et aucun suivi n'est actif.
+    from ..services.gtm import gtm_id_from_env
+    if gtm_id_from_env():
+        log("📈  [GTM] GOOGLE_TAG_MANAGER_ID chargé : le suivi sera injecté à la livraison")
+    else:
+        log("ℹ️  [GTM] GOOGLE_TAG_MANAGER_ID absent du .env : mesure d'audience désactivée")
     max_workers = int(os.getenv("API_MAX_WORKERS", "64"))
     server = BoundedHTTPServer((host, port), GameAPIHandler, max_workers=max_workers)
     log(f"🌐  [API JEU] Serveur HTTP opérationnel sur http://{host}:{port}/api ({max_workers} workers max)")

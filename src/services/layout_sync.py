@@ -161,4 +161,11 @@ def sync_all_pages(web_root: Optional[Path] = None) -> Dict[str, bool]:
     for rel_path, depth, active_tab in pages:
         target = root / rel_path
         results[rel_path] = sync_html_file(target, depth, active_tab)
+
+    # Injection du bloc Google Tag Manager placeholder (l'ID réel est substitué
+    # à la livraison HTTP ; voir src/services/gtm.py). La console /panier-9x/
+    # est volontairement exclue du suivi.
+    from .gtm import sync_static_pages as sync_gtm_pages
+    for rel_path, ok in sync_gtm_pages(web_root=root).items():
+        results[f"gtm:{rel_path}"] = ok
     return results

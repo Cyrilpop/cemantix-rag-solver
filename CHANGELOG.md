@@ -4,6 +4,30 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-04 · Mesure d'audience Google Tag Manager (GTM sans fuite de secret)
+
+### Ajouté
+- **Injection Google Tag Manager sur toutes les pages (`src/services/gtm.py`, nouveau module)** :
+  - Bloc de suivi (`gtm.js` + `window.dataLayer` + `gtag('js', new Date())`) injecté dans le `<head>` des 5 vues statiques (`index.html`, `/play/`, `/battle/`, `/multi/`, `/defi/`) et de toutes les pages SEO générées (archives `/puzzles/`, index paginé, hubs `/mot-du-jour/` et `/methode/`).
+  - La console d'exploitation `/panier-9x/` est **volontairement exclue** de tout suivi (page privée `noindex, nofollow`) : elle reste 100 % sans tracker.
+  - Injection idempotente délimitée par `<!-- GTM:START -->` / `<!-- GTM:END -->`, branchée dans `layout_sync.sync_all_pages()` (donc au démarrage des conteneurs) et dans `render_page()` pour les gabarits générés.
+- **Secret d'exploitation hors git (`GOOGLE_TAG_MANAGER_ID`)** :
+  - L'identifiant de conteneur vit uniquement dans `.env` (déjà couvert par le `.gitignore` `.env*`) ; `.env.example` documente la clé **vide** par défaut.
+  - Les fichiers HTML, versionnés comme générés, ne portent que le gabarit placeholder `gtm.js?id=GOOGLE_TAG_MANAGER_ID` : l'ID réel n'est **jamais écrit sur le disque**, il est substitué à la livraison HTTP.
+  - Livraison : directive `replace_response` de Caddy alimentée par `{env.GOOGLE_TAG_MANAGER_ID}` (README, Caddyfile de production) et `sub_filter` nginx pour le banc local (`local/nginx/cemantix.local.conf` + `local/nginx/entrypoint-gtm.sh`, la config étant montée en lecture seule).
+- **Contrôle anti-fuite en CI (`tools/check_seo.py`)** :
+  - Chaque page auditée doit porter le bloc placeholder ; la présence d'un identifiant réel `GTM-XXXXXXXX` dans un fichier sous `volumes/web` fait échouer la CI (`check_gtm_fuite`).
+- **Outillage** : `tools/sync_layout.py` injecte le bloc et signale l'absence de `GOOGLE_TAG_MANAGER_ID` ; `tools/build_css_bundles.py` entretient le bloc aux côtés du CSS critique et vérifie la substitution en livraison (sans jamais afficher l'ID en `--check`).
+- **Content-Security-Policy élargie** : `script-src`/`img-src`/`connect-src` autorisent `googletagmanager.com` et `google-analytics.com` (README Caddy + config nginx locale), nécessité liée au script inline `dataLayer`/`gtag` imposé par GTM.
+- **Suite de tests dédiée (`tests/test_gtm.py`, 19 tests)** : intégrité du gabarit, idempotence de l'injection, substitution à la livraison, durcissement du jeton altéré, exclusion de la console admin, absence de toute fuite d'ID sur disque, déterminisme du rendu généré avec ou sans variable d'environnement.
+
+### Modifié
+- `src/services/seo_templates.py` : `render_page` émet le bloc GTM placeholder (indépendant de l'environnement, donc diff git neutre).
+- `src/api/server.py` : journalise au démarrage l'état de la mesure d'audience (ID chargé / variable absente).
+- `tools/build_css_bundles.py` : charge `gtm.py` par chemin direct (stdlib seule) afin de rester exécutable sur un poste nu et dans le job `docs` de la CI, sans `requirements.txt`.
+
+---
+
 ## [Non publié] - 2026-11-03 · Défier le Bot : Animation Temps Réel & Simulation de Réflexion
 
 ### Ajouté

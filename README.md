@@ -412,19 +412,33 @@ cemantix.cyril-randon.fr {
         Cross-Origin-Opener-Policy "same-origin"
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
-        # Politique de sécurité du contenu. Le site n'utilise AUCUNE ressource externe
-        # (ni CDN, ni police, ni script tiers) : la politique peut donc être
-        # restrictive. 'unsafe-inline' pour les styles est nécessaire car les feuilles
-        # de style sont locales et les style="…" posés par le JS sont des valeurs codées
-        # en dur, jamais des données utilisateur.
-        # script-src 'self' suffit : seul js/app.js (module ES local) est chargé, donc
-        # tout <script> injecté par une faille XSS est bloqué par le navigateur.
-        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+        # Politique de sécurité du contenu. Le site ne chargeait jusqu'ici aucune
+        # ressource externe ; la mesure d'audience Google Tag Manager introduit
+        # deux origines tierces (googletagmanager.com pour le conteneur,
+        # google-analytics.com pour les hits) et un <script> inline obligatoire
+        # (window.dataLayer / gtag). 'unsafe-inline' sur script-src est donc
+        # requis : la protection XSS ne repose plus sur la CSP mais sur
+        # l'absence totale de donnée utilisateur dans le HTML généré, plus les
+        # restrictions conservées (base-uri, form-action, frame-ancestors,
+        # object-src).
+        # L'ID GTM n'est JAMAIS versionné : les fichiers HTML portent le jeton
+        # GOOGLE_TAG_MANAGER_ID, substitué à la livraison par replace_response
+        # ci-dessous, alimenté par la variable d'environnement du conteneur Caddy
+        # (GOOGLE_TAG_MANAGER_ID défini dans .env). Variable vide = aucun suivi.
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google-analytics.com; connect-src 'self' https://www.google-analytics.com; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
     }
 
+    # Google Tag Manager : substitution du jeton placeholder par l'ID réel dans
+    # la réponse HTML uniquement (le fichier sur disque et git reste neutre).
+    # `replace_response` impose un filtrage de corps : `encode` doit être déclaré
+    # après (ou retiré) pour que Caddy puisse réécrire la réponse.
+    replace_response "gtm.js?id=GOOGLE_TAG_MANAGER_ID" "gtm.js?id={env.GOOGLE_TAG_MANAGER_ID}"
+
     # Pages d'archives : contenu statique et script inline de bascule de thème.
+    # GTM : mêmes origines tierces et même exigence de script inline que le bloc
+    # header principal (voir le commentaire CSP ci-dessus).
     header /puzzles/* {
-        Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.google-analytics.com; connect-src 'self' https://www.google-analytics.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     }
 
     # 1. Polices web immuables (cache 1 an)
@@ -807,6 +821,34 @@ Ces variables peuvent être définies dans votre shell ou dans un fichier `.env`
 | `ADMIN_API_PATH` | `/api/snap-9x` | Préfixe d'accès sécurisé pour l'API de supervision de la console. |
 | `DOCKER_GID` | `120` | GID propriétaire du socket `/var/run/docker.sock` autorisant les logs sous utilisateur non-root. |
 | `DASHBOARD_DATA_FILE` | `cemantix_data/data.json` | Emplacement de `data.json`. **Ne doit pas** pointer dans `volumes/web` (refusé par `export_web_data`). |
+| `GOOGLE_TAG_MANAGER_ID` | `—` (vide = pas de suivi) | Identifiant de conteneur Google Tag Manager (`GTM-XXXXXXXX`). **Secret d'exploitation : à ne jamais versionner.** Les pages HTML ne portent que le jeton `GOOGLE_TAG_MANAGER_ID` ; l'ID réel est substitué à la livraison par le proxy (`replace_response` Caddy, `sub_filter` nginx). La console `/panier-9x/` reste sans tracker. |
+
+---
+
+## 📈 Mesure d'audience Google Tag Manager
+
+Le bloc GTM (`gtm.js` + `window.dataLayer` + `gtag('js', new Date())`) est injecté dans le `<head>`
+des 5 vues applicatives et de toutes les pages SEO générées, **sans que l'identifiant ne transite
+jamais par git** :
+
+1. **Le fichier ne porte qu'un jeton.** `src/services/gtm.py` écrit `gtm.js?id=GOOGLE_TAG_MANAGER_ID`
+   dans les pages ; `tools/build_css_bundles.py` et `python tools/sync_layout.py` entretiennent ce
+   bloc (idempotent, balisé `<!-- GTM:START/END -->`), y compris au démarrage des conteneurs via
+   `layout_sync.sync_all_pages()`.
+2. **L'ID vient de `.env`.** `GOOGLE_TAG_MANAGER_ID` y est lu par le proxy, jamais par un build :
+   Caddy en production (`replace_response "gtm.js?id=GOOGLE_TAG_MANAGER_ID" "gtm.js?id={env.GOOGLE_TAG_MANAGER_ID}"`)
+   et nginx en local (`sub_filter` + `local/nginx/entrypoint-gtm.sh`, la config étant montée en `:ro`).
+3. **Variable vide = aucun suivi.** Le placeholder est livré tel quel, sans requête inutile ni erreur
+   de démarrage. C'est le comportement par défaut en développement, en test et en CI.
+4. **Contrôle anti-fuite.** `python tools/check_seo.py` échoue si un identifiant `GTM-XXXXXXXX`
+   apparaît dans un fichier sous `volumes/web`.
+
+> La console d'exploitation `/panier-9x/` est **exclue** du suivi : page privée `noindex, nofollow`,
+> elle ne reçoit aucun tracker, même lorsque la variable est renseignée.
+
+> La CSP doit autoriser les origines GTM (`script-src 'unsafe-inline' https://www.googletagmanager.com
+> https://www.google-analytics.com`, plus `img-src`/`connect-src` pour les hits) : le script inline
+> `dataLayer`/`gtag` est imposé par Google. Voir le Caddyfile de la section déploiement.
 
 ---
 

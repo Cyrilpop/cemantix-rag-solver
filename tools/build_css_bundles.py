@@ -27,11 +27,35 @@ Contraintes vérifiées par le script
 import argparse
 import hashlib
 import io
+import os
 import re
 import sys
+import importlib.util
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load_gtm_module():
+    """Charge src/services/gtm.py par son chemin, sans exécuter src/__init__.py.
+
+    Le package `src` importe numpy/chromadb/requests/psycopg : ce script de build
+    doit rester utilisable sur un poste nu et dans le job `docs` de la CI, qui
+    n'installent pas requirements.txt. gtm.py ne dépend que de la stdlib.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "cemantix_gtm", BASE_DIR / "src" / "services" / "gtm.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_gtm = _load_gtm_module()
+GTM_PLACEHOLDER = _gtm.GTM_PLACEHOLDER
+inject_gtm_block = _gtm.inject_gtm_block
+resolve_gtm_for_delivery = _gtm.resolve_gtm_for_delivery
+
 WEB_DIR = BASE_DIR / "volumes" / "web"
 CSS_DIR = WEB_DIR / "css"
 DIST_DIR = CSS_DIR / "dist"
@@ -198,11 +222,16 @@ def main(check_only: bool) -> int:
         current_html = html_path.read_text(encoding="utf-8").replace("\r\n", "\n")
         new_block = build_inline_block(bundle_name, prefix, sources)
         updated_html = inject_critical_into_html(current_html, bundle_name, prefix, new_block)
+        # Le bloc GTM placeholder accompagne le CSS critique : il est écrit en
+        # version (gabarit neutre) et l'ID réel n'est substitué qu'à la livraison
+        # (src/api/server.py, depuis GOOGLE_TAG_MANAGER_ID). La console
+        # /panier-9x/ est exclue du suivi (hors CRITICAL_PAGES).
+        updated_html = inject_gtm_block(updated_html)
         rel_html = html_path.relative_to(BASE_DIR)
 
         if check_only:
             if html_path.read_bytes() != updated_html.encode("utf-8"):
-                print(f"⚠️  {rel_html} : CSS critique inline périmé")
+                print(f"⚠️  {rel_html} : CSS critique inline ou bloc GTM périmé")
                 stale = True
             else:
                 print(f"✔ {rel_html} : CSS critique inline à jour")
@@ -214,6 +243,20 @@ def main(check_only: bool) -> int:
     if check_only and stale:
         print("\n→ Relancer : python tools/build_css_bundles.py")
         return 1
+
+    # Contrôle hors version : l'ID réel (environné, jamais commité) doit bien se
+    # substituer au placeholder dans le gabarit livré. En --check, la substitution
+    # est vérifiée sans jamais afficher l'ID (secret d'exploitation).
+    gtm_id = os.environ.get("GOOGLE_TAG_MANAGER_ID", "").strip()
+    if gtm_id:
+        delivered = resolve_gtm_for_delivery(inject_gtm_block("<html><head><title>t</title></head>"))
+        if f"gtm.js?id={gtm_id}" not in delivered or GTM_PLACEHOLDER in delivered:
+            print("✖ Résolution GTM en livraison défaillante (GOOGLE_TAG_MANAGER_ID)")
+            return 1
+        print("✔ GTM : ID réel substitué au placeholder en livraison"
+              + ("" if check_only else f" ({gtm_id})"))
+    else:
+        print("ℹ GTM : GOOGLE_TAG_MANAGER_ID vide — placeholder servi, aucun suivi actif")
     return 0
 
 
