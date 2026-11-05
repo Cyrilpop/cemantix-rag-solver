@@ -19,6 +19,7 @@ import re
 import threading
 import time
 import unicodedata
+from datetime import datetime, timezone
 from typing import Optional
 
 from ...config import log
@@ -71,8 +72,10 @@ def validate_word(raw, store) -> Optional[str]:
         canonical = store.normalize(word)
         if canonical != word or not store.is_valid_french(word):
             return None
-    except Exception:
-        # Un store indisponible ne doit jamais transformer la validation en 500.
+    except Exception as exc:
+        # Un store indisponible ne doit jamais transformer la validation en 500,
+        # mais doit être tracé pour diagnostiquer les anomalies du magasin lexical.
+        log(f"⚠️  [DÉFI] Erreur validation mot VocabStore pour '{word}' : {exc}", level="WARNING")
         return None
     return word
 
@@ -89,16 +92,16 @@ def _retry_after_seconds(hashed_ip: str) -> float:
     """Temps d'attente avant libération d'un créneau : expiration du plus ancien."""
     oldest = dao.oldest_recent_for_ip(hashed_ip, QUOTA_WINDOW_SECONDS)
     try:
-        from datetime import datetime, timezone
         if isinstance(oldest, str):
-            oldest = datetime.fromisoformat(oldest)
+            clean_str = oldest.replace(" ", "T")
+            oldest = datetime.fromisoformat(clean_str)
         if oldest is not None:
             if oldest.tzinfo is None:
                 oldest = oldest.replace(tzinfo=timezone.utc)
             wait = QUOTA_WINDOW_SECONDS - (datetime.now(timezone.utc) - oldest).total_seconds()
             return max(5.0, round(wait, 1))
-    except Exception:
-        pass
+    except (ValueError, TypeError, AttributeError) as exc:
+        log(f"⚠️  [DÉFI] Erreur parsing date quota ({oldest}): {exc}", level="DEBUG")
     return QUOTA_WINDOW_SECONDS
 
 
@@ -149,14 +152,14 @@ def _attente_secondes(challenge: dict):
     l'état du solveur seul ne suffit donc pas. Une attente anormalement longue à
     statut `queued`, solveur annoncé vivant, est la preuve que rien ne lit la file.
     """
-    from datetime import datetime, timezone
     brut = challenge.get("created_at") or ""
     try:
-        cree = datetime.fromisoformat(brut)
+        clean_str = brut.replace(" ", "T")
+        cree = datetime.fromisoformat(clean_str)
         if cree.tzinfo is None:
             cree = cree.replace(tzinfo=timezone.utc)
         return max(0, int((datetime.now(timezone.utc) - cree).total_seconds()))
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
         return None
 
 
@@ -170,7 +173,7 @@ def _public_view(challenge: dict) -> dict:
     }
     if challenge["status"] in TERMINAL_STATUSES:
         view["duration_seconds"] = challenge["duration_seconds"]
-        if challenge["status"] == "solved":
+        if challenge["status"] in ("solved", "won"):
             view["word"] = challenge["secret_word"]
         elif challenge["status"] == "error":
             view["error"] = "Le bot n'a pas pu mener ce défi au bout."
@@ -205,7 +208,7 @@ def _parse_challenge_id(path: str) -> tuple[Optional[str], bool]:
 # --------------------------------------------------------------------------- #
 KPIS_CACHE_TTL_SECONDS = 15.0
 WALL_OF_FAME_LIMIT = 12
-STATS_ID_RE = re.compile(r"^[0-9A-Za-z_-]{6,64}$")
+STATS_ID_RE = CHALLENGE_ID_RE
 
 _kpis_cache: dict = {"expires": 0.0, "payload": None}
 _kpis_cache_lock = threading.Lock()
@@ -220,8 +223,12 @@ def reset_kpis_cache() -> None:
 def _global_kpis_cached() -> dict:
     """Blocs `global` + `wall_of_fame` + `recent_challenges`, recalculés au plus une fois par TTL."""
     now = time.monotonic()
+    payload = _kpis_cache.get("payload")
+    if payload is not None and now < _kpis_cache.get("expires", 0.0):
+        return payload
+
     with _kpis_cache_lock:
-        if _kpis_cache["payload"] is not None and now < _kpis_cache["expires"]:
+        if _kpis_cache.get("payload") is not None and now < _kpis_cache.get("expires", 0.0):
             return _kpis_cache["payload"]
         kpis = dao.get_challenge_kpis()
         glob = dict(kpis["global"])
@@ -268,7 +275,7 @@ def handle_guesses_get(challenge_id: str) -> tuple[dict, int]:
         return {"error": "Défi introuvable."}, 404
     stat = dao.get_challenge_stat(challenge_id)
     if not stat:
-        dao.sync_legacy_challenges_to_stats()
+        dao.sync_legacy_challenges_to_stats(force=True)
         stat = dao.get_challenge_stat(challenge_id)
 
     chal = dao.get_challenge(challenge_id)
@@ -342,7 +349,7 @@ def handle_challenge_get(manager, path: str, query: str = "",
 def handle_challenge_stream(path: str, send_json, send_sse) -> None:
     """Flux SSE des coups, plafonné en durée et en connexions simultanées."""
     challenge_id, _ = _parse_challenge_id(path)
-    if not challenge_id or not get_challenge(challenge_id):
+    if not challenge_id or not get_challenge(challenge_id, include_trajectory=False):
         send_json({"error": "Défi introuvable."}, 404)
         return
 

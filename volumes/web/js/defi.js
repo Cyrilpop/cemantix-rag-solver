@@ -409,6 +409,10 @@ let activeChallengeFilter = "all";
 
 function animateCount(node, target, decimals = 0) {
   if (!node) return;
+  if (node._animId) {
+    cancelAnimationFrame(node._animId);
+    node._animId = null;
+  }
   const suffix = node.dataset.suffix || "";
   const fmt = (v) => `${v.toLocaleString("fr-FR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${suffix}`;
   const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -421,17 +425,22 @@ function animateCount(node, target, decimals = 0) {
   const tick = (now) => {
     const t = Math.min(1, (now - start) / duration);
     node.textContent = fmt(target * t);
-    if (t < 1) requestAnimationFrame(tick);
+    if (t < 1) {
+      node._animId = requestAnimationFrame(tick);
+    } else {
+      node._animId = null;
+    }
   };
-  requestAnimationFrame(tick);
+  node._animId = requestAnimationFrame(tick);
 }
 
 function renderKpis(glob) {
   if (!glob) return;
-  animateCount(el("kpi-bot-win-rate"), Number(glob.bot_win_rate_pct || 0), 1);
-  animateCount(el("kpi-total"), Number(glob.total_challenges || 0));
-  animateCount(el("kpi-avg-tries"), Number(glob.avg_tries || 0), 1);
-  animateCount(el("kpi-wall-count"), Number(glob.wall_of_fame_count || 0));
+  const winRate = Math.min(100, Math.max(0, Number(glob.bot_win_rate_pct || 0)));
+  animateCount(el("kpi-bot-win-rate"), winRate, 1);
+  animateCount(el("kpi-total"), Math.max(0, Number(glob.total_challenges || 0)));
+  animateCount(el("kpi-avg-tries"), Math.max(0, Number(glob.avg_tries || 0)), 1);
+  animateCount(el("kpi-wall-count"), Math.max(0, Number(glob.wall_of_fame_count || 0)));
 }
 
 function renderPlayerBanner(player) {
@@ -474,8 +483,8 @@ function renderChallengesList() {
     const date = it.date ? new Date(it.date).toLocaleDateString("fr-FR") : "";
     const durText = it.duration_seconds != null ? `${Number(it.duration_seconds).toFixed(1)} s` : "—";
     const badgeHtml = isBotWon
-      ? `<span class="badge" style="font-size:0.7rem;font-weight:700;color:var(--success,#3fb950);background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.35);padding:1px 7px;border-radius:999px;">🤖 Trouvé</span>`
-      : `<span class="badge" style="font-size:0.7rem;font-weight:700;color:var(--tier-warm,#f59e0b);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.45);padding:1px 7px;border-radius:999px;">😅 Perdu</span>`;
+      ? `<span class="badge badge-won">🤖 Trouvé</span>`
+      : `<span class="badge badge-lost">😅 Perdu</span>`;
     const playerDisp = String(it.player || "").replace(/^Visiteur\s*/i, "");
 
     return `<tr>
@@ -516,6 +525,7 @@ async function onWallClick(evt) {
   const btn = evt.target.closest("button[data-challenge-id]");
   if (!btn) return;
   btn.disabled = true;
+  btn.classList.add("is-loading");
   try {
     const res = await fetch(`${API}/${encodeURIComponent(btn.dataset.challengeId)}/guesses`, FETCH_JSON);
     if (!res.ok) throw new Error(String(res.status));
@@ -534,6 +544,7 @@ async function onWallClick(evt) {
     setStatus("Impossible de charger le chemin de ce défi pour le moment.");
   } finally {
     btn.disabled = false;
+    btn.classList.remove("is-loading");
   }
 }
 

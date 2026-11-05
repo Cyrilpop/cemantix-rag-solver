@@ -384,7 +384,7 @@ Le visiteur propose **un mot secret** ; le solveur RAG du site doit le retrouver
 3. **Le front affiche** — `js/defi.js` ouvre un `EventSource` sur `/api/challenge/<id>/stream` (repli polling automatique si le flux tombe) et rend chaque coup au gabarit exact de la trajectoire du mot du jour ; le bot peut **perdre** (statut `lost`), c'est une issue affichée.
 4. **Traçage analytique & KPIs communautaires (M8)** — à la clôture du défi, le worker enregistre de façon atomique et pérenne la performance dans `bot_challenge_stats` et le cheminement coup par coup dans `bot_challenge_guesses`. Les identifiants visiteurs sont pseudonymisés (`Visiteur #a1b2`, RGPD sans stockage d'IP brute), et l'API DAO agrège les indicateurs clés (taux de victoire IA/joueur, coups moyens, top mots joués, mots invaincus).
 
-Sécurité : IP hachée (HMAC-SHA256 salé, /24), purge automatique à 30 jours, identifiants de défis aléatoires 128 bits, `Cache-Control: no-store`, mot jamais révélé avant le statut terminal (et seulement si le bot a gagné), anti-XSS en trois couches, plafond de 16 flux SSE simultanés. Les IP exemptées se gèrent dans la console d'exploitation (onglet Actions).
+Sécurité : IP hachée (HMAC-SHA256 salé, /24 avec sel persistant sur disque), purge automatique à 30 jours, identifiants de défis aléatoires 128 bits, `Cache-Control: no-store`, mot jamais révélé avant le statut terminal (et seulement si le bot a gagné), anti-XSS en trois couches, plafond de 16 flux SSE simultanés. Les IP exemptées se gèrent dans la console d'exploitation (onglet Actions).
 
 #### Configuration Caddy (Production & Anti-Cache Automatique) :
 Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volumes/web` et appliquez la politique de cache HTTP optimisée.

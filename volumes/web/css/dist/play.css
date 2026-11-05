@@ -24,6 +24,7 @@ a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hov
 }
 .status-sleeping .status-pulse{background-color:var(--accent);box-shadow:0 0 8px var(--accent);}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:0.4rem;padding:0.5rem 1rem;font-size:0.875rem;font-weight:600;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;transition:var(--transition);text-decoration:none;}
+.btn.is-loading{opacity:0.6;cursor:wait;pointer-events:none;}
 .btn-sm{padding:0.3rem 0.65rem;font-size:0.8rem;}
 .btn-primary{background:var(--accent-btn,#1668dc);color:#ffffff;border:1px solid rgba(88,166,255,0.35);}
 .btn-primary:hover{background:var(--accent-btn-hover,#1f6feb);filter:brightness(1.1);box-shadow:0 0 14px var(--accent-glow);}
@@ -44,6 +45,10 @@ a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hov
 [data-theme="light"] .badge-accent{background:rgba(9,105,218,0.1);color:#0969da;border:1px solid rgba(9,105,218,0.3);}
 .badge-success{background:rgba(46,160,67,0.15);color:#56d364;border:1px solid rgba(63,185,80,0.35);}
 [data-theme="light"] .badge-success{background:rgba(26,127,55,0.12);color:#1a7f37;border:1px solid rgba(26,127,55,0.3);}
+.badge-won{font-size:0.7rem;font-weight:700;color:var(--success,#3fb950);background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.35);padding:1px 7px;border-radius:999px;}
+[data-theme="light"] .badge-won{background:rgba(26,127,55,0.12);color:#1a7f37;border:1px solid rgba(26,127,55,0.3);}
+.badge-lost{font-size:0.7rem;font-weight:700;color:var(--tier-warm,#f59e0b);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.45);padding:1px 7px;border-radius:999px;}
+[data-theme="light"] .badge-lost{background:rgba(217,119,6,0.12);color:#b45309;border:1px solid rgba(217,119,6,0.35);}
 .card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.5rem;box-shadow:var(--shadow-sm);transition:var(--transition);}
 .card:hover{box-shadow:var(--shadow-md);border-color:rgba(88,166,255,0.4);}
 .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border-color);}
