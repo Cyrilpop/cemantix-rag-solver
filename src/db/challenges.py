@@ -17,6 +17,7 @@ import hmac
 import json
 import os
 import secrets
+import threading
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -444,76 +445,102 @@ def get_player_stats(player_ip_hash: Optional[str]) -> dict:
     }
 
 
-def sync_legacy_challenges_to_stats() -> int:
+# --------------------------------------------------------------------------- #
+# M9 — Synchronisation legacy, KPIs et Wall of Fame (WOF-01..06)
+# --------------------------------------------------------------------------- #
+_legacy_sync_done = False
+_legacy_sync_lock = threading.Lock()
+
+
+def reset_legacy_sync() -> None:
+    """Réinitialise l'indicateur de synchronisation legacy (tests uniquement)."""
+    global _legacy_sync_done
+    with _legacy_sync_lock:
+        _legacy_sync_done = False
+
+
+def sync_legacy_challenges_to_stats(limit: int = 200, force: bool = False) -> int:
     """Rétro-remplit bot_challenge_stats et bot_challenge_guesses depuis bot_challenges
     pour tous les défis antérieurs non encore enregistrés dans les stats.
-    Idempotent et sécurisé.
+    Idempotent et exécuté une seule fois au démarrage (sauf si force=True).
     """
-    try:
-        rows = db.fetch_all(
-            """
-            SELECT id, secret_word, ip_hash, status, tries_count, duration_seconds, trajectory, created_at
-            FROM bot_challenges
-            WHERE status IN ('solved', 'won', 'lost')
-              AND id NOT IN (SELECT challenge_id FROM bot_challenge_stats);
-            """
-        )
-    except Exception as exc:
-        log(f"⚠️  [DÉFI] Erreur lecture défis historiques : {exc}", level="WARNING")
+    global _legacy_sync_done
+    if not force and _legacy_sync_done:
         return 0
 
-    if not rows:
-        return 0
-
-    count = 0
-    for r in rows:
+    with _legacy_sync_lock:
+        if not force and _legacy_sync_done:
+            return 0
         try:
-            cid = str(r["id"])
-            word = str(r["secret_word"])
-            status = str(r["status"])
-            outcome = "won" if status in ("solved", "won") else status
-            tries = int(r.get("tries_count") or 0)
-            dur = float(r.get("duration_seconds")) if r.get("duration_seconds") is not None else None
-            created = r.get("created_at")
-            created_dt = None
-            if isinstance(created, datetime):
-                created_dt = created
-            elif isinstance(created, str) and created:
-                try:
-                    created_dt = datetime.fromisoformat(created)
-                except Exception:
-                    pass
-
-            record_challenge_stat(
-                challenge_id=cid,
-                secret_word=word,
-                ip_hash_value=str(r.get("ip_hash") or ""),
-                outcome=outcome,
-                tries_count=tries,
-                duration_seconds=dur,
-                created_at=created_dt,
+            rows = db.fetch_all(
+                """
+                SELECT id, secret_word, ip_hash, status, tries_count, duration_seconds, trajectory, created_at
+                FROM bot_challenges
+                WHERE status IN ('solved', 'won', 'lost')
+                  AND id NOT IN (SELECT challenge_id FROM bot_challenge_stats)
+                ORDER BY created_at ASC
+                LIMIT %s;
+                """,
+                (int(limit),),
             )
-
-            traj = r.get("trajectory")
-            if isinstance(traj, str) and traj:
-                try:
-                    traj = json.loads(traj)
-                except Exception:
-                    traj = []
-            if isinstance(traj, list) and traj:
-                save_challenge_guesses(cid, traj)
-            count += 1
         except Exception as exc:
-            log(f"⚠️  [DÉFI] Erreur sync défi legacy {r.get('id')}: {exc}", level="WARNING")
+            log(f"⚠️  [DÉFI] Erreur lecture défis historiques : {exc}", level="WARNING")
+            return 0
 
-    if count > 0:
-        log(f"🔄  [DÉFI] {count} défi(s) historique(s) synchronisé(s) dans bot_challenge_stats.")
-    return count
+        if not rows:
+            _legacy_sync_done = True
+            return 0
+
+        count = 0
+        for r in rows:
+            try:
+                cid = str(r["id"])
+                word = str(r["secret_word"])
+                status = str(r["status"])
+                outcome = "won" if status in ("solved", "won") else status
+                tries = int(r.get("tries_count") or 0)
+                dur = float(r.get("duration_seconds")) if r.get("duration_seconds") is not None else None
+                created = r.get("created_at")
+                created_dt = None
+                if isinstance(created, datetime):
+                    created_dt = created
+                elif isinstance(created, str) and created:
+                    try:
+                        clean_date = created.replace(" ", "T")
+                        created_dt = datetime.fromisoformat(clean_date)
+                    except Exception as err:
+                        log(f"⚠️  [DÉFI] Format date invalide pour legacy {cid}: {err}", level="DEBUG")
+
+                record_challenge_stat(
+                    challenge_id=cid,
+                    secret_word=word,
+                    ip_hash_value=str(r.get("ip_hash") or ""),
+                    outcome=outcome,
+                    tries_count=tries,
+                    duration_seconds=dur,
+                    created_at=created_dt,
+                )
+
+                traj = r.get("trajectory")
+                if isinstance(traj, str) and traj:
+                    try:
+                        traj = json.loads(traj)
+                    except Exception:
+                        traj = []
+                if isinstance(traj, list) and traj:
+                    save_challenge_guesses(cid, traj)
+                count += 1
+            except Exception as exc:
+                log(f"⚠️  [DÉFI] Erreur sync défi legacy {r.get('id')}: {exc}", level="WARNING")
+
+        _legacy_sync_done = True
+        if count > 0:
+            log(f"🔄  [DÉFI] {count} défi(s) historique(s) synchronisé(s) dans bot_challenge_stats.")
+        return count
 
 
 def get_wall_of_fame(limit: int = 12) -> list[dict]:
     """Derniers mots invaincus (`outcome = 'lost'`), du plus récent au plus ancien (M9)."""
-    sync_legacy_challenges_to_stats()
     rows = db.fetch_all(
         """
         SELECT challenge_id, secret_word, player_anon_id, outcome, tries_count,
@@ -544,7 +571,6 @@ def get_wall_of_fame(limit: int = 12) -> list[dict]:
 
 def get_recent_challenges(limit: int = 20) -> list[dict]:
     """Derniers défis joués (victoires ET défaites), du plus récent au plus ancien."""
-    sync_legacy_challenges_to_stats()
     rows = db.fetch_all(
         """
         SELECT challenge_id, secret_word, player_anon_id, outcome, tries_count,

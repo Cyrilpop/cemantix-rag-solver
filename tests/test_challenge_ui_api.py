@@ -18,6 +18,11 @@ from src.db.connection import db
 
 PATH_KPIS = "/api/challenge/kpis"
 ANON_IP = "203.0.113.0"
+CID_1 = "1" * 32
+CID_2 = "2" * 32
+CID_3 = "3" * 32
+CID_LEGACY = "4" * 32
+CID_REA = "5" * 32
 
 
 class TestChallengeUiApi(unittest.TestCase):
@@ -30,10 +35,12 @@ class TestChallengeUiApi(unittest.TestCase):
         db.reset()
         db.init_db()
         route.reset_kpis_cache()
+        dao.reset_legacy_sync()
         self.ip_hash = dao.ip_hash(ANON_IP)
 
     def tearDown(self):
         route.reset_kpis_cache()
+        dao.reset_legacy_sync()
         db.reset()
         for key, value in self._orig.items():
             if value is None:
@@ -50,7 +57,7 @@ class TestChallengeUiApi(unittest.TestCase):
 
     # -- WOF-01 : cache TTL -------------------------------------------------
     def test_kpis_cache_avoids_second_aggregation(self):
-        self._stat("chal_000001", "alambic", "lost", 100)
+        self._stat(CID_1, "alambic", "lost", 100)
         with mock.patch.object(dao, "get_challenge_kpis", wraps=dao.get_challenge_kpis) as spy, \
                 mock.patch.object(dao, "get_wall_of_fame", wraps=dao.get_wall_of_fame) as spy_wall:
             first, status1 = self._kpis()
@@ -69,9 +76,9 @@ class TestChallengeUiApi(unittest.TestCase):
         self.assertEqual(spy.call_count, 2)
 
     def test_kpis_global_values(self):
-        self._stat("chal_000001", "alambic", "lost", 100)
-        self._stat("chal_000002", "pomme", "solved", 20)
-        self._stat("chal_000003", "arbre", "solved", 40)
+        self._stat(CID_1, "alambic", "lost", 100)
+        self._stat(CID_2, "pomme", "solved", 20)
+        self._stat(CID_3, "arbre", "solved", 40)
         payload, status = self._kpis()
         self.assertEqual(status, 200)
         glob = payload["global"]
@@ -83,19 +90,19 @@ class TestChallengeUiApi(unittest.TestCase):
 
     # -- WOF-03 : Wall of Fame ---------------------------------------------
     def test_wall_of_fame_only_lost_challenges(self):
-        self._stat("chal_000001", "alambic", "lost", 100)
-        self._stat("chal_000002", "pomme", "solved", 20)
+        self._stat(CID_1, "alambic", "lost", 100)
+        self._stat(CID_2, "pomme", "solved", 20)
         payload, _ = self._kpis()
         wall = payload["wall_of_fame"]
         self.assertEqual([w["secret_word"] for w in wall], ["alambic"])
-        self.assertEqual(wall[0]["challenge_id"], "chal_000001")
+        self.assertEqual(wall[0]["challenge_id"], CID_1)
         self.assertTrue(wall[0]["player"].startswith("Visiteur #"))
         self.assertEqual(wall[0]["tries_count"], 100)
 
     # -- WOF-02 : guesses ---------------------------------------------------
     def test_guesses_ordered_and_formatted(self):
-        self._stat("chal_000001", "alambic", "lost", 3)
-        dao.save_challenge_guesses("chal_000001", [
+        self._stat(CID_1, "alambic", "lost", 3)
+        dao.save_challenge_guesses(CID_1, [
             {"step": 3, "word": "c", "score": 30.0, "permille": 900, "weather": "🔥",
              "is_record": True, "source": "rag"},
             {"step": 1, "word": "a", "score": -5.5, "permille": None, "weather": "🥶",
@@ -103,7 +110,7 @@ class TestChallengeUiApi(unittest.TestCase):
             {"step": 2, "word": "b", "score": 8.4, "permille": 7, "weather": "😎",
              "is_record": True, "source": "seed"},
         ])
-        payload, status = route.handle_challenge_get(None, "/api/challenge/chal_000001/guesses")
+        payload, status = route.handle_challenge_get(None, f"/api/challenge/{CID_1}/guesses")
         self.assertEqual(status, 200)
         self.assertEqual(payload["status"], "ok")
         self.assertEqual(payload["guesses_count"], 3)
@@ -114,16 +121,16 @@ class TestChallengeUiApi(unittest.TestCase):
         self.assertTrue(payload["steps"][1]["is_record"])
 
     def test_guesses_unknown_or_malformed_id_is_404(self):
-        for path in ("/api/challenge/chal_unknown/guesses", "/api/challenge/../guesses",
-                     "/api/challenge/a b/guesses"):
+        for path in (f"/api/challenge/{'f' * 32}/guesses", "/api/challenge/../guesses",
+                     "/api/challenge/a b/guesses", "/api/challenge/invalid_len/guesses"):
             _, status = route.handle_challenge_get(None, path)
             self.assertEqual(status, 404, path)
 
     # -- WOF-05 : bilan & quota --------------------------------------------
     def test_player_block_and_quota(self):
-        self._stat("chal_000001", "alambic", "lost", 100)
-        self._stat("chal_000002", "pomme", "solved", 20)
-        self._stat("chal_000003", "arbre", "solved", 40)
+        self._stat(CID_1, "alambic", "lost", 100)
+        self._stat(CID_2, "pomme", "solved", 20)
+        self._stat(CID_3, "arbre", "solved", 40)
         for i in range(3):
             dao.create_challenge(f"mot{i}abc", self.ip_hash, max_tries=100)
         payload, _ = self._kpis()
@@ -143,7 +150,7 @@ class TestChallengeUiApi(unittest.TestCase):
         self.assertEqual(payload["player"]["quota_remaining"], dao.CHALLENGE_QUOTA_PER_HOUR)
 
     def test_player_block_is_not_cached_between_visitors(self):
-        self._stat("chal_000001", "alambic", "lost", 100)
+        self._stat(CID_1, "alambic", "lost", 100)
         first, _ = self._kpis()
         other, _ = self._kpis(anonymized_ip="198.51.100.0")
         self.assertEqual(first["player"]["total_played"], 1)
@@ -158,7 +165,7 @@ class TestChallengeUiApi(unittest.TestCase):
     def test_sync_legacy_challenges_and_recent_challenges(self):
         """Les défis historiques stockés dans bot_challenges sont synchronisés et restitués."""
         # Insère un défi legacy dans bot_challenges (non présent dans bot_challenge_stats)
-        cid = "legacy_001"
+        cid = CID_LEGACY
         traj = [{"word": "p1", "score": 10.0, "permille": 50, "weather": "😎"}]
         db.execute(
             """
@@ -167,7 +174,7 @@ class TestChallengeUiApi(unittest.TestCase):
             """,
             (cid, "quatorze", self.ip_hash, "solved", 62, 0.85, json.dumps(traj)),
         )
-        self._stat("chal_rea", "réa", "lost", 103)
+        self._stat(CID_REA, "réa", "lost", 103)
 
         payload, status = self._kpis()
         self.assertEqual(status, 200)

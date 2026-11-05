@@ -33,6 +33,7 @@ from .challenges import (
     release_challenge,
     remove_whitelist_ip,
     requeue_stale_running,
+    reset_legacy_sync,
     sync_legacy_challenges_to_stats,
 )
 from .connection import db, get_db_type, init_db
@@ -114,4 +115,6 @@ __all__ = [
     "release_challenge",
     "remove_whitelist_ip",
     "requeue_stale_running",
+    "reset_legacy_sync",
+    "sync_legacy_challenges_to_stats",
 ]
