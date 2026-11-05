@@ -2,7 +2,7 @@
 
 **Dépôt :** `Cyrilpop/cemantix-rag-solver`  
 **Branche visée :** `feature/m11-instant-indexing-rich-snippets` (base `origin/main`)  
-**Statut :** Spécification technique & contrat d'implémentation SEO avancé  
+**Statut :** ✅ Implémenté et validé sous Docker (7 tests unitaires dédiés, suite globale 386 tests verte)  
 **Périmètre exclusif :** `src/services/seo_google.py`, `src/services/seo_indexnow.py`, `src/services/seo_templates.py`, `src/services/seo_hubs.py`, `src/services/seo.py`, CLI `cemantix_rag.py`, suite de tests `tests/test_instant_indexing.py`, et documentation associée (`docs/roadmap/`, `README.md`, `CHANGELOG.md`).  
 **Suite de validation requise :** Tests unitaires sous Docker Python 3.12 (`docker compose`), `tools/check_docs.py`, `tools/check_seo.py`, `tools/build_css_bundles.py --check`.
 
