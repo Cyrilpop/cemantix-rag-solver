@@ -223,8 +223,12 @@ def reset_kpis_cache() -> None:
 def _global_kpis_cached() -> dict:
     """Blocs `global` + `wall_of_fame` + `recent_challenges`, recalculés au plus une fois par TTL."""
     now = time.monotonic()
+    payload = _kpis_cache.get("payload")
+    if payload is not None and now < _kpis_cache.get("expires", 0.0):
+        return payload
+
     with _kpis_cache_lock:
-        if _kpis_cache["payload"] is not None and now < _kpis_cache["expires"]:
+        if _kpis_cache.get("payload") is not None and now < _kpis_cache.get("expires", 0.0):
             return _kpis_cache["payload"]
         kpis = dao.get_challenge_kpis()
         glob = dict(kpis["global"])
@@ -345,7 +349,7 @@ def handle_challenge_get(manager, path: str, query: str = "",
 def handle_challenge_stream(path: str, send_json, send_sse) -> None:
     """Flux SSE des coups, plafonné en durée et en connexions simultanées."""
     challenge_id, _ = _parse_challenge_id(path)
-    if not challenge_id or not get_challenge(challenge_id):
+    if not challenge_id or not get_challenge(challenge_id, include_trajectory=False):
         send_json({"error": "Défi introuvable."}, 404)
         return
 

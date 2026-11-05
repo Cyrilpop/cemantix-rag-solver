@@ -38,16 +38,35 @@ CHALLENGE_QUOTA_PER_HOUR = int(os.getenv("CHALLENGE_QUOTA_PER_HOUR", "10"))
 # Sel du HMAC d'IP (SEC-21) : secret d'exploitation, jamais le mot de passe
 # admin, jamais versionné. À défaut d'un sel dédié (`CHALLENGE_IP_SALT`), on
 # dérive du secret d'exploitation déjà partagé entre le web et le worker
-# (`DB_PASS`) ; à défaut des deux, un sel aléatoire par processus : le quota
-# reste valable pendant la vie du processus mais ne survit pas au redémarrage.
+# (`DB_PASS`) ; à défaut des deux, un sel persistant sur disque (ip_salt.key)
+# pour que les quotas survivent aux redémarrages de conteneurs.
+def _get_persistent_salt() -> bytes:
+    """Récupère ou génère un sel persistant sur disque (DATA_DIR / 'ip_salt.key')."""
+    try:
+        from ..config import DATA_DIR
+        salt_file = DATA_DIR / "ip_salt.key"
+        if salt_file.exists():
+            content = salt_file.read_bytes().strip()
+            if content:
+                return content
+        new_salt = secrets.token_bytes(16)
+        try:
+            salt_file.parent.mkdir(parents=True, exist_ok=True)
+            salt_file.write_bytes(new_salt)
+        except Exception:
+            pass
+        return new_salt
+    except Exception:
+        return secrets.token_bytes(16)
+
+
 _SALT_ENV = os.getenv("CHALLENGE_IP_SALT") or os.getenv("DB_PASS") or ""
-_RANDOM_SALT = secrets.token_bytes(16)
+_PERSISTENT_SALT = _SALT_ENV.encode("utf-8") if _SALT_ENV else _get_persistent_salt()
 
 
 def ip_hash(ip_anonymized: str) -> str:
     """HMAC-SHA256 salé de l'IP déjà anonymisée en /24 (empreinte non réversible)."""
-    sel = _SALT_ENV.encode("utf-8") if _SALT_ENV else _RANDOM_SALT
-    return hmac.new(sel, ("cemantix-challenge|" + ip_anonymized).encode("utf-8"),
+    return hmac.new(_PERSISTENT_SALT, ("cemantix-challenge|" + ip_anonymized).encode("utf-8"),
                     hashlib.sha256).hexdigest()
 
 
@@ -101,9 +120,29 @@ def create_challenge(secret_word: str, ip_hash_value: str,
     return challenge_id
 
 
-def get_challenge(challenge_id: str) -> Optional[dict]:
-    """Relit un défi par son identifiant (None si inconnu ou purgé)."""
-    row = db.fetch_one("SELECT * FROM bot_challenges WHERE id = %s;", (str(challenge_id),))
+def get_challenge(challenge_id: str, include_trajectory: bool = True) -> Optional[dict]:
+    """Relit un défi par son identifiant (None si inconnu ou purgé).
+
+    Par défaut `include_trajectory=True` charge la trajectoire complète (utile au SSE/replay).
+    Si `include_trajectory=False`, la colonne JSONB volumineuse est omise pour les contrôles d'existence.
+    """
+    if include_trajectory:
+        query = """
+        SELECT id, secret_word, ip_hash, status, max_tries, tries_count,
+               duration_seconds, trajectory, error, heartbeat_at, started_at,
+               finished_at, created_at
+        FROM bot_challenges
+        WHERE id = %s;
+        """
+    else:
+        query = """
+        SELECT id, secret_word, ip_hash, status, max_tries, tries_count,
+               duration_seconds, error, heartbeat_at, started_at,
+               finished_at, created_at
+        FROM bot_challenges
+        WHERE id = %s;
+        """
+    row = db.fetch_one(query, (str(challenge_id),))
     return _row_to_challenge(row)
 
 
@@ -406,13 +445,24 @@ def save_challenge_guesses(challenge_id: str, guesses: list[dict]) -> int:
 
 def get_challenge_guesses(challenge_id: str) -> list[dict]:
     """Relit le cheminement complet ordonné pour un défi donné."""
-    query = "SELECT * FROM bot_challenge_guesses WHERE challenge_id = %s ORDER BY step_num ASC;"
+    query = """
+    SELECT step_num, word, score, permille, weather, is_record, source
+    FROM bot_challenge_guesses
+    WHERE challenge_id = %s
+    ORDER BY step_num ASC;
+    """
     return db.fetch_all(query, (str(challenge_id),))
 
 
 def get_challenge_stat(challenge_id: str) -> Optional[dict]:
     """Relit la ligne de statistique d'un défi par son identifiant."""
-    return db.fetch_one("SELECT * FROM bot_challenge_stats WHERE challenge_id = %s;", (str(challenge_id),))
+    query = """
+    SELECT challenge_id, secret_word, player_anon_id, outcome, tries_count,
+           duration_seconds, created_at
+    FROM bot_challenge_stats
+    WHERE challenge_id = %s;
+    """
+    return db.fetch_one(query, (str(challenge_id),))
 
 
 def get_player_stats(player_ip_hash: Optional[str]) -> dict:
