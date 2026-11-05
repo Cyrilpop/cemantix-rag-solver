@@ -44,9 +44,11 @@ from .seo import (
     ensure_seo_published,
     format_date_fr,
     format_duration_fr,
+    get_google_credentials,
     prerender_dashboard,
     publish_ard_manifests,
     publish_seo_pages,
+    submit_sitemap_to_google,
 )
 
 __all__ = [
@@ -80,6 +82,8 @@ __all__ = [
     "prerender_dashboard",
     "publish_ard_manifests",
     "publish_seo_pages",
+    "submit_sitemap_to_google",
+    "get_google_credentials",
     "DEFAULT_TIER_TARGETS",
     "generate_hints_for_word",
     "backfill_puzzle_hints",

@@ -95,6 +95,13 @@ from .seo_agents import (
     publish_ard_manifests,
     refresh_agent_docs,
 )
+from .seo_google import (
+    get_google_credentials,
+    generate_auth_url,
+    exchange_code_for_tokens,
+    get_access_token,
+    submit_sitemap_to_google,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -283,6 +290,19 @@ def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = No
 
     written["prerender"] = prerender_dashboard(entries[0] if entries else None, web_root=root)
     written["agent_docs"] = refresh_agent_docs(entries, web_root=root)
+
+    # Soumission automatique de sitemap.xml à Google Search Console
+    try:
+        from .seo_google import submit_sitemap_to_google
+        google_res = submit_sitemap_to_google(
+            site_url=SITE_ORIGIN,
+            sitemap_url=f"{SITE_ORIGIN}/sitemap.xml",
+        )
+        written["google_sitemap"] = bool(google_res.get("success"))
+    except Exception as g_exc:
+        log(f"⚠️  [SEO] Soumission Google Search Console ignorée ({g_exc})")
+        written["google_sitemap"] = False
+
     log(
         f"🔎  SEO publié : {written['archives']} archive(s), "
         f"{written['index_pages']} page(s) d'index, {written['hub_pages']} page(s) hub, "
@@ -290,6 +310,7 @@ def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = No
         f"{written['ard_manifests']} manifeste(s) ARD"
         + (", accueil pré-rendu" if written["prerender"] else "")
         + (f", {written['agent_docs']} doc(s) agent rafraîchie(s)" if written["agent_docs"] else "")
+        + (", sitemap soumis à Google Search Console" if written["google_sitemap"] else "")
     )
     return written
 
@@ -400,4 +421,10 @@ __all__ = [
     "prerender_dashboard",
     "publish_seo_pages",
     "ensure_seo_published",
+    # Google Search Console
+    "get_google_credentials",
+    "generate_auth_url",
+    "exchange_code_for_tokens",
+    "get_access_token",
+    "submit_sitemap_to_google",
 ]
