@@ -193,6 +193,10 @@
         </div>
       </noscript>
 
+      <!-- Bandeau visiteur : bilan de session et quota horaire (WOF-05) -->
+      <p id="defi-player-banner" class="game-status-note" role="status" aria-live="polite"
+         style="margin-bottom:.75rem" hidden></p>
+
       <!-- Carte de saisie du défi -->
       <section class="card game-control-card">
         <form id="defi-form" class="input-wrapper" autocomplete="off">
@@ -207,33 +211,72 @@
         </p>
       </section>
 
-      <!-- Déroulé en direct -->
-      <section class="card" style="margin-top: 1rem;">
-        <div class="card-header">
-          <div class="card-title-group">
-            <h3>🔍 Trajectoire du bot en direct</h3>
-            <span class="card-subtitle">Ordre chronologique des coups, comme la nuit sur le mot du jour</span>
-          </div>
-          <span id="defi-chrono" class="status-badge status-sleeping">⏱️ —</span>
-        </div>
-        <div id="defi-guesses" class="clues-list game-guesses-list">
-          <div class="clues-empty">
-            <span>En attente d'un défi.</span>
-          </div>
-        </div>
-      </section>
+      <!-- Grille 2 colonnes : Trajectoire du bot en direct & Wall of Fame -->
+      <div class="grid-2col" style="margin-top: 1rem;">
+        <!-- Colonne gauche : Résolution en cours & Dénouement -->
+        <div style="display:flex;flex-direction:column;gap:1rem;">
+          <!-- Déroulé en direct -->
+          <section class="card" style="margin-top: 0;">
+            <div class="card-header">
+              <div class="card-title-group">
+                <h3>🔍 Trajectoire du bot en direct</h3>
+                <span class="card-subtitle">Ordre chronologique des coups, comme la nuit sur le mot du jour</span>
+              </div>
+              <span id="defi-chrono" class="status-badge status-sleeping">⏱️ —</span>
+            </div>
+            <div id="defi-guesses" class="clues-list game-guesses-list">
+              <div class="clues-empty">
+                <span>En attente d'un défi.</span>
+              </div>
+            </div>
+          </section>
 
-      <!-- Dénouement -->
-      <section id="defi-result" class="card" style="margin-top: 1rem; display: none;">
+          <!-- Dénouement -->
+          <section id="defi-result" class="card" style="margin-top: 0; display: none;">
+            <div class="card-header">
+              <div class="card-title-group">
+                <h3 id="defi-result-title">🏁 Dénouement</h3>
+                <span id="defi-result-line" class="card-subtitle" role="status" aria-live="polite"></span>
+              </div>
+            </div>
+            <div class="game-actions" style="margin-top:.75rem">
+              <button type="button" id="defi-full-trajectory" class="btn btn-secondary">📜 Voir la trajectoire complète</button>
+              <button type="button" id="defi-retry" class="btn btn-secondary">🤖 Nouveau défi</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- Colonne droite : Wall of Fame (mots invaincus) -->
+        <section class="card" style="margin-top: 0;" aria-labelledby="defi-wof-title">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h2 id="defi-wof-title" style="font-size:1.1rem;margin:0">🏆 Wall of Fame</h2>
+              <span class="card-subtitle">Les mots que le bot n'a pas su retrouver</span>
+            </div>
+          </div>
+          <ul id="defi-wall-of-fame" class="clues-list game-guesses-list" style="list-style:none;padding:0;margin:.75rem 0 0">
+            <li class="clues-empty"><span>Chargement du palmarès…</span></li>
+          </ul>
+        </section>
+      </div>
+
+      <!-- KPIs communautaires (WOF-04) -->
+      <section class="card" style="margin-top: 1rem;" aria-labelledby="defi-kpi-title">
         <div class="card-header">
           <div class="card-title-group">
-            <h3 id="defi-result-title">🏁 Dénouement</h3>
-            <span id="defi-result-line" class="card-subtitle" role="status" aria-live="polite"></span>
+            <h2 id="defi-kpi-title" style="font-size:1.1rem;margin:0">📊 Le bot en chiffres</h2>
+            <span class="card-subtitle">Statistiques communautaires de tous les défis</span>
           </div>
         </div>
-        <div class="game-actions" style="margin-top:.75rem">
-          <button type="button" id="defi-full-trajectory" class="btn btn-secondary">📜 Voir la trajectoire complète</button>
-          <button type="button" id="defi-retry" class="btn btn-secondary">🤖 Nouveau défi</button>
+        <div id="defi-kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin-top:.75rem">
+          <div class="card" style="text-align:center"><div aria-hidden="true">🤖</div>
+            <strong id="kpi-bot-win-rate" data-suffix=" %">—</strong><div class="card-subtitle">Victoire IA</div></div>
+          <div class="card" style="text-align:center"><div aria-hidden="true">⚔️</div>
+            <strong id="kpi-total" data-suffix="">—</strong><div class="card-subtitle">Défis joués</div></div>
+          <div class="card" style="text-align:center"><div aria-hidden="true">🎯</div>
+            <strong id="kpi-avg-tries" data-suffix="">—</strong><div class="card-subtitle">Coups moyens</div></div>
+          <div class="card" style="text-align:center"><div aria-hidden="true">🏆</div>
+            <strong id="kpi-wall-count" data-suffix="">—</strong><div class="card-subtitle">Mots invaincus</div></div>
         </div>
       </section>
     </div>

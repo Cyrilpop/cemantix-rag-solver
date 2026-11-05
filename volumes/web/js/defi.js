@@ -183,6 +183,9 @@ function showResult(done) {
   const submit = el("defi-submit");
   if (submit) submit.disabled = false;
   setStatus("Défi terminé — lancez-en un autre (dans la limite de 10 par heure).");
+  // WOF-05/06 : le défi vient d'être archivé par le worker — rafraîchit palmarès et bandeau.
+  setTimeout(loadKpis, 1500);
+  loadKpis();
 }
 
 function openFullTrajectory() {
@@ -320,6 +323,7 @@ async function submitChallenge(word) {
       currentId = data.id;
       const quota = data.quota_restant === "unlimited" ? "illimité" : `${data.quota_restant} restant(s)`;
       setStatus(`Défi accepté dans la file (quota : ${quota}). Le worker démarre…`);
+      loadKpis();
       startChrono();
       openStream(data.id);
     } else if (res.status === 429) {
@@ -371,6 +375,120 @@ export function initDefi() {
 
   const full = el("defi-full-trajectory");
   if (full) full.addEventListener("click", openFullTrajectory);
+
+  const wall = el("defi-wall-of-fame");
+  if (wall) wall.addEventListener("click", onWallClick);
+  loadKpis();
+}
+
+// --------------------------------------------------------------------------- //
+// M9 — Wall of Fame, KPIs communautaires, bandeau visiteur, replay (WOF-03..06)
+// --------------------------------------------------------------------------- //
+const FETCH_JSON = { headers: { Accept: "application/json" } };
+
+function animateCount(node, target, decimals = 0) {
+  if (!node) return;
+  const suffix = node.dataset.suffix || "";
+  const fmt = (v) => `${v.toLocaleString("fr-FR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${suffix}`;
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced || !Number.isFinite(target)) {
+    node.textContent = fmt(Number.isFinite(target) ? target : 0);
+    return;
+  }
+  const start = performance.now();
+  const duration = 600;
+  const tick = (now) => {
+    const t = Math.min(1, (now - start) / duration);
+    node.textContent = fmt(target * t);
+    if (t < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function renderKpis(glob) {
+  if (!glob) return;
+  animateCount(el("kpi-bot-win-rate"), Number(glob.bot_win_rate_pct || 0), 1);
+  animateCount(el("kpi-total"), Number(glob.total_challenges || 0));
+  animateCount(el("kpi-avg-tries"), Number(glob.avg_tries || 0), 1);
+  animateCount(el("kpi-wall-count"), Number(glob.wall_of_fame_count || 0));
+}
+
+function renderPlayerBanner(player) {
+  const banner = el("defi-player-banner");
+  if (!banner || !player) return;
+  const remaining = player.quota_remaining === "unlimited"
+    ? "défis illimités"
+    : `${player.quota_remaining} défi${player.quota_remaining > 1 ? "s" : ""} restant${player.quota_remaining > 1 ? "s" : ""} cette heure-ci`;
+  const name = player.display_name || "Visiteur";
+  if (player.total_played > 0) {
+    banner.textContent = `Bienvenue ${name} — ${player.player_wins} victoire${player.player_wins > 1 ? "s" : ""} / ` +
+      `${player.total_played} défi${player.total_played > 1 ? "s" : ""} lancé${player.total_played > 1 ? "s" : ""} ` +
+      `(${Math.round(player.player_win_rate_pct)} %) • ${remaining}`;
+  } else {
+    banner.textContent = `Bienvenue ${name} — aucun défi lancé pour l'instant • ${remaining}`;
+  }
+  banner.hidden = false;
+}
+
+function renderWallOfFame(items) {
+  const box = el("defi-wall-of-fame");
+  if (!box) return;
+  if (!Array.isArray(items) || !items.length) {
+    box.innerHTML = `<li class="clues-empty"><span>Aucun mot invaincu pour l'instant — soyez le premier !</span></li>`;
+    return;
+  }
+  box.innerHTML = items.map((it) => {
+    const date = it.date ? new Date(it.date).toLocaleDateString("fr-FR") : "";
+    return `<li class="guess-row" style="display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;justify-content:space-between;padding:.45rem .65rem;">
+      <div style="min-width:0;flex:1 1 auto;">
+        <span style="font-weight:700;">🏆 ${escapeHtml(it.secret_word)}</span>
+        <div class="card-subtitle" style="font-size:0.75rem;">${escapeHtml(it.player)} · ${escapeHtml(String(it.tries_count))} coups · ${escapeHtml(date)}</div>
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" data-challenge-id="${escapeHtml(it.challenge_id)}" style="flex-shrink:0;">👁️ Revoir</button>
+    </li>`;
+  }).join("");
+}
+
+/** Charge (ou recharge) KPIs, Wall of Fame et bandeau. Silencieux en cas d'échec. */
+async function loadKpis() {
+  try {
+    const res = await fetch(`${API}/kpis`, FETCH_JSON);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderKpis(data.global);
+    renderWallOfFame(data.wall_of_fame);
+    renderPlayerBanner(data.player);
+  } catch (_err) {
+    const box = el("defi-wall-of-fame");
+    if (box && box.querySelector(".clues-empty")) {
+      box.innerHTML = `<li class="clues-empty"><span>Palmarès momentanément indisponible.</span></li>`;
+    }
+  }
+}
+
+async function onWallClick(evt) {
+  const btn = evt.target.closest("button[data-challenge-id]");
+  if (!btn) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/${encodeURIComponent(btn.dataset.challengeId)}/guesses`, FETCH_JSON);
+    if (!res.ok) throw new Error(String(res.status));
+    const data = await res.json();
+    const entry = {
+      puzzle: "Défi",
+      date: "Wall of Fame",
+      word: data.secret_word || null,
+      win: data.outcome === "won",
+      tries: data.tries_count,
+      source: "rag",
+      trajectory: data.steps || [],
+    };
+    openTrajectoryModal("Défi", { current: entry }, data.secret_word || null);
+  } catch (_err) {
+    setStatus("Impossible de charger le chemin de ce défi pour le moment.");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 if (document.getElementById("defi-form")) {
