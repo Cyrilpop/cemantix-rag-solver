@@ -413,6 +413,65 @@ def get_challenge_stat(challenge_id: str) -> Optional[dict]:
     return db.fetch_one("SELECT * FROM bot_challenge_stats WHERE challenge_id = %s;", (str(challenge_id),))
 
 
+def get_player_stats(player_ip_hash: Optional[str]) -> dict:
+    """Bilan pseudonymisé d'un visiteur (M9) : le seul bloc non mis en cache."""
+    if not player_ip_hash:
+        return {"identified": False, "display_name": None, "total_played": 0,
+                "player_wins": 0, "player_losses": 0, "player_win_rate_pct": 0.0}
+    player_anon_id = anonymize_player_token(player_ip_hash)
+    row = db.fetch_one(
+        """
+        SELECT
+            COUNT(*) AS total_played,
+            SUM(CASE WHEN outcome = 'lost' THEN 1 ELSE 0 END) AS player_wins,
+            SUM(CASE WHEN outcome = 'won' THEN 1 ELSE 0 END) AS player_losses
+        FROM bot_challenge_stats
+        WHERE player_anon_id = %s;
+        """,
+        (player_anon_id,),
+    ) or {}
+    total = int(row.get("total_played") or 0)
+    wins = int(row.get("player_wins") or 0)
+    losses = int(row.get("player_losses") or 0)
+    return {
+        "identified": True,
+        "display_name": format_player_display(player_anon_id),
+        "total_played": total,
+        "player_wins": wins,
+        "player_losses": losses,
+        "player_win_rate_pct": round((wins / total) * 100, 1) if total > 0 else 0.0,
+    }
+
+
+def get_wall_of_fame(limit: int = 12) -> list[dict]:
+    """Derniers mots invaincus (`outcome = 'lost'`), du plus récent au plus ancien (M9)."""
+    rows = db.fetch_all(
+        """
+        SELECT challenge_id, secret_word, player_anon_id, tries_count,
+               duration_seconds, created_at
+        FROM bot_challenge_stats
+        WHERE outcome = 'lost'
+        ORDER BY created_at DESC
+        LIMIT %s;
+        """,
+        (int(limit),),
+    )
+    result = []
+    for r in rows:
+        created = r.get("created_at")
+        date_str = created.isoformat() if isinstance(created, datetime) else str(created or "")
+        dur = r.get("duration_seconds")
+        result.append({
+            "challenge_id": str(r["challenge_id"]),
+            "secret_word": str(r["secret_word"]),
+            "player": format_player_display(r["player_anon_id"]),
+            "tries_count": int(r["tries_count"]),
+            "duration_seconds": round(float(dur), 1) if dur is not None else None,
+            "date": date_str,
+        })
+    return result
+
+
 def get_challenge_kpis(player_ip_hash: Optional[str] = None) -> dict:
     """Retourne la synthèse des KPIs globaux et les stats de la session courante."""
     row_counts = db.fetch_one(
