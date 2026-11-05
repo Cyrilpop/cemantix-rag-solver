@@ -4,6 +4,7 @@ Tests d'intégration M9 — Wall of Fame, KPIs en direct, replay des défis.
 Couvre `GET /api/challenge/kpis` (cache TTL 15 s, Wall of Fame, bilan et quota
 visiteur) et `GET /api/challenge/<id>/guesses` sur une base SQLite temporaire.
 """
+import json
 import os
 import shutil
 import tempfile
@@ -153,6 +154,37 @@ class TestChallengeUiApi(unittest.TestCase):
             payload, status = self._kpis()
         self.assertEqual(status, 503)
         self.assertIn("error", payload)
+
+    def test_sync_legacy_challenges_and_recent_challenges(self):
+        """Les défis historiques stockés dans bot_challenges sont synchronisés et restitués."""
+        # Insère un défi legacy dans bot_challenges (non présent dans bot_challenge_stats)
+        cid = "legacy_001"
+        traj = [{"word": "p1", "score": 10.0, "permille": 50, "weather": "😎"}]
+        db.execute(
+            """
+            INSERT INTO bot_challenges (id, secret_word, ip_hash, status, tries_count, duration_seconds, trajectory)
+            VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """,
+            (cid, "quatorze", self.ip_hash, "solved", 62, 0.85, json.dumps(traj)),
+        )
+        self._stat("chal_rea", "réa", "lost", 103)
+
+        payload, status = self._kpis()
+        self.assertEqual(status, 200)
+        self.assertIn("recent_challenges", payload)
+        recents = payload["recent_challenges"]
+        words = {r["secret_word"]: r["outcome"] for r in recents}
+        self.assertIn("quatorze", words)
+        self.assertEqual(words["quatorze"], "won")
+        self.assertIn("réa", words)
+        self.assertEqual(words["réa"], "lost")
+
+        # Vérifie que guesses_get fonctionne pour le défi legacy
+        g_payload, g_status = route.handle_challenge_get(None, f"/api/challenge/{cid}/guesses")
+        self.assertEqual(g_status, 200)
+        self.assertEqual(g_payload["secret_word"], "quatorze")
+        self.assertEqual(g_payload["outcome"], "won")
+        self.assertEqual(len(g_payload["steps"]), 1)
 
 
 if __name__ == "__main__":

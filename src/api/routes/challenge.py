@@ -218,7 +218,7 @@ def reset_kpis_cache() -> None:
 
 
 def _global_kpis_cached() -> dict:
-    """Blocs `global` + `wall_of_fame`, recalculés au plus une fois par TTL."""
+    """Blocs `global` + `wall_of_fame` + `recent_challenges`, recalculés au plus une fois par TTL."""
     now = time.monotonic()
     with _kpis_cache_lock:
         if _kpis_cache["payload"] is not None and now < _kpis_cache["expires"]:
@@ -226,7 +226,13 @@ def _global_kpis_cached() -> dict:
         kpis = dao.get_challenge_kpis()
         glob = dict(kpis["global"])
         glob["wall_of_fame_count"] = glob["bot_losses"]
-        payload = {"global": glob, "wall_of_fame": dao.get_wall_of_fame(WALL_OF_FAME_LIMIT)}
+        wall = dao.get_wall_of_fame(WALL_OF_FAME_LIMIT)
+        recent = dao.get_recent_challenges(WALL_OF_FAME_LIMIT)
+        payload = {
+            "global": glob,
+            "wall_of_fame": wall,
+            "recent_challenges": recent,
+        }
         _kpis_cache.update(expires=now + KPIS_CACHE_TTL_SECONDS, payload=payload)
         return payload
 
@@ -247,8 +253,13 @@ def handle_kpis_get(client_ip: str = "", anonymized_ip: str = "") -> tuple[dict,
     except Exception as exc:
         log(f"⚠️  [DÉFI] KPIs indisponibles : {exc}")
         return {"error": "Statistiques momentanément indisponibles."}, 503
-    return {"status": "ok", "global": cached["global"],
-            "wall_of_fame": cached["wall_of_fame"], "player": player}, 200
+    return {
+        "status": "ok",
+        "global": cached["global"],
+        "wall_of_fame": cached["wall_of_fame"],
+        "recent_challenges": cached.get("recent_challenges") or cached["wall_of_fame"],
+        "player": player,
+    }, 200
 
 
 def handle_guesses_get(challenge_id: str) -> tuple[dict, int]:
@@ -257,21 +268,46 @@ def handle_guesses_get(challenge_id: str) -> tuple[dict, int]:
         return {"error": "Défi introuvable."}, 404
     stat = dao.get_challenge_stat(challenge_id)
     if not stat:
+        dao.sync_legacy_challenges_to_stats()
+        stat = dao.get_challenge_stat(challenge_id)
+
+    chal = dao.get_challenge(challenge_id)
+    if not stat and not chal:
         return {"error": "Défi introuvable."}, 404
+
+    secret_word = stat["secret_word"] if stat else chal["secret_word"]
+    outcome = stat["outcome"] if stat else ("won" if chal.get("status") in ("solved", "won") else chal.get("status"))
+    tries_count = int(stat["tries_count"] if stat else chal.get("tries_count", 0))
+
     rows = dao.get_challenge_guesses(challenge_id)
-    steps = [{
-        "step": int(r["step_num"]),
-        "word": str(r["word"]),
-        "score": float(r["score"]) if r.get("score") is not None else 0.0,
-        "permille": int(r["permille"]) if r.get("permille") is not None else None,
-        "weather": r.get("weather") or "",
-        "is_record": bool(r.get("is_record")),
-        "source": r.get("source") or "rag",
-    } for r in rows]
+    if rows:
+        steps = [{
+            "step": int(r["step_num"]),
+            "word": str(r["word"]),
+            "score": float(r["score"]) if r.get("score") is not None else 0.0,
+            "permille": int(r["permille"]) if r.get("permille") is not None else None,
+            "weather": r.get("weather") or "",
+            "is_record": bool(r.get("is_record")),
+            "source": r.get("source") or "rag",
+        } for r in rows]
+    elif chal and chal.get("trajectory"):
+        traj = chal["trajectory"]
+        steps = [{
+            "step": idx,
+            "word": str(g.get("word") or ""),
+            "score": float(g.get("score") or 0.0),
+            "permille": int(g["permille"]) if g.get("permille") is not None else None,
+            "weather": g.get("weather") or "",
+            "is_record": bool(g.get("is_record")),
+            "source": g.get("source") or "rag",
+        } for idx, g in enumerate(traj, start=1)]
+    else:
+        steps = []
+
     return {"status": "ok", "challenge_id": challenge_id,
-            "secret_word": str(stat["secret_word"]),
-            "outcome": str(stat["outcome"]),
-            "tries_count": int(stat["tries_count"]),
+            "secret_word": str(secret_word),
+            "outcome": str(outcome),
+            "tries_count": tries_count,
             "guesses_count": len(steps), "steps": steps}, 200
 
 

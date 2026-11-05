@@ -378,6 +378,23 @@ export function initDefi() {
 
   const wall = el("defi-wall-of-fame");
   if (wall) wall.addEventListener("click", onWallClick);
+
+  const filterGroup = el("defi-list-filters");
+  if (filterGroup) {
+    filterGroup.addEventListener("click", (evt) => {
+      const btn = evt.target.closest("button.pill-btn");
+      if (!btn || btn.classList.contains("active")) return;
+      filterGroup.querySelectorAll(".pill-btn").forEach((b) => {
+        b.classList.remove("active");
+        b.setAttribute("aria-selected", "false");
+      });
+      btn.classList.add("active");
+      btn.setAttribute("aria-selected", "true");
+      activeChallengeFilter = btn.dataset.filter || "all";
+      renderChallengesList();
+    });
+  }
+
   loadKpis();
 }
 
@@ -385,6 +402,8 @@ export function initDefi() {
 // M9 — Wall of Fame, KPIs communautaires, bandeau visiteur, replay (WOF-03..06)
 // --------------------------------------------------------------------------- //
 const FETCH_JSON = { headers: { Accept: "application/json" } };
+let challengesList = [];
+let activeChallengeFilter = "all";
 
 function animateCount(node, target, decimals = 0) {
   if (!node) return;
@@ -430,33 +449,57 @@ function renderPlayerBanner(player) {
   banner.hidden = false;
 }
 
-function renderWallOfFame(items) {
+function renderChallengesList() {
   const box = el("defi-wall-of-fame");
   if (!box) return;
-  if (!Array.isArray(items) || !items.length) {
-    box.innerHTML = `<li class="clues-empty"><span>Aucun mot invaincu pour l'instant — soyez le premier !</span></li>`;
+
+  const items = challengesList.filter((it) => {
+    if (activeChallengeFilter === "lost") return it.outcome === "lost";
+    if (activeChallengeFilter === "won") return it.outcome === "won" || it.outcome === "solved";
+    return true;
+  });
+
+  if (!items.length) {
+    const emptyMsg = activeChallengeFilter === "lost"
+      ? "Aucun mot invaincu pour l'instant — soyez le premier !"
+      : (activeChallengeFilter === "won" ? "Aucune victoire bot enregistrée." : "Aucun défi pour l'instant.");
+    box.innerHTML = `<li class="clues-empty"><span>${escapeHtml(emptyMsg)}</span></li>`;
     return;
   }
+
   box.innerHTML = items.map((it) => {
+    const isBotWon = it.outcome === "won" || it.outcome === "solved";
     const date = it.date ? new Date(it.date).toLocaleDateString("fr-FR") : "";
-    return `<li class="guess-row" style="display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;justify-content:space-between;padding:.45rem .65rem;">
-      <div style="min-width:0;flex:1 1 auto;">
-        <span style="font-weight:700;">🏆 ${escapeHtml(it.secret_word)}</span>
-        <div class="card-subtitle" style="font-size:0.75rem;">${escapeHtml(it.player)} · ${escapeHtml(String(it.tries_count))} coups · ${escapeHtml(date)}</div>
+    const badgeHtml = isBotWon
+      ? `<span class="badge" style="font-size:0.72rem;font-weight:700;color:var(--success,#3fb950);background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.35);padding:2px 8px;border-radius:999px;">🤖 Bot a trouvé (${escapeHtml(String(it.tries_count))} coups)</span>`
+      : `<span class="badge" style="font-size:0.72rem;font-weight:700;color:var(--tier-warm,#f59e0b);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.45);padding:2px 8px;border-radius:999px;">🏆 Mot invaincu (${escapeHtml(String(it.tries_count))} coups)</span>`;
+
+    return `<li class="guess-row" style="display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;justify-content:space-between;padding:.5rem .75rem;">
+      <div style="min-width:0;flex:1 1 auto;display:flex;flex-direction:column;gap:3px;">
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+          <strong style="font-size:0.95rem;letter-spacing:0.02em;">${escapeHtml(it.secret_word)}</strong>
+          ${badgeHtml}
+        </div>
+        <div class="card-subtitle" style="font-size:0.74rem;">
+          ${escapeHtml(it.player)} · ${escapeHtml(date)}${it.duration_seconds ? ` · ${escapeHtml(String(it.duration_seconds))} s` : ""}
+        </div>
       </div>
       <button type="button" class="btn btn-secondary btn-sm" data-challenge-id="${escapeHtml(it.challenge_id)}" style="flex-shrink:0;">👁️ Revoir</button>
     </li>`;
   }).join("");
 }
 
-/** Charge (ou recharge) KPIs, Wall of Fame et bandeau. Silencieux en cas d'échec. */
+/** Charge (ou recharge) KPIs, liste des défis et bandeau. Silencieux en cas d'échec. */
 async function loadKpis() {
   try {
     const res = await fetch(`${API}/kpis`, FETCH_JSON);
     if (!res.ok) return;
     const data = await res.json();
     renderKpis(data.global);
-    renderWallOfFame(data.wall_of_fame);
+    challengesList = Array.isArray(data.recent_challenges) && data.recent_challenges.length
+      ? data.recent_challenges
+      : (data.wall_of_fame || []);
+    renderChallengesList();
     renderPlayerBanner(data.player);
   } catch (_err) {
     const box = el("defi-wall-of-fame");

@@ -21,6 +21,8 @@ from .challenges import (
     create_challenge,
     finish_challenge,
     get_challenge,
+    get_recent_challenges,
+    get_wall_of_fame,
     get_whitelist,
     heartbeat,
     ip_hash,
@@ -31,6 +33,7 @@ from .challenges import (
     release_challenge,
     remove_whitelist_ip,
     requeue_stale_running,
+    sync_legacy_challenges_to_stats,
 )
 from .connection import db, get_db_type, init_db
 from .daily import (

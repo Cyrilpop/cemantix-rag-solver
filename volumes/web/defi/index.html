@@ -246,16 +246,21 @@
           </section>
         </div>
 
-        <!-- Colonne droite : Wall of Fame (mots invaincus) -->
+        <!-- Colonne droite : Palmarès & Défis récents -->
         <section class="card" style="margin-top: 0;" aria-labelledby="defi-wof-title">
-          <div class="card-header">
+          <div class="card-header" style="flex-wrap:wrap;gap:.5rem;justify-content:space-between;align-items:center;">
             <div class="card-title-group">
-              <h2 id="defi-wof-title" style="font-size:1.1rem;margin:0">🏆 Wall of Fame</h2>
-              <span class="card-subtitle">Les mots que le bot n'a pas su retrouver</span>
+              <h2 id="defi-wof-title" style="font-size:1.1rem;margin:0">🏆 Palmarès des Défis</h2>
+              <span class="card-subtitle">Historique récent et mots ayant résisté au bot</span>
+            </div>
+            <div id="defi-list-filters" class="pill-group" role="tablist" aria-label="Filtrer les défis">
+              <button type="button" class="pill-btn active" data-filter="all" role="tab" aria-selected="true">Tous</button>
+              <button type="button" class="pill-btn" data-filter="lost" role="tab" aria-selected="false">🏆 Invaincus</button>
+              <button type="button" class="pill-btn" data-filter="won" role="tab" aria-selected="false">🤖 Victoires</button>
             </div>
           </div>
           <ul id="defi-wall-of-fame" class="clues-list game-guesses-list" style="list-style:none;padding:0;margin:.75rem 0 0">
-            <li class="clues-empty"><span>Chargement du palmarès…</span></li>
+            <li class="clues-empty"><span>Chargement des défis…</span></li>
           </ul>
         </section>
       </div>
