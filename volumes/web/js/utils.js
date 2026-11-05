@@ -70,17 +70,26 @@ if (typeof document !== "undefined") {
 
 // Neutralisation des erreurs parasites d'extensions navigateur
 export function initErrorHandling() {
+  function isExtensionError(msg, stack, filename) {
+    if (msg.includes("tabs:outgoing.message.ready")) return true;
+    const isExtensionOrigin = (filename && (filename.startsWith("chrome-extension://") || filename.startsWith("moz-extension://"))) ||
+      (stack && (stack.includes("chrome-extension://") || stack.includes("moz-extension://")));
+    return Boolean(isExtensionOrigin && msg.includes("No Listener"));
+  }
+
   window.addEventListener("unhandledrejection", (event) => {
     const reason = event?.reason;
     const msg = (reason && (reason.message || String(reason))) || "";
-    if (msg.includes("tabs:outgoing.message.ready") || msg.includes("No Listener")) {
+    const stack = (reason && reason.stack) || "";
+    if (isExtensionError(msg, stack, "")) {
       event.preventDefault();
     }
   });
 
   window.addEventListener("error", (event) => {
     const msg = event?.message || "";
-    if (msg.includes("tabs:outgoing.message.ready") || msg.includes("No Listener")) {
+    const filename = event?.filename || "";
+    if (isExtensionError(msg, "", filename)) {
       event.preventDefault();
     }
   });
@@ -223,6 +232,7 @@ export function showConfirmDialog({
       card.classList.toggle("is-accent", confirmType !== "danger");
     }
 
+    const previousActive = document.activeElement;
     let isResolved = false;
     function cleanup(value) {
       if (isResolved) return;
@@ -230,6 +240,13 @@ export function showConfirmDialog({
       backdrop.style.display = "none";
       document.removeEventListener("keydown", handleKeyDown);
       backdrop.removeEventListener("click", handleBackdropClick);
+      if (previousActive && typeof previousActive.focus === "function") {
+        try {
+          previousActive.focus();
+        } catch (_err) {
+          // Ignore si l'élément n'est plus focusable
+        }
+      }
       resolve(value);
     }
 

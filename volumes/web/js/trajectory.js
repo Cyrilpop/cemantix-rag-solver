@@ -261,6 +261,8 @@ export function openTrajectoryModal(puzzleId, data, secretWordOverride = null) {
   if (modalSecretWord) {
     if (resolvedWord) {
       modalSecretWord.textContent = resolvedWord.toUpperCase();
+    } else if (isDefi) {
+      modalSecretWord.textContent = "NON RÉVÉLÉ";
     } else if (entry.win !== false) {
       modalSecretWord.textContent = "MOT DU JOUR";
     } else {
