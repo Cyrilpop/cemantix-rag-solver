@@ -582,6 +582,21 @@ supplémentaire et un rendu correct même sans JS.
 docker compose run --rm cemantix --publish-seo
 ```
 
+### Soumission programmatique à Google Search Console (Jalon M10)
+Chaque régénération de `sitemap.xml` (après la résolution de minuit ou via `--publish-seo`) soumet automatiquement le sitemap mis à jour à l'API Google Search Console (`webmasters.sitemaps.submit`).
+
+Pour autoriser et tester la communication OAuth 2.0 :
+```bash
+# 1. Générer le lien de consentement Google OAuth 2.0
+docker compose run --rm cemantix --google-auth
+
+# 2. Après validation dans votre navigateur, échanger le code reçu contre le refresh token :
+docker compose run --rm cemantix --google-code "<VOTRE_CODE_AUTH>"
+
+# 3. Forcer la soumission manuelle immédiate pour test :
+docker compose run --rm cemantix --submit-sitemap
+```
+
 ### Cache HTTP : cohérence avec la politique « no-cache »
 Le projet applique `Cache-Control: "no-cache, must-revalidate"` sur le code applicatif
 (voir l'encadré « Pourquoi aucun paramètre de version (`?v=...`) » plus haut) : la
@@ -777,6 +792,8 @@ curl -sI https://cemantix.cyril-randon.fr/ | grep -iE 'content-security|strict-t
 | `--no-run-on-start` | Flag | `False` | En mode démon, ne résout pas immédiatement si non résolu, attend le cycle de 00h00. |
 | `--export-web` | Flag | `False` | Exporte `data.json` pour le serveur web et régénère les pages d'archives SEO, `sitemap.xml` et `.well-known/*.json`. |
 | `--publish-seo` | Flag | `False` | Régénère uniquement les pages `/puzzles/<date>/`, l'index paginé, `sitemap.xml` et `.well-known/*.json` depuis l'historique. |
+| `--submit-sitemap` | Flag | `False` | Soumet immédiatement `sitemap.xml` à Google Search Console via l'API Webmasters. |
+| `--google-auth` | Flag | `False` | Affiche l'URL de consentement OAuth 2.0 ou échange le code (`--google-code`) contre un refresh token. |
 | `--duel` | Flag | `False` | Lance le mode duel croisé interactif (Humain vs IA RAG). |
 | `--difficulty`, `-d` | Choix (`facile`, `moyen`, `expert`) | `moyen` | Règle le niveau d'agressivité de l'IA en mode duel. |
 | `--play`, `--game` | Flag | `False` | Active le mode jeu interactif solo dans le terminal. |
