@@ -4,6 +4,34 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-05 · Optimisations & Durcissement Backend et Frontend (Post-Audit)
+
+### Amélioré
+- **Synchronisation legacy des défis (`sync_legacy_challenges_to_stats`)** :
+  - Exécution unique au démarrage applicatif (retirée des requêtes KPIs fréquentes `get_wall_of_fame` et `get_recent_challenges`).
+  - Protection contre la saturation mémoire par pagination SQL (`LIMIT 200`, ordonné chronologiquement).
+  - Verrou d'exécution thread-safe (`_legacy_sync_lock`) et fonction de réinitialisation (`reset_legacy_sync()`) pour la suite de tests.
+- **Sélectivité des requêtes SQL (Fin des `SELECT *` avec JSONB volumineux)** :
+  - `get_challenge()` : projection des colonnes nécessaires avec paramètre `include_trajectory=False` pour les contrôles d'existence légers.
+  - `get_challenge_guesses()` et `get_challenge_stat()` : requêtes SQL avec colonnes explicites sans surcoût de transfert.
+- **Concurrence & Cache KPIs (`src/api/routes/challenge.py`)** :
+  - Mise en place du patron *Double-Checked Locking* (DCL) sur `_global_kpis_cached()` : lecture non bloquante si le cache est chaud, éliminant tout goulot d'étranglement sous trafic simultané.
+- **Persistance du sel de hachage IP (`src/db/challenges.py`)** :
+  - En l'absence de `CHALLENGE_IP_SALT` et `DB_PASS`, génération et réutilisation d'un sel aléatoire persistant (`DATA_DIR / "ip_salt.key"`), assurant la continuité des quotas horaires entre redémarrages de conteneurs.
+- **Observabilité et gestion des exceptions** :
+  - Parsing défensif des horodatages SQLite/ISO dans `_retry_after_seconds` et `_attente_secondes`.
+  - Élimination des `except Exception: pass` silencieux avec journalisation ciblée (`DEBUG` / `WARNING`) dans la validation lexicale et le calcul de retry.
+  - Harmonisation stricte de la validation d'identifiant (`STATS_ID_RE` aligné sur 32 hex) et de la détection du statut terminal (`solved` et `won`).
+- **Frontend & Accessibilité (`volumes/web/js/` et `base.css`)** :
+  - Annulation propre des `requestAnimationFrame` précédents dans `animateCount()` pour éliminer la concurrence lors des rafraîchissements rapides.
+  - Restitution automatique du focus clavier sur l'élément d'origine lors de la fermeture de la boîte de dialogue `showConfirmDialog`.
+  - État visuel d'attente (`.btn.is-loading` avec curseur d'attente) sur les boutons du Wall of Fame pendant le chargement des coups.
+  - Déplacement des styles inline des badges vers les classes réutilisables `.badge-won` et `.badge-lost` dans `base.css`.
+  - Affichage précis de la mention « NON RÉVÉLÉ » au lieu de « MOT DU JOUR » dans la modale de trajectoire d'un défi non dévoilé.
+  - Durcissement de l'interception des rejets de promesses dans `initErrorHandling()` pour cibler exclusivement les extensions de navigateur.
+
+---
+
 ## [Non publié] - 2026-11-04 · Jalon M8 : Traçage relationnel & Métriques KPI des Défis Visiteurs
 
 ### Ajouté
