@@ -828,14 +828,14 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .defi-table th {
-  padding: 0.55rem 0.65rem;
+  padding: 0.45rem 0.4rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-weight: 600;
@@ -846,7 +846,7 @@
 }
 
 .defi-table td {
-  padding: 0.5rem 0.65rem;
+  padding: 0.45rem 0.4rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-main);
   white-space: nowrap;
@@ -858,8 +858,8 @@
 }
 
 .defi-table .btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.72rem;
 }
 
 /* Secours modal critique : garantit l'overlay fixe hors-flux même avant le différé */

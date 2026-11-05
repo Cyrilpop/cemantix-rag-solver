@@ -155,6 +155,10 @@
   align-items: stretch;
 }
 
+.grid-2col > * {
+  min-width: 0;
+}
+
 @media (max-width: 768px) {
   .main-content {
     padding: 0.75rem max(0.75rem, env(safe-area-inset-right, 0px)) 2rem max(0.75rem, env(safe-area-inset-left, 0px));

@@ -476,13 +476,14 @@ function renderChallengesList() {
     const badgeHtml = isBotWon
       ? `<span class="badge" style="font-size:0.7rem;font-weight:700;color:var(--success,#3fb950);background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.35);padding:1px 7px;border-radius:999px;">🤖 Trouvé</span>`
       : `<span class="badge" style="font-size:0.7rem;font-weight:700;color:var(--tier-warm,#f59e0b);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.45);padding:1px 7px;border-radius:999px;">😅 Perdu</span>`;
+    const playerDisp = String(it.player || "").replace(/^Visiteur\s*/i, "");
 
     return `<tr>
-      <td><strong style="font-family:var(--font-mono);font-size:0.9rem;">${escapeHtml(it.secret_word)}</strong></td>
+      <td><strong style="font-family:var(--font-mono);font-size:0.88rem;">${escapeHtml(it.secret_word)}</strong></td>
       <td>${badgeHtml}</td>
       <td style="font-family:var(--font-mono);">${escapeHtml(String(it.tries_count))}</td>
       <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.78rem;">${escapeHtml(durText)}</td>
-      <td style="color:var(--text-muted);font-size:0.75rem;">${escapeHtml(it.player)}</td>
+      <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.75rem;" title="${escapeHtml(it.player)}">${escapeHtml(playerDisp)}</td>
       <td style="color:var(--text-muted);font-size:0.75rem;">${escapeHtml(date)}</td>
       <td style="text-align:right;">
         <button type="button" class="btn btn-secondary btn-sm" data-challenge-id="${escapeHtml(it.challenge_id)}" title="Revoir le cheminement de ce défi">👁️ Revoir</button>
