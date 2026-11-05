@@ -10,7 +10,7 @@
 
 ## 1. Objectifs Métier et Contexte SEO
 
-Le solveur Cémantix publie quotidiennement de nouvelles pages d'archives (`/puzzles/AAAA-MM-JJ/`), met à jour la page hub `/mot-du-jour/` et réécrit son fichier [`volumes/web/sitemap.xml`](../../volumes/web/sitemap.xml).
+Le solveur Cémantix publie quotidiennement de nouvelles pages d'archives (`/puzzles/AAAA-MM-JJ/`), met à jour la page hub `/mot-du-jour/` et réécrit son fichier `volumes/web/sitemap.xml`.
 
 Afin d'accélérer l'indexation de ces nouveaux contenus par le moteur de recherche Google sans attendre un passage aléatoire du robot d'exploration :
 1. **Soumission programmatique immédiate :** L'API officielle Google Search Console v1 (`webmasters.sitemaps.submit`) doit être notifiée à chaque actualisation du sitemap.
