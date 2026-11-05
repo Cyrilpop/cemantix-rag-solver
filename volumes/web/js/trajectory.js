@@ -2,6 +2,7 @@
  * Cémantix Solver — Modal de Trajectoire et Débriefing IA
  */
 import { escapeHtml, getTierClass, getTierWeatherIcon, showToast } from "./utils.js";
+import { activateDeferredStyles } from "./theme.js";
 
 let activeTrajectoryEntry = null;
 let activeTrajectoryFilter = "all";
@@ -11,6 +12,7 @@ let activeTrajectoryFilter = "all";
  * Évite de dupliquer les 39 lignes de gabarit HTML statique sur chaque page qui en a besoin.
  */
 export function ensureTrajectoryModal() {
+  activateDeferredStyles();
   let modal = document.getElementById("trajectory-modal");
   if (!modal) {
     modal = document.createElement("div");
@@ -206,6 +208,7 @@ export function initTrajectoryModal() {
 }
 
 export function openTrajectoryModal(puzzleId, data, secretWordOverride = null) {
+  activateDeferredStyles();
   if (!data) return;
   const puzzleStr = String(puzzleId);
   let entry = (data.history || []).find((h) => String(h.puzzle) === puzzleStr);

@@ -9,6 +9,7 @@
  * Toute valeur affichée passe par escapeHtml() — règle du projet.
  */
 import { escapeHtml } from "./utils.js";
+import { initTheme } from "./theme.js";
 import { initTrajectoryModal, openTrajectoryModal, buildTrajectoryStepHtml } from "./trajectory.js";
 
 const API = "/api/challenge";
@@ -341,6 +342,7 @@ async function submitChallenge(word) {
 }
 
 export function initDefi() {
+  initTheme();
   initTrajectoryModal();
   const form = el("defi-form");
   if (!form) return;
