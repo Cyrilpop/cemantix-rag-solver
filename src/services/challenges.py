@@ -26,6 +26,7 @@ from ..db import (
     release_challenge,
     requeue_stale_running,
 )
+from ..db.challenges import record_challenge_stat, save_challenge_guesses
 
 CHALLENGE_POLL_SECONDS = float(os.getenv("CHALLENGE_POLL_SECONDS", "3"))
 CHALLENGE_PUBLISH_SECONDS = 2.0  # DEFI-11 : publication au moins toutes les 2 s
@@ -155,6 +156,18 @@ def process_next_challenge(store=None) -> bool:
             append_trajectory(challenge_id, steps, len(solver.guesses))
             finish_challenge(challenge_id, "error", len(solver.guesses),
                              time.time() - started, "délai maximal dépassé")
+            try:
+                record_challenge_stat(
+                    challenge_id=challenge_id,
+                    secret_word=secret,
+                    ip_hash_value=challenge.get("ip_hash") or "",
+                    outcome="error",
+                    tries_count=len(solver.guesses),
+                    duration_seconds=time.time() - started,
+                )
+                save_challenge_guesses(challenge_id, steps)
+            except Exception as exc:
+                log(f"⚠️  [DÉFI] Erreur enregistrement stats M8 : {exc}", level="WARNING")
             log(f"⏱️  [DÉFI] Défi {challenge_id[:8]}… interrompu : délai maximal.",
                 level="WARNING")
             return True
@@ -163,11 +176,36 @@ def process_next_challenge(store=None) -> bool:
     if not result:
         finish_challenge(challenge_id, "error", len(solver.guesses),
                          time.time() - started, "incident interne de résolution")
+        try:
+            record_challenge_stat(
+                challenge_id=challenge_id,
+                secret_word=secret,
+                ip_hash_value=challenge.get("ip_hash") or "",
+                outcome="error",
+                tries_count=len(solver.guesses),
+                duration_seconds=time.time() - started,
+            )
+            save_challenge_guesses(challenge_id, list(solver.trajectory))
+        except Exception as exc:
+            log(f"⚠️  [DÉFI] Erreur enregistrement stats M8 : {exc}", level="WARNING")
         return True
 
     status = "solved" if result.get("win") else "lost"
-    finish_challenge(challenge_id, status, int(result.get("tries") or 0),
-                     float(result.get("time") or 0.0))
+    tries = int(result.get("tries") or 0)
+    duration = float(result.get("time") or 0.0)
+    finish_challenge(challenge_id, status, tries, duration)
+    try:
+        record_challenge_stat(
+            challenge_id=challenge_id,
+            secret_word=secret,
+            ip_hash_value=challenge.get("ip_hash") or "",
+            outcome=status,
+            tries_count=tries,
+            duration_seconds=duration,
+        )
+        save_challenge_guesses(challenge_id, list(solver.trajectory))
+    except Exception as exc:
+        log(f"⚠️  [DÉFI] Erreur enregistrement stats M8 : {exc}", level="WARNING")
     log(f"⚔️  [DÉFI] Défi {challenge_id[:8]}… : {status} en {result.get('tries')} coups "
         f"({float(result.get('time') or 0.0):.1f} s)")
     return True

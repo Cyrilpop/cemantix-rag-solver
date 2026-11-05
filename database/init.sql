@@ -87,3 +87,37 @@ CREATE TABLE IF NOT EXISTS bot_challenge_whitelist (
     description      VARCHAR(100),
     created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 6. Table analytique pérenne des défis visiteurs (M8 - KPIs & Traçage)
+CREATE TABLE IF NOT EXISTS bot_challenge_stats (
+    id               SERIAL PRIMARY KEY,
+    challenge_id     VARCHAR(32) NOT NULL UNIQUE,
+    secret_word      VARCHAR(64) NOT NULL,
+    player_anon_id   VARCHAR(32) NOT NULL,
+    outcome          VARCHAR(16) NOT NULL, -- 'won', 'lost', 'error'
+    tries_count      INT NOT NULL DEFAULT 0,
+    duration_seconds NUMERIC(8, 2),
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_word ON bot_challenge_stats(secret_word);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_player ON bot_challenge_stats(player_anon_id);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_outcome ON bot_challenge_stats(outcome);
+CREATE INDEX IF NOT EXISTS idx_bot_challenge_stats_created ON bot_challenge_stats(created_at);
+
+-- 7. Table relationnelle normalisée du chemin de résolution (M8 - Trajectoire de l'IA)
+CREATE TABLE IF NOT EXISTS bot_challenge_guesses (
+    id           SERIAL PRIMARY KEY,
+    challenge_id VARCHAR(32) NOT NULL REFERENCES bot_challenge_stats(challenge_id) ON DELETE CASCADE,
+    step_num     INT NOT NULL,
+    word         VARCHAR(64) NOT NULL,
+    score        NUMERIC(6, 2) NOT NULL,
+    permille     INT,
+    weather      VARCHAR(8),
+    is_record    BOOLEAN DEFAULT FALSE,
+    source       VARCHAR(16) DEFAULT 'rag',
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(challenge_id, step_num)
+);
+CREATE INDEX IF NOT EXISTS idx_bcg_challenge ON bot_challenge_guesses(challenge_id);
+CREATE INDEX IF NOT EXISTS idx_bcg_word ON bot_challenge_guesses(word);
+
