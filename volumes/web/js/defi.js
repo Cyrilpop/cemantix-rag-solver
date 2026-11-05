@@ -461,7 +461,7 @@ function renderChallengesList() {
 
   if (!items.length) {
     const emptyMsg = activeChallengeFilter === "lost"
-      ? "Aucun mot invaincu pour l'instant — soyez le premier !"
+      ? "Le bot n'a perdu aucun défi pour l'instant — soyez le premier !"
       : (activeChallengeFilter === "won" ? "Aucune victoire bot enregistrée." : "Aucun défi pour l'instant.");
     box.innerHTML = `<li class="clues-empty"><span>${escapeHtml(emptyMsg)}</span></li>`;
     return;
@@ -472,7 +472,7 @@ function renderChallengesList() {
     const date = it.date ? new Date(it.date).toLocaleDateString("fr-FR") : "";
     const badgeHtml = isBotWon
       ? `<span class="badge" style="font-size:0.72rem;font-weight:700;color:var(--success,#3fb950);background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.35);padding:2px 8px;border-radius:999px;">🤖 Bot a trouvé (${escapeHtml(String(it.tries_count))} coups)</span>`
-      : `<span class="badge" style="font-size:0.72rem;font-weight:700;color:var(--tier-warm,#f59e0b);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.45);padding:2px 8px;border-radius:999px;">🏆 Mot invaincu (${escapeHtml(String(it.tries_count))} coups)</span>`;
+      : `<span class="badge" style="font-size:0.72rem;font-weight:700;color:var(--tier-warm,#f59e0b);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.45);padding:2px 8px;border-radius:999px;">🏆 Bot a perdu (${escapeHtml(String(it.tries_count))} coups)</span>`;
 
     return `<li class="guess-row" style="display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;justify-content:space-between;padding:.5rem .75rem;">
       <div style="min-width:0;flex:1 1 auto;display:flex;flex-direction:column;gap:3px;">
