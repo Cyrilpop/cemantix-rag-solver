@@ -797,3 +797,68 @@
     max-height: min(175px, 32dvh);
   }
 }
+
+/* Tableau condensé du palmarès des défis (M9) */
+.defi-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 280px;
+  max-height: 520px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.defi-table-wrapper::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.defi-table-wrapper::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 9999px;
+}
+
+.defi-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+.defi-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.defi-table th {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 1;
+}
+
+.defi-table td {
+  padding: 0.5rem 0.65rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.defi-table tr:hover td {
+  background: var(--bg-card-hover);
+}
+
+.defi-table .btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}

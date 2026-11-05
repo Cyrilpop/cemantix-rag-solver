@@ -463,29 +463,29 @@ function renderChallengesList() {
     const emptyMsg = activeChallengeFilter === "lost"
       ? "Le bot n'a perdu aucun défi pour l'instant — soyez le premier !"
       : (activeChallengeFilter === "won" ? "Aucune victoire bot enregistrée." : "Aucun défi pour l'instant.");
-    box.innerHTML = `<li class="clues-empty"><span>${escapeHtml(emptyMsg)}</span></li>`;
+    box.innerHTML = `<tr><td colspan="7" class="clues-empty" style="text-align:center;padding:1.5rem 0.5rem;">${escapeHtml(emptyMsg)}</td></tr>`;
     return;
   }
 
   box.innerHTML = items.map((it) => {
     const isBotWon = it.outcome === "won" || it.outcome === "solved";
     const date = it.date ? new Date(it.date).toLocaleDateString("fr-FR") : "";
+    const durText = it.duration_seconds != null ? `${Number(it.duration_seconds).toFixed(1)} s` : "—";
     const badgeHtml = isBotWon
-      ? `<span class="badge" style="font-size:0.72rem;font-weight:700;color:var(--success,#3fb950);background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.35);padding:2px 8px;border-radius:999px;">🤖 Bot a trouvé (${escapeHtml(String(it.tries_count))} coups)</span>`
-      : `<span class="badge" style="font-size:0.72rem;font-weight:700;color:var(--tier-warm,#f59e0b);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.45);padding:2px 8px;border-radius:999px;">🏆 Bot a perdu (${escapeHtml(String(it.tries_count))} coups)</span>`;
+      ? `<span class="badge" style="font-size:0.7rem;font-weight:700;color:var(--success,#3fb950);background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.35);padding:1px 7px;border-radius:999px;">🤖 Trouvé</span>`
+      : `<span class="badge" style="font-size:0.7rem;font-weight:700;color:var(--tier-warm,#f59e0b);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.45);padding:1px 7px;border-radius:999px;">😅 Perdu</span>`;
 
-    return `<li class="guess-row" style="display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;justify-content:space-between;padding:.5rem .75rem;">
-      <div style="min-width:0;flex:1 1 auto;display:flex;flex-direction:column;gap:3px;">
-        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
-          <strong style="font-size:0.95rem;letter-spacing:0.02em;">${escapeHtml(it.secret_word)}</strong>
-          ${badgeHtml}
-        </div>
-        <div class="card-subtitle" style="font-size:0.74rem;">
-          ${escapeHtml(it.player)} · ${escapeHtml(date)}${it.duration_seconds ? ` · ${escapeHtml(String(it.duration_seconds))} s` : ""}
-        </div>
-      </div>
-      <button type="button" class="btn btn-secondary btn-sm" data-challenge-id="${escapeHtml(it.challenge_id)}" style="flex-shrink:0;">👁️ Revoir</button>
-    </li>`;
+    return `<tr>
+      <td><strong style="font-family:var(--font-mono);font-size:0.9rem;">${escapeHtml(it.secret_word)}</strong></td>
+      <td>${badgeHtml}</td>
+      <td style="font-family:var(--font-mono);">${escapeHtml(String(it.tries_count))}</td>
+      <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.78rem;">${escapeHtml(durText)}</td>
+      <td style="color:var(--text-muted);font-size:0.75rem;">${escapeHtml(it.player)}</td>
+      <td style="color:var(--text-muted);font-size:0.75rem;">${escapeHtml(date)}</td>
+      <td style="text-align:right;">
+        <button type="button" class="btn btn-secondary btn-sm" data-challenge-id="${escapeHtml(it.challenge_id)}" title="Revoir le cheminement de ce défi">👁️ Revoir</button>
+      </td>
+    </tr>`;
   }).join("");
 }
 
@@ -504,7 +504,7 @@ async function loadKpis() {
   } catch (_err) {
     const box = el("defi-wall-of-fame");
     if (box && box.querySelector(".clues-empty")) {
-      box.innerHTML = `<li class="clues-empty"><span>Palmarès momentanément indisponible.</span></li>`;
+      box.innerHTML = `<tr><td colspan="7" class="clues-empty" style="text-align:center;padding:1.5rem 0.5rem;">Palmarès momentanément indisponible.</td></tr>`;
     }
   }
 }
