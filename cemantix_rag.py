@@ -48,6 +48,12 @@ def main():
                     help="régénère data.json dans ./cemantix_data (jamais dans le webroot Caddy) et publie les pages SEO")
     ap.add_argument("--publish-seo", action="store_true",
                     help="régénère uniquement les pages d'archives /puzzles/<date>/, l'index paginé et sitemap.xml depuis l'historique")
+    ap.add_argument("--submit-sitemap", action="store_true",
+                    help="soumet immédiatement sitemap.xml à Google Search Console via l'API Webmasters")
+    ap.add_argument("--google-auth", action="store_true",
+                    help="affiche l'URL d'autorisation OAuth2 Google pour Search Console et permet d'échanger le code")
+    ap.add_argument("--google-code", type=str, default="",
+                    help="code d'autorisation OAuth2 Google à échanger contre un refresh token")
     ap.add_argument("--backfill-hints", action="store_true",
                     help="exécute le rattrapage idempotent des indices de tous les puzzles quotidiens (M6)")
     ap.add_argument("--force-solve", action="store_true",
@@ -113,6 +119,49 @@ def main():
         from src.services import load_history, publish_seo_pages, PARIS_TZ
         publish_seo_pages(history=load_history(), generated_at=datetime.now(PARIS_TZ))
         return
+
+    if getattr(args, "submit_sitemap", False):
+        from src.services.seo_google import submit_sitemap_to_google
+        res = submit_sitemap_to_google()
+        if res.get("success"):
+            log("🎉 Soumission à Google Search Console terminée avec succès.")
+            sys.exit(0)
+        else:
+            log(f"❌ Échec de la soumission : {res.get('message')}")
+            sys.exit(1)
+
+    if getattr(args, "google_auth", False) or bool(getattr(args, "google_code", "")):
+        from src.services.seo_google import generate_auth_url, exchange_code_for_tokens, get_google_credentials
+        creds = get_google_credentials()
+        code = getattr(args, "google_code", "").strip()
+        if not code:
+            auth_url = generate_auth_url(creds)
+            log("=" * 60)
+            log("🔗  AUTORISATION GOOGLE SEARCH CONSOLE OAUTH 2.0")
+            log("=" * 60)
+            log("1. Ouvrez l'URL suivante dans votre navigateur :")
+            log(f"\n{auth_url}\n")
+            log("2. Connectez-vous avec votre compte propriétaire de la Search Console.")
+            log("3. Copiez le code d'autorisation (ou le paramètre 'code=' de l'URL de redirection).")
+            log("4. Relancez : python cemantix_rag.py --google-code <VOTRE_CODE>")
+            log("=" * 60)
+            return
+        log("🔄 Échange du code d'autorisation auprès de Google...")
+        tokens = exchange_code_for_tokens(code, creds)
+        if "refresh_token" in tokens:
+            rf = tokens["refresh_token"]
+            log("=" * 60)
+            log("🎉 REFRESH TOKEN OBTENU AVEC SUCCÈS !")
+            log("=" * 60)
+            log("Ajoutez la ligne suivante dans votre fichier .env :")
+            log(f'\nGOOGLE_REFRESH_TOKEN="{rf}"\n')
+            log("Une fois ajoutée, les conteneurs worker et démon soumettront automatiquement")
+            log("le sitemap à chaque mise à jour sans intervention humaine.")
+            log("=" * 60)
+            sys.exit(0)
+        else:
+            log(f"❌ Échec de l'obtention du token : {tokens.get('error', tokens)}")
+            sys.exit(1)
 
     if getattr(args, "backfill_hints", False):
         from src.services.hints import bootstrap_database
