@@ -259,7 +259,7 @@ html.is-keyboard-open .game-guesses-list{max-height:175px;max-height:min(175px,3
 .main-content,.view-content{gap:0.55rem;}
 .game-guesses-list{max-height:min(175px,32dvh);}
 }
-.defi-table-wrapper{width:100%;overflow-x:auto;overflow-y:auto;flex:1 1 auto;min-height:280px;max-height:520px;scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) transparent;}
+.defi-table-wrapper{width:100%;overflow-x:auto;overflow-y:auto;flex:1 1 0;min-height:280px;scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) transparent;}
 .defi-table-wrapper::-webkit-scrollbar{width:5px;height:5px;}
 .defi-table-wrapper::-webkit-scrollbar-track{background:var(--scrollbar-track);border-radius:9999px;}
 .defi-table-wrapper::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:9999px;}

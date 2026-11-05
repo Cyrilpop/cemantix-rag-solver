@@ -519,9 +519,9 @@ async function onWallClick(evt) {
     const data = await res.json();
     const entry = {
       puzzle: "Défi",
-      date: "Wall of Fame",
+      date: data.date ? new Date(data.date).toLocaleDateString("fr-FR") : "Défi archivé",
       word: data.secret_word || null,
-      win: data.outcome === "won",
+      win: data.outcome === "won" || data.outcome === "solved",
       tries: data.tries_count,
       source: "rag",
       trajectory: data.steps || [],
