@@ -21,9 +21,9 @@
 
 | Statut | Nombre | Dont 🔴 critique |
 |---|---|---|
-| ✅ Fait | **0** | 0 |
+| ✅ Fait | **5** | 2 |
 | ⚠️ Partiel | **0** | 0 |
-| ⬜ À faire | **5** | 2 |
+| ⬜ À faire | **0** | 0 |
 | **Total suivis** | **5** | **2** |
 
 Répartition par criticité : 🔴 `IND-01` (Google Indexing API), `IND-02` (Protocole IndexNow) · 🟠 `IND-03` (Balisages HowTo & WebApplication), `IND-04` (CLI & Orchestration) · 🟡 `IND-05` (Tests & Non-Régression).
@@ -34,11 +34,11 @@ Répartition par criticité : 🔴 `IND-01` (Google Indexing API), `IND-02` (Pro
 
 | ID | Sév. | Composant & Chantier | Statut | Résolution & Preuve |
 |---|---|---|---|---|
-| **IND-01** | 🔴 | Client Google Indexing API (`src/services/seo_google.py`) | `⬜ À faire` | En attente d'implémentation. |
-| **IND-02** | 🔴 | Protocole Multi-Moteurs IndexNow (`src/services/seo_indexnow.py`) | `⬜ À faire` | En attente d'implémentation. |
-| **IND-03** | 🟠 | Balisages Schema.org Avancés : HowTo & WebApplication | `⬜ À faire` | En attente d'enrichissement JSON-LD. |
-| **IND-04** | 🟠 | Déclenchement Automatique & Option CLI (`cemantix_rag.py`) | `⬜ À faire` | En attente d'intégration CLI et SEO. |
-| **IND-05** | 🟡 | Suite de Tests & Non-Régression | `⬜ À faire` | En attente de validation. |
+| **IND-01** | 🔴 | Client Google Indexing API (`src/services/seo_google.py`) | `✅ Fait` | Implémentation de `notify_google_indexing` et `notify_daily_urls_to_google` poussant les URLs à `https://indexing.googleapis.com/v3/urlNotifications:publish`. Preuve : `test_notify_success` et `test_notify_daily_urls` OK. |
+| **IND-02** | 🔴 | Protocole Multi-Moteurs IndexNow (`src/services/seo_indexnow.py`) | `✅ Fait` | Implémentation du module IndexNow avec création automatique et exposition de la clé dans `volumes/web/<key>.txt`. Preuve : `test_get_indexnow_key_generation_and_file_creation` et `test_submit_indexnow_urls_success` OK (HTTP 200/202 validé). |
+| **IND-03** | 🟠 | Balisages Schema.org Avancés : HowTo & WebApplication | `✅ Fait` | Schéma `HowTo` en 5 étapes calibré sur `/methode/` et `WebApplication` sur les pages de jeu (`/`, `/play/`, `/defi/`, `/battle/`). Preuve : `test_build_methode_page_contains_howto_schema` OK. |
+| **IND-04** | 🟠 | Déclenchement Automatique & Option CLI (`cemantix_rag.py`) | `✅ Fait` | Intégration dans `publish_seo_pages()` et ajout du flag `--notify-indexing`. Preuve : exécution Docker `cemantix --notify-indexing` validée. |
+| **IND-05** | 🟡 | Suite de Tests & Non-Régression | `✅ Fait` | 7 tests dans `tests/test_instant_indexing.py` + 386 tests globaux OK sous Docker. Preuve : `check_docs.py`, `check_seo.py`, `build_css_bundles.py --check` tous verts. |
 
 ---
 
@@ -47,3 +47,4 @@ Répartition par criticité : 🔴 `IND-01` (Google Indexing API), `IND-02` (Pro
 | Date | ID | Action & preuve |
 |---|---|---|
 | 05/11/2026 | — | Ouverture de l'évolution M11 et rédaction de la référence de conception. |
+| 05/11/2026 | IND-01→05 | Implémentation de Google Indexing API, IndexNow, intégration CLI et tests unitaires (386 tests OK sous Docker). |

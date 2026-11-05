@@ -62,12 +62,13 @@ services:
       - PYTHONUNBUFFERED=${PYTHONUNBUFFERED:-1}
       - LM_API=${LM_API:-http://host.docker.internal:1234/v1}
       - LLM_MODEL=${LLM_MODEL:-qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2}
-      # Google Search Console (M10)
+      # Google Search Console & Indexing (M10/M11)
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-${GOOCLE_CLIEBNT_SECRET:-}}
       - GOOGLE_REFRESH_TOKEN=${GOOGLE_REFRESH_TOKEN:-}
       - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID:-}
       - GOOGLE_REDIRECT_URIS=${GOOGLE_REDIRECT_URIS:-}
+      - INDEXNOW_KEY=${INDEXNOW_KEY:-}
     volumes:
       - ./cemantix_data:/app/cemantix_data:rw
       - ./volumes/web:/app/volumes/web:rw
@@ -125,12 +126,13 @@ services:
       - PYTHONUNBUFFERED=${PYTHONUNBUFFERED:-1}
       # Reverse-proxys de confiance pour le filtrage sécurisé de X-Forwarded-For (M3)
       - TRUSTED_PROXIES=${TRUSTED_PROXIES:-}
-      # Google Search Console (M10)
+      # Google Search Console & Indexing (M10/M11)
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-${GOOCLE_CLIEBNT_SECRET:-}}
       - GOOGLE_REFRESH_TOKEN=${GOOGLE_REFRESH_TOKEN:-}
       - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID:-}
       - GOOGLE_REDIRECT_URIS=${GOOGLE_REDIRECT_URIS:-}
+      - INDEXNOW_KEY=${INDEXNOW_KEY:-}
     volumes:
       - ./cemantix_data:/app/cemantix_data:rw
       - ./volumes/web:/app/volumes/web:rw
@@ -184,12 +186,13 @@ services:
       - PYTHONUNBUFFERED=${PYTHONUNBUFFERED:-1}
       - LM_API=${LM_API:-http://host.docker.internal:1234/v1}
       - LLM_MODEL=${LLM_MODEL:-qwen3.5-9b-claude-4.6-opus-reasoning-distilled-v2}
-      # Google Search Console (M10)
+      # Google Search Console & Indexing (M10/M11)
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-${GOOCLE_CLIEBNT_SECRET:-}}
       - GOOGLE_REFRESH_TOKEN=${GOOGLE_REFRESH_TOKEN:-}
       - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID:-}
       - GOOGLE_REDIRECT_URIS=${GOOGLE_REDIRECT_URIS:-}
+      - INDEXNOW_KEY=${INDEXNOW_KEY:-}
     volumes:
       - ./cemantix_data:/app/cemantix_data
       - ./volumes/web:/app/volumes/web
