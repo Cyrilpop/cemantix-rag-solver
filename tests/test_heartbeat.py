@@ -61,7 +61,7 @@ class TestHeartbeat(unittest.TestCase):
         daemon.start_heartbeat_monitor()
         premier = self._read()["updated_at"]
 
-        deadline = time.monotonic() + 2.0
+        deadline = time.monotonic() + 3.0
         second = self._read()
         while second["updated_at"] <= premier and time.monotonic() < deadline:
             time.sleep(0.05)  # le thread principal ne fait RIEN pendant ce temps

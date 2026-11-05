@@ -9,6 +9,7 @@
  * Toute valeur affichée passe par escapeHtml() — règle du projet.
  */
 import { escapeHtml } from "./utils.js";
+import { initTheme } from "./theme.js";
 import { initTrajectoryModal, openTrajectoryModal, buildTrajectoryStepHtml } from "./trajectory.js";
 
 const API = "/api/challenge";
@@ -183,6 +184,9 @@ function showResult(done) {
   const submit = el("defi-submit");
   if (submit) submit.disabled = false;
   setStatus("Défi terminé — lancez-en un autre (dans la limite de 10 par heure).");
+  // WOF-05/06 : le défi vient d'être archivé par le worker — rafraîchit palmarès et bandeau.
+  setTimeout(loadKpis, 1500);
+  loadKpis();
 }
 
 function openFullTrajectory() {
@@ -320,6 +324,7 @@ async function submitChallenge(word) {
       currentId = data.id;
       const quota = data.quota_restant === "unlimited" ? "illimité" : `${data.quota_restant} restant(s)`;
       setStatus(`Défi accepté dans la file (quota : ${quota}). Le worker démarre…`);
+      loadKpis();
       startChrono();
       openStream(data.id);
     } else if (res.status === 429) {
@@ -337,6 +342,7 @@ async function submitChallenge(word) {
 }
 
 export function initDefi() {
+  initTheme();
   initTrajectoryModal();
   const form = el("defi-form");
   if (!form) return;
@@ -371,6 +377,164 @@ export function initDefi() {
 
   const full = el("defi-full-trajectory");
   if (full) full.addEventListener("click", openFullTrajectory);
+
+  const wall = el("defi-wall-of-fame");
+  if (wall) wall.addEventListener("click", onWallClick);
+
+  const filterGroup = el("defi-list-filters");
+  if (filterGroup) {
+    filterGroup.addEventListener("click", (evt) => {
+      const btn = evt.target.closest("button.pill-btn");
+      if (!btn || btn.classList.contains("active")) return;
+      filterGroup.querySelectorAll(".pill-btn").forEach((b) => {
+        b.classList.remove("active");
+        b.setAttribute("aria-selected", "false");
+      });
+      btn.classList.add("active");
+      btn.setAttribute("aria-selected", "true");
+      activeChallengeFilter = btn.dataset.filter || "all";
+      renderChallengesList();
+    });
+  }
+
+  loadKpis();
+}
+
+// --------------------------------------------------------------------------- //
+// M9 — Wall of Fame, KPIs communautaires, bandeau visiteur, replay (WOF-03..06)
+// --------------------------------------------------------------------------- //
+const FETCH_JSON = { headers: { Accept: "application/json" } };
+let challengesList = [];
+let activeChallengeFilter = "all";
+
+function animateCount(node, target, decimals = 0) {
+  if (!node) return;
+  const suffix = node.dataset.suffix || "";
+  const fmt = (v) => `${v.toLocaleString("fr-FR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${suffix}`;
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced || !Number.isFinite(target)) {
+    node.textContent = fmt(Number.isFinite(target) ? target : 0);
+    return;
+  }
+  const start = performance.now();
+  const duration = 600;
+  const tick = (now) => {
+    const t = Math.min(1, (now - start) / duration);
+    node.textContent = fmt(target * t);
+    if (t < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+function renderKpis(glob) {
+  if (!glob) return;
+  animateCount(el("kpi-bot-win-rate"), Number(glob.bot_win_rate_pct || 0), 1);
+  animateCount(el("kpi-total"), Number(glob.total_challenges || 0));
+  animateCount(el("kpi-avg-tries"), Number(glob.avg_tries || 0), 1);
+  animateCount(el("kpi-wall-count"), Number(glob.wall_of_fame_count || 0));
+}
+
+function renderPlayerBanner(player) {
+  const banner = el("defi-player-banner");
+  if (!banner || !player) return;
+  const remaining = player.quota_remaining === "unlimited"
+    ? "défis illimités"
+    : `${player.quota_remaining} défi${player.quota_remaining > 1 ? "s" : ""} restant${player.quota_remaining > 1 ? "s" : ""} cette heure-ci`;
+  const name = player.display_name || "Visiteur";
+  if (player.total_played > 0) {
+    banner.textContent = `Bienvenue ${name} — ${player.player_wins} victoire${player.player_wins > 1 ? "s" : ""} / ` +
+      `${player.total_played} défi${player.total_played > 1 ? "s" : ""} lancé${player.total_played > 1 ? "s" : ""} ` +
+      `(${Math.round(player.player_win_rate_pct)} %) • ${remaining}`;
+  } else {
+    banner.textContent = `Bienvenue ${name} — aucun défi lancé pour l'instant • ${remaining}`;
+  }
+  banner.hidden = false;
+}
+
+function renderChallengesList() {
+  const box = el("defi-wall-of-fame");
+  if (!box) return;
+
+  const items = challengesList.filter((it) => {
+    if (activeChallengeFilter === "lost") return it.outcome === "lost";
+    if (activeChallengeFilter === "won") return it.outcome === "won" || it.outcome === "solved";
+    return true;
+  });
+
+  if (!items.length) {
+    const emptyMsg = activeChallengeFilter === "lost"
+      ? "Le bot n'a perdu aucun défi pour l'instant — soyez le premier !"
+      : (activeChallengeFilter === "won" ? "Aucune victoire bot enregistrée." : "Aucun défi pour l'instant.");
+    box.innerHTML = `<tr><td colspan="7" class="clues-empty" style="text-align:center;padding:1.5rem 0.5rem;">${escapeHtml(emptyMsg)}</td></tr>`;
+    return;
+  }
+
+  box.innerHTML = items.map((it) => {
+    const isBotWon = it.outcome === "won" || it.outcome === "solved";
+    const date = it.date ? new Date(it.date).toLocaleDateString("fr-FR") : "";
+    const durText = it.duration_seconds != null ? `${Number(it.duration_seconds).toFixed(1)} s` : "—";
+    const badgeHtml = isBotWon
+      ? `<span class="badge" style="font-size:0.7rem;font-weight:700;color:var(--success,#3fb950);background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.35);padding:1px 7px;border-radius:999px;">🤖 Trouvé</span>`
+      : `<span class="badge" style="font-size:0.7rem;font-weight:700;color:var(--tier-warm,#f59e0b);background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.45);padding:1px 7px;border-radius:999px;">😅 Perdu</span>`;
+    const playerDisp = String(it.player || "").replace(/^Visiteur\s*/i, "");
+
+    return `<tr>
+      <td><strong style="font-family:var(--font-mono);font-size:0.88rem;">${escapeHtml(it.secret_word)}</strong></td>
+      <td>${badgeHtml}</td>
+      <td style="font-family:var(--font-mono);">${escapeHtml(String(it.tries_count))}</td>
+      <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.78rem;">${escapeHtml(durText)}</td>
+      <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.75rem;" title="${escapeHtml(it.player)}">${escapeHtml(playerDisp)}</td>
+      <td style="color:var(--text-muted);font-size:0.75rem;">${escapeHtml(date)}</td>
+      <td style="text-align:right;">
+        <button type="button" class="btn btn-secondary btn-sm" data-challenge-id="${escapeHtml(it.challenge_id)}" title="Revoir le cheminement de ce défi">👁️ Revoir</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+/** Charge (ou recharge) KPIs, liste des défis et bandeau. Silencieux en cas d'échec. */
+async function loadKpis() {
+  try {
+    const res = await fetch(`${API}/kpis`, FETCH_JSON);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderKpis(data.global);
+    challengesList = Array.isArray(data.recent_challenges) && data.recent_challenges.length
+      ? data.recent_challenges
+      : (data.wall_of_fame || []);
+    renderChallengesList();
+    renderPlayerBanner(data.player);
+  } catch (_err) {
+    const box = el("defi-wall-of-fame");
+    if (box && box.querySelector(".clues-empty")) {
+      box.innerHTML = `<tr><td colspan="7" class="clues-empty" style="text-align:center;padding:1.5rem 0.5rem;">Palmarès momentanément indisponible.</td></tr>`;
+    }
+  }
+}
+
+async function onWallClick(evt) {
+  const btn = evt.target.closest("button[data-challenge-id]");
+  if (!btn) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/${encodeURIComponent(btn.dataset.challengeId)}/guesses`, FETCH_JSON);
+    if (!res.ok) throw new Error(String(res.status));
+    const data = await res.json();
+    const entry = {
+      puzzle: "Défi",
+      date: data.date ? new Date(data.date).toLocaleDateString("fr-FR") : "Défi archivé",
+      word: data.secret_word || null,
+      win: data.outcome === "won" || data.outcome === "solved",
+      tries: data.tries_count,
+      source: "rag",
+      trajectory: data.steps || [],
+    };
+    openTrajectoryModal("Défi", { current: entry }, data.secret_word || null);
+  } catch (_err) {
+    setStatus("Impossible de charger le chemin de ce défi pour le moment.");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 if (document.getElementById("defi-form")) {

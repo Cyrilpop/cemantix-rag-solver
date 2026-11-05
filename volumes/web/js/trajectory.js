@@ -2,6 +2,7 @@
  * Cémantix Solver — Modal de Trajectoire et Débriefing IA
  */
 import { escapeHtml, getTierClass, getTierWeatherIcon, showToast } from "./utils.js";
+import { activateDeferredStyles } from "./theme.js";
 
 let activeTrajectoryEntry = null;
 let activeTrajectoryFilter = "all";
@@ -11,6 +12,7 @@ let activeTrajectoryFilter = "all";
  * Évite de dupliquer les 39 lignes de gabarit HTML statique sur chaque page qui en a besoin.
  */
 export function ensureTrajectoryModal() {
+  activateDeferredStyles();
   let modal = document.getElementById("trajectory-modal");
   if (!modal) {
     modal = document.createElement("div");
@@ -63,10 +65,10 @@ export function ensureTrajectoryModal() {
           <div class="trajectory-filter-bar">
             <span class="filter-label">Filtrer les coups :</span>
             <div class="pill-group" id="trajectory-filter-group">
-              <button type="button" class="pill-btn active" data-filter="all">Tous (<span id="filter-all-count">0</span>)</button>
-              <button type="button" class="pill-btn" data-filter="top1000">Top 1000 (<span id="filter-top1000-count">0</span>)</button>
-              <button type="button" class="pill-btn" data-filter="rag">⚡ RAG (<span id="filter-rag-count">0</span>)</button>
-              <button type="button" class="pill-btn" data-filter="llm">🤖 LLM (<span id="filter-llm-count">0</span>)</button>
+              <button type="button" class="pill-btn active" data-filter="all">Tous (<span id="count-all">0</span>)</button>
+              <button type="button" class="pill-btn" data-filter="seeds">🌱 Graines (<span id="count-seeds">0</span>)</button>
+              <button type="button" class="pill-btn" data-filter="rag">⚡ RAG (<span id="count-rag">0</span>)</button>
+              <button type="button" class="pill-btn" data-filter="hot">🔥 Top 1000 (<span id="count-hot">0</span>)</button>
             </div>
           </div>
 
@@ -206,6 +208,7 @@ export function initTrajectoryModal() {
 }
 
 export function openTrajectoryModal(puzzleId, data, secretWordOverride = null) {
+  activateDeferredStyles();
   if (!data) return;
   const puzzleStr = String(puzzleId);
   let entry = (data.history || []).find((h) => String(h.puzzle) === puzzleStr);
@@ -240,12 +243,20 @@ export function openTrajectoryModal(puzzleId, data, secretWordOverride = null) {
   const filterBtns = document.querySelectorAll("#trajectory-filter-group .pill-btn");
   const modal = document.getElementById("trajectory-modal");
 
-  if (modalPuzzleBadge) modalPuzzleBadge.textContent = `Puzzle #${entry.puzzle || "--"}`;
+  const isDefi = String(entry.puzzle).toLowerCase().includes("défi") || String(entry.puzzle).toLowerCase().includes("defi");
+  if (modalPuzzleBadge) {
+    modalPuzzleBadge.textContent = isDefi ? "⚔️ Défi Bot" : `Puzzle #${entry.puzzle || "--"}`;
+  }
   if (modalDateBadge) modalDateBadge.textContent = entry.date || "--";
   if (modalWinBadge) {
     const isWinner = entry.win !== false;
-    modalWinBadge.className = `badge ${isWinner ? "badge-success" : ""}`;
-    modalWinBadge.textContent = isWinner ? "🏆 Trouvé avec succès" : "⏳ Non résolu";
+    if (isDefi) {
+      modalWinBadge.className = `badge ${isWinner ? "badge-success" : "badge-warning"}`;
+      modalWinBadge.textContent = isWinner ? "🤖 Bot a trouvé" : "😅 Bot a perdu";
+    } else {
+      modalWinBadge.className = `badge ${isWinner ? "badge-success" : ""}`;
+      modalWinBadge.textContent = isWinner ? "🏆 Trouvé avec succès" : "⏳ Non résolu";
+    }
   }
   if (modalSecretWord) {
     if (resolvedWord) {
@@ -255,7 +266,11 @@ export function openTrajectoryModal(puzzleId, data, secretWordOverride = null) {
     } else {
       modalSecretWord.textContent = "NON TROUVÉ";
     }
-    modalSecretWord.classList.add("is-hidden");
+    if (isDefi) {
+      modalSecretWord.classList.remove("is-hidden");
+    } else {
+      modalSecretWord.classList.add("is-hidden");
+    }
   }
 
   if (modalTries) modalTries.textContent = `${entry.tries || "--"} coups`;

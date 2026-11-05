@@ -7,6 +7,8 @@ il valide, compte, et empile une ligne en base. C'est le worker qui résout.
 - `POST /api/challenge`             — empile un défi validé (DEFI-04)
 - `GET  /api/challenge/<id>`        — état borné pour le polling (DEFI-05)
 - `GET  /api/challenge/<id>/stream` — coups en direct via SSE (DEFI-06)
+- `GET  /api/challenge/kpis`        — KPIs, Wall of Fame, bilan visiteur (M9, WOF-01)
+- `GET  /api/challenge/<id>/guesses` — replay d'un défi archivé (M9, WOF-02)
 
 Interdit structurel : ce module n'importe ni le moteur de résolution ni les
 services du worker — uniquement la couche de données (DEFI-04).
@@ -198,13 +200,130 @@ def _parse_challenge_id(path: str) -> tuple[Optional[str], bool]:
     return candidate, is_stream
 
 
-def handle_challenge_get(manager, path: str, query: str = "") -> tuple[dict, int]:
+# --------------------------------------------------------------------------- #
+# GET /api/challenge/kpis & /api/challenge/<id>/guesses (M9, WOF-01/02)
+# --------------------------------------------------------------------------- #
+KPIS_CACHE_TTL_SECONDS = 15.0
+WALL_OF_FAME_LIMIT = 12
+STATS_ID_RE = re.compile(r"^[0-9A-Za-z_-]{6,64}$")
+
+_kpis_cache: dict = {"expires": 0.0, "payload": None}
+_kpis_cache_lock = threading.Lock()
+
+
+def reset_kpis_cache() -> None:
+    """Vide le cache des KPIs globaux (tests, ou purge administrative)."""
+    with _kpis_cache_lock:
+        _kpis_cache.update(expires=0.0, payload=None)
+
+
+def _global_kpis_cached() -> dict:
+    """Blocs `global` + `wall_of_fame` + `recent_challenges`, recalculés au plus une fois par TTL."""
+    now = time.monotonic()
+    with _kpis_cache_lock:
+        if _kpis_cache["payload"] is not None and now < _kpis_cache["expires"]:
+            return _kpis_cache["payload"]
+        kpis = dao.get_challenge_kpis()
+        glob = dict(kpis["global"])
+        glob["wall_of_fame_count"] = glob["bot_losses"]
+        wall = dao.get_wall_of_fame(WALL_OF_FAME_LIMIT)
+        recent = dao.get_recent_challenges(WALL_OF_FAME_LIMIT)
+        payload = {
+            "global": glob,
+            "wall_of_fame": wall,
+            "recent_challenges": recent,
+        }
+        _kpis_cache.update(expires=now + KPIS_CACHE_TTL_SECONDS, payload=payload)
+        return payload
+
+
+def handle_kpis_get(client_ip: str = "", anonymized_ip: str = "") -> tuple[dict, int]:
+    """KPIs communautaires (cache TTL) enrichis du bilan et du quota du visiteur."""
+    try:
+        cached = _global_kpis_cached()
+        hashed = ip_hash(anonymized_ip) if anonymized_ip else None
+        player = dao.get_player_stats(hashed)
+        quota_max = dao.CHALLENGE_QUOTA_PER_HOUR
+        if hashed:
+            remaining = _quota_restant(hashed, is_ip_whitelisted(client_ip))
+        else:
+            remaining = quota_max
+        player["quota_remaining"] = remaining
+        player["quota_max"] = quota_max
+    except Exception as exc:
+        log(f"⚠️  [DÉFI] KPIs indisponibles : {exc}")
+        return {"error": "Statistiques momentanément indisponibles."}, 503
+    return {
+        "status": "ok",
+        "global": cached["global"],
+        "wall_of_fame": cached["wall_of_fame"],
+        "recent_challenges": cached.get("recent_challenges") or cached["wall_of_fame"],
+        "player": player,
+    }, 200
+
+
+def handle_guesses_get(challenge_id: str) -> tuple[dict, int]:
+    """Coups ordonnés d'un défi archivé, au format attendu par la modale."""
+    if not STATS_ID_RE.match(challenge_id or ""):
+        return {"error": "Défi introuvable."}, 404
+    stat = dao.get_challenge_stat(challenge_id)
+    if not stat:
+        dao.sync_legacy_challenges_to_stats()
+        stat = dao.get_challenge_stat(challenge_id)
+
+    chal = dao.get_challenge(challenge_id)
+    if not stat and not chal:
+        return {"error": "Défi introuvable."}, 404
+
+    secret_word = stat["secret_word"] if stat else chal["secret_word"]
+    outcome = stat["outcome"] if stat else ("won" if chal.get("status") in ("solved", "won") else chal.get("status"))
+    tries_count = int(stat["tries_count"] if stat else chal.get("tries_count", 0))
+
+    rows = dao.get_challenge_guesses(challenge_id)
+    if rows:
+        steps = [{
+            "step": int(r["step_num"]),
+            "word": str(r["word"]),
+            "score": float(r["score"]) if r.get("score") is not None else 0.0,
+            "permille": int(r["permille"]) if r.get("permille") is not None else None,
+            "weather": r.get("weather") or "",
+            "is_record": bool(r.get("is_record")),
+            "source": r.get("source") or "rag",
+        } for r in rows]
+    elif chal and chal.get("trajectory"):
+        traj = chal["trajectory"]
+        steps = [{
+            "step": idx,
+            "word": str(g.get("word") or ""),
+            "score": float(g.get("score") or 0.0),
+            "permille": int(g["permille"]) if g.get("permille") is not None else None,
+            "weather": g.get("weather") or "",
+            "is_record": bool(g.get("is_record")),
+            "source": g.get("source") or "rag",
+        } for idx, g in enumerate(traj, start=1)]
+    else:
+        steps = []
+
+    return {"status": "ok", "challenge_id": challenge_id,
+            "secret_word": str(secret_word),
+            "outcome": str(outcome),
+            "tries_count": tries_count,
+            "guesses_count": len(steps), "steps": steps}, 200
+
+
+def handle_challenge_get(manager, path: str, query: str = "",
+                         client_ip: str = "", anonymized_ip: str = "") -> tuple[dict, int]:
     """État borné pour le polling : compte de coups, et les coups sur demande.
 
     `?detail=1` ajoute la trajectoire déjà publiée — les mêmes données que le
     SSE, donc aucun secret supplémentaire — pour que le repli polling puisse
     afficher les mots quand un intermédiaire coupe les flux longs.
     """
+    sub_parts = [p for p in path[len("/api/challenge"):].split("/") if p]
+    if sub_parts == ["kpis"]:
+        return handle_kpis_get(client_ip, anonymized_ip)
+    if len(sub_parts) == 2 and sub_parts[1] == "guesses":
+        return handle_guesses_get(sub_parts[0])
     challenge_id, _ = _parse_challenge_id(path)
     if not challenge_id:
         return {"error": "Défi introuvable."}, 404

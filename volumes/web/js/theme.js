@@ -11,15 +11,8 @@ export const themeState = {
 
 export function activateDeferredStyles() {
   for (const link of document.querySelectorAll("link[data-deferred-css]")) {
-    if (link.media === "all") continue;
-    const enable = () => {
-      if (link.media !== "all") link.media = "all";
-    };
-    if (link.sheet || document.readyState === "complete") {
-      enable();
-    } else {
-      link.addEventListener("load", enable, { once: true });
-      window.addEventListener("load", enable, { once: true });
+    if (link.media !== "all") {
+      link.media = "all";
     }
   }
 }
