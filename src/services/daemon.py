@@ -79,8 +79,11 @@ def _heartbeat_loop() -> None:
 def start_heartbeat_monitor() -> None:
     """Démarre le rafraîchissement périodique du battement (idempotent)."""
     global _heartbeat_thread
-    if _heartbeat_thread is not None and _heartbeat_thread.is_alive():
+    if _heartbeat_thread is not None and _heartbeat_thread.is_alive() and not _heartbeat_stop.is_set():
         return
+    if _heartbeat_thread is not None and _heartbeat_thread.is_alive():
+        _heartbeat_stop.set()
+        _heartbeat_thread.join(timeout=2.0)
     _heartbeat_stop.clear()
     _heartbeat_thread = threading.Thread(
         target=_heartbeat_loop, name="CemantixHeartbeat", daemon=True
@@ -88,9 +91,13 @@ def start_heartbeat_monitor() -> None:
     _heartbeat_thread.start()
 
 
-def stop_heartbeat_monitor() -> None:
+def stop_heartbeat_monitor(timeout: float = 2.0) -> None:
     """Arrête le rafraîchissement périodique (appelé avant l'écriture de « stopped »)."""
+    global _heartbeat_thread
     _heartbeat_stop.set()
+    if _heartbeat_thread is not None and _heartbeat_thread.is_alive():
+        _heartbeat_thread.join(timeout=timeout)
+    _heartbeat_thread = None
 
 
 def update_heartbeat(status: str, extra: dict = None) -> None:
@@ -106,11 +113,12 @@ def update_heartbeat(status: str, extra: dict = None) -> None:
     if extra:
         data.update(extra)
     try:
-        HEARTBEAT_FILE.parent.mkdir(parents=True, exist_ok=True)
-        tmp_file = HEARTBEAT_FILE.with_suffix(".tmp")
+        target_file = HEARTBEAT_FILE
+        target_file.parent.mkdir(parents=True, exist_ok=True)
+        tmp_file = target_file.with_suffix(".tmp")
         with open(tmp_file, "w", encoding="utf-8") as f:
             json.dump(data, f)
-        tmp_file.replace(HEARTBEAT_FILE)
+        tmp_file.replace(target_file)
     except Exception as e:
         # Muet ici, le HEALTHCHECK Docker finirait par déclarer le conteneur
         # `unhealthy` alors que le démon tourne : la cause doit rester visible.
