@@ -39,7 +39,7 @@ class GeminiClient:
         temperature: float = DEFAULT_TEMPERATURE,
         max_retries: int = 2,
     ):
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY", "").strip()
+        self.api_key = (api_key if api_key is not None else os.getenv("GEMINI_API_KEY", "")).strip()
         self.model = model
         self.fallback_models = fallback_models if fallback_models is not None else list(FALLBACK_MODELS)
         self.timeout = timeout if timeout is not None else float(os.getenv("GEMINI_TIMEOUT", str(DEFAULT_TIMEOUT_SECONDS)))
