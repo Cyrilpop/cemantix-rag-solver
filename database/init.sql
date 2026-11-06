@@ -122,3 +122,19 @@ CREATE TABLE IF NOT EXISTS bot_challenge_guesses (
 CREATE INDEX IF NOT EXISTS idx_bcg_challenge ON bot_challenge_guesses(challenge_id);
 CREATE INDEX IF NOT EXISTS idx_bcg_word ON bot_challenge_guesses(word);
 
+-- 8. Table des indices IA propulsés par Google Gemini (M12 - Indices IA Gemini)
+CREATE TABLE IF NOT EXISTS daily_puzzle_ai_hints (
+    id SERIAL PRIMARY KEY,
+    puzzle_date DATE NOT NULL REFERENCES daily_puzzles(date) ON DELETE CASCADE,
+    hint_level INT NOT NULL,
+    weight NUMERIC(4, 2) NOT NULL,
+    hint_word VARCHAR(100) NOT NULL,
+    hint_phrase TEXT NOT NULL,
+    model VARCHAR(64) DEFAULT 'gemini-3.8-flash',
+    is_revealed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(puzzle_date, hint_level)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_hints_date ON daily_puzzle_ai_hints(puzzle_date);
+
+

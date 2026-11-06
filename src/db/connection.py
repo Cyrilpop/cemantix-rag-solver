@@ -166,6 +166,20 @@ CREATE TABLE IF NOT EXISTS bot_challenge_guesses (
 );
 CREATE INDEX IF NOT EXISTS idx_bcg_challenge ON bot_challenge_guesses(challenge_id);
 CREATE INDEX IF NOT EXISTS idx_bcg_word ON bot_challenge_guesses(word);
+
+CREATE TABLE IF NOT EXISTS daily_puzzle_ai_hints (
+    id SERIAL PRIMARY KEY,
+    puzzle_date DATE NOT NULL REFERENCES daily_puzzles(date) ON DELETE CASCADE,
+    hint_level INT NOT NULL,
+    weight NUMERIC(4, 2) NOT NULL,
+    hint_word VARCHAR(100) NOT NULL,
+    hint_phrase TEXT NOT NULL,
+    model VARCHAR(64) DEFAULT 'gemini-3.8-flash',
+    is_revealed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(puzzle_date, hint_level)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_hints_date ON daily_puzzle_ai_hints(puzzle_date);
 """
 
 SQLITE_SCHEMA = """
@@ -279,6 +293,20 @@ CREATE TABLE IF NOT EXISTS bot_challenge_guesses (
 );
 CREATE INDEX IF NOT EXISTS idx_bcg_challenge ON bot_challenge_guesses(challenge_id);
 CREATE INDEX IF NOT EXISTS idx_bcg_word ON bot_challenge_guesses(word);
+
+CREATE TABLE IF NOT EXISTS daily_puzzle_ai_hints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    puzzle_date TEXT NOT NULL REFERENCES daily_puzzles(date) ON DELETE CASCADE,
+    hint_level INTEGER NOT NULL,
+    weight REAL NOT NULL,
+    hint_word TEXT NOT NULL,
+    hint_phrase TEXT NOT NULL,
+    model TEXT DEFAULT 'gemini-3.8-flash',
+    is_revealed BOOLEAN DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(puzzle_date, hint_level)
+);
+CREATE INDEX IF NOT EXISTS idx_ai_hints_date ON daily_puzzle_ai_hints(puzzle_date);
 """
 
 

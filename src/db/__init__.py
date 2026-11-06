@@ -40,6 +40,7 @@ from .connection import db, get_db_type, init_db
 from .daily import (
     backfill_daily_puzzles_from_json,
     get_all_daily_puzzles,
+    get_daily_ai_hints,
     get_daily_hints,
     get_daily_puzzle,
     get_history_summary,
@@ -47,6 +48,7 @@ from .daily import (
     is_daily_puzzle_indexed,
     mark_daily_puzzle_indexed,
     reveal_daily_hint_tier,
+    save_daily_ai_hints,
     save_daily_hints,
     save_daily_puzzle,
 )
@@ -80,7 +82,9 @@ __all__ = [
     "get_all_daily_puzzles",
     "get_history_summary",
     "save_daily_hints",
+    "save_daily_ai_hints",
     "get_daily_hints",
+    "get_daily_ai_hints",
     "reveal_daily_hint_tier",
     "save_room",
     "get_room",
