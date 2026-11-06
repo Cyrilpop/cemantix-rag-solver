@@ -324,6 +324,16 @@ def get_daily_ai_hints(puzzle_date: str, revealed_only: bool = False) -> list[di
     return db.fetch_all(query, (str(puzzle_date),))
 
 
+def has_daily_ai_hints(puzzle_date: str) -> bool:
+    """Vérifie rapidement si les indices IA pour une date sont déjà complets (3 indices)."""
+    if not puzzle_date:
+        return False
+    query = "SELECT COUNT(*) as count FROM daily_puzzle_ai_hints WHERE puzzle_date = %s;"
+    row = db.fetch_one(query, (str(puzzle_date),))
+    return bool(row and row.get("count", 0) >= 3)
+
+
+
 
 def backfill_daily_puzzles_from_json(filepath: Optional[object] = None) -> int:
     """Rattrapage idempotent de daily_puzzles depuis l'historique JSON.

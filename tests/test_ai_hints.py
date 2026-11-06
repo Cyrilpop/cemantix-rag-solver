@@ -35,6 +35,7 @@ from src.ai import (
 from src.db.connection import db
 from src.db.daily import (
     get_daily_ai_hints,
+    has_daily_ai_hints,
     save_daily_ai_hints,
     save_daily_puzzle,
 )
@@ -295,6 +296,31 @@ class TestSQLPersistence(unittest.TestCase):
         self.assertEqual(loaded[0]["hint_word"], "nouveau_mot")
         self.assertEqual(loaded[0]["hint_phrase"], "nouvelle phrase")
 
+    def test_has_daily_ai_hints(self):
+        puzzle_date = "2026-11-06"
+        save_daily_puzzle({
+            "date": puzzle_date,
+            "puzzle": 123,
+            "word": "boussole",
+            "tries": 10,
+            "attempts": 10,
+            "win": True,
+        })
+        self.assertFalse(has_daily_ai_hints(puzzle_date))
+
+        # Moins de 3 indices -> incomplet
+        save_daily_ai_hints(puzzle_date, [
+            {"hint_level": 1, "weight": 0.33, "hint_word": "w1", "hint_phrase": "p1"},
+            {"hint_level": 2, "weight": 0.66, "hint_word": "w2", "hint_phrase": "p2"},
+        ])
+        self.assertFalse(has_daily_ai_hints(puzzle_date))
+
+        # 3 indices complets -> True
+        save_daily_ai_hints(puzzle_date, [
+            {"hint_level": 3, "weight": 1.00, "hint_word": "w3", "hint_phrase": "p3"},
+        ])
+        self.assertTrue(has_daily_ai_hints(puzzle_date))
+
 
 class TestOrchestrationService(unittest.TestCase):
     """Vérifie les fonctions d'orchestration de src.services.ai_hints."""
@@ -332,7 +358,7 @@ class TestOrchestrationService(unittest.TestCase):
         self.assertEqual(len(res1), 3)
         self.assertEqual(mock_client.request_hints.call_count, 1)
 
-        # Deuxième appel sans force : réutilise la BDD sans appeler l'API
+        # Deuxième appel sans force pour le MÊME mot de la MÊME date : réutilise la BDD sans appeler l'API Gemini
         res2 = generate_and_store_ai_hints(puzzle_date, "boussole", force=False, client=mock_client)
         self.assertEqual(len(res2), 3)
         self.assertEqual(mock_client.request_hints.call_count, 1)
