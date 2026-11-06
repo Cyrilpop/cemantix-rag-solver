@@ -294,6 +294,16 @@ def run_daily_solver(args) -> dict:
     except Exception as e:
         log(f"⚠️  Erreur sauvegarde indices quotidiens : {e}")
 
+    # Persistance des indices IA gradués dans daily_puzzle_ai_hints (Jalon M12)
+    try:
+        from .ai_hints import generate_and_store_ai_hints
+        if result.get("word"):
+            ai_hints = generate_and_store_ai_hints(today_str, result["word"])
+            if ai_hints:
+                log(f"✨  {len(ai_hints)} indices IA Gemini générés et persistés dans daily_puzzle_ai_hints.")
+    except Exception as e:
+        log(f"⚠️  Erreur génération des indices IA quotidiens : {e}")
+
     history = load_history()
     # Remplacer toute entrée précédente pour la même date pour garantir l'enregistrement de la trajectoire
     history = [h for h in history if h.get("date") != today_str]

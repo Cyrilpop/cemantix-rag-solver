@@ -34,6 +34,11 @@ from .hints import (
     bootstrap_database,
     generate_hints_for_word,
 )
+from .ai_hints import (
+    backfill_ai_hints,
+    generate_ai_hints_cli,
+    generate_and_store_ai_hints,
+)
 from .seo import (
     SITE_ORIGIN,
     build_agent_card,
@@ -95,4 +100,7 @@ __all__ = [
     "DEFAULT_TIER_TARGETS",
     "generate_hints_for_word",
     "backfill_puzzle_hints",
+    "generate_and_store_ai_hints",
+    "backfill_ai_hints",
+    "generate_ai_hints_cli",
 ]
