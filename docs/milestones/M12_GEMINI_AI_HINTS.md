@@ -2,7 +2,7 @@
 
 **Dépôt :** `Cyrilpop/cemantix-rag-solver`  
 **Branche visée :** `feature/m12-gemini-ai-hints` (base `origin/main`)  
-**Statut :** 🧭 Cadrage et spécification finalisés — prêt pour implémentation  
+**Statut :** ✅ Validé  
 **Périmètre exclusif :** `database/init.sql`, `src/db/connection.py`, `src/db/daily.py`, `src/db/__init__.py`, nouveau module `src/ai/` (`__init__.py`, `gemini_client.py`, `model_selector.py`, `prompts.py`), `src/services/ai_hints.py`, `src/services/daemon.py`, CLI `cemantix_rag.py`, suite de tests `tests/test_ai_hints.py`, et documentation associée (`docs/roadmap/`, `README.md`, `CHANGELOG.md`).  
 **Périmètre exclu pour ce jalon :** Pas de modification des interfaces web frontend (`volumes/web/**`).  
 **Suite de validation requise :** Tests unitaires sous Docker Python 3.12 (`docker compose` ou conteneur `python:3.12-slim`), `tools/check_docs.py`, `tools/check_seo.py`, `tools/build_css_bundles.py --check`.  
