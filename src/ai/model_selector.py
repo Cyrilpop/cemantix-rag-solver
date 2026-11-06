@@ -5,6 +5,7 @@ import os
 from typing import Any, Dict
 
 DEFAULT_MODEL = "gemini-3.8-flash"
+FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-1.5-flash"]
 DEFAULT_TEMPERATURE = 0.3
 DEFAULT_TIMEOUT_SECONDS = 10.0
 

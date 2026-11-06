@@ -69,6 +69,9 @@ services:
       - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID:-}
       - GOOGLE_REDIRECT_URIS=${GOOGLE_REDIRECT_URIS:-}
       - INDEXNOW_KEY=${INDEXNOW_KEY:-}
+      # Google Gemini AI Hints (M12)
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_TIMEOUT=${GEMINI_TIMEOUT:-25}
     volumes:
       - ./cemantix_data:/app/cemantix_data:rw
       - ./volumes/web:/app/volumes/web:rw
@@ -133,6 +136,9 @@ services:
       - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID:-}
       - GOOGLE_REDIRECT_URIS=${GOOGLE_REDIRECT_URIS:-}
       - INDEXNOW_KEY=${INDEXNOW_KEY:-}
+      # Google Gemini AI Hints (M12)
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_TIMEOUT=${GEMINI_TIMEOUT:-25}
     volumes:
       - ./cemantix_data:/app/cemantix_data:rw
       - ./volumes/web:/app/volumes/web:rw
@@ -193,6 +199,9 @@ services:
       - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID:-}
       - GOOGLE_REDIRECT_URIS=${GOOGLE_REDIRECT_URIS:-}
       - INDEXNOW_KEY=${INDEXNOW_KEY:-}
+      # Google Gemini AI Hints (M12)
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_TIMEOUT=${GEMINI_TIMEOUT:-25}
     volumes:
       - ./cemantix_data:/app/cemantix_data
       - ./volumes/web:/app/volumes/web
