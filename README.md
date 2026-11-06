@@ -602,10 +602,13 @@ docker compose run --rm cemantix --submit-sitemap
 1. **Google Indexing API** : Signal push immédiat incitant Googlebot à visiter la nouvelle archive sous quelques minutes.
 2. **IndexNow** : Notification instantanée multi-moteurs pour Microsoft Bing, Yahoo, Naver et Seznam (avec clé d'authentification générée et exposée de manière autonome).
 3. **Schémas Schema.org enrichis** : Schéma `HowTo` en 5 étapes sur `/methode/` et `WebApplication` sur les vues de jeu (`/`, `/play/`, `/defi/`).
+4. **Protection de quota Google Indexing** : L'API Google étant limitée à 200 requêtes/jour, la colonne `google_indexed_at` dans la table `daily_puzzles` mémorise l'horodatage d'indexation. Tout déclenchement ultérieur (redémarrage de conteneur, régénération web) ignore l'envoi pour préserver le quota, sauf si `--force` est spécifié.
 
 Pour tester immédiatement la notification d'indexation :
 ```bash
 docker compose run --rm cemantix --notify-indexing
+# Pour forcer la notification même si le puzzle du jour est déjà indexé :
+docker compose run --rm cemantix --notify-indexing --force
 ```
 
 ### Cache HTTP : cohérence avec la politique « no-cache »
@@ -805,6 +808,7 @@ curl -sI https://cemantix.cyril-randon.fr/ | grep -iE 'content-security|strict-t
 | `--publish-seo` | Flag | `False` | Régénère uniquement les pages `/puzzles/<date>/`, l'index paginé, `sitemap.xml` et `.well-known/*.json` depuis l'historique. |
 | `--submit-sitemap` | Flag | `False` | Soumet immédiatement `sitemap.xml` à Google Search Console via l'API Webmasters. |
 | `--notify-indexing` | Flag | `False` | Pousse instantanément les URLs chaudes à Google Indexing API et IndexNow (Bing/Yahoo). |
+| `--force` | Flag | `False` | Force l'exécution même si déjà effectuée (ex: ré-indexation Google malgré le puzzle déjà notifié). |
 | `--google-auth` | Flag | `False` | Affiche l'URL de consentement OAuth 2.0 ou échange le code (`--google-code`) contre un refresh token. |
 | `--duel` | Flag | `False` | Lance le mode duel croisé interactif (Humain vs IA RAG). |
 | `--difficulty`, `-d` | Choix (`facile`, `moyen`, `expert`) | `moyen` | Règle le niveau d'agressivité de l'IA en mode duel. |

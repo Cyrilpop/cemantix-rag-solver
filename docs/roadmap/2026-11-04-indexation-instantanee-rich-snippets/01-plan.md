@@ -50,3 +50,8 @@ Cette évolution déploie l'accélération maximale d'indexation et d'affichage 
 - **Problème :** Risque de casser la suite de tests ou les scripts d'audit.
 - **Correctif :** Création de `tests/test_instant_indexing.py` et exécution des 4 outils de validation (`check_docs.py`, `check_seo.py`, `build_css_bundles.py --check`, tests unitaires).
 - **Vérification :** 100 % de succès sur l'ensemble de la suite.
+
+### IND-06 (🔴) — Protection de Quota Google Indexing & Flag en Base (`google_indexed_at`)
+- **Problème :** À chaque redémarrage de conteneur, régénération web ou test, les URLs chaudes sont renvoyées à Google Indexing API, risquant d'épuiser prématurément le quota journalier (200 URLs/jour).
+- **Correctif :** Ajout d'une colonne `google_indexed_at` dans `database/init.sql` et dans la table `daily_puzzles` (`connection.py`, `daily.py`). Si le puzzle du jour est déjà indexé, la notification Google est sautée avec log explicite, sauf si le paramètre `force=True` (ou flag `--force`) est spécifié.
+- **Vérification :** Tests unitaires validant l'évitement d'appel réseau quand le flag est présent et le bypass quand `force=True`.

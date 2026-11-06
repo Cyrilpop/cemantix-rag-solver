@@ -22,6 +22,8 @@ Le présent **Jalon M11** déploie la couche supérieure d'indexation instantan�
    - Intégration du schéma `WebApplication` sur l'accueil `/` et la vue `/play/` pour catégoriser le site comme jeu sémantique gratuit.
 4. **Résilience et Zéro Blocage :**  
    Toutes les notifications d'indexation s'exécutent de façon non bloquante avec repli silencieux en cas d'indisponibilité réseau.
+5. **Protection de Quota et Évitement des Doublons (Flag en Base) :**  
+   Google Indexing API imposant un quota journalier (200 notifications/jour), l'ajout d'une colonne `google_indexed_at` dans la table relationnelle `daily_puzzles` permet de mémoriser l'horodatage d'indexation réussie. Si le puzzle du jour est déjà indexé, les déclenchements ultérieurs (redémarrages de conteneurs, régénérations de pages) sautent l'appel réseau pour préserver le quota, sauf si l'option `--force` est explicitement requise.
 
 ---
 

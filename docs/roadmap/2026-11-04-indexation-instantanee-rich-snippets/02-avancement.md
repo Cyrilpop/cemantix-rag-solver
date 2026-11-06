@@ -21,12 +21,12 @@
 
 | Statut | Nombre | Dont 🔴 critique |
 |---|---|---|
-| ✅ Fait | **5** | 2 |
+| ✅ Fait | **6** | 3 |
 | ⚠️ Partiel | **0** | 0 |
 | ⬜ À faire | **0** | 0 |
-| **Total suivis** | **5** | **2** |
+| **Total suivis** | **6** | **3** |
 
-Répartition par criticité : 🔴 `IND-01` (Google Indexing API), `IND-02` (Protocole IndexNow) · 🟠 `IND-03` (Balisages HowTo & WebApplication), `IND-04` (CLI & Orchestration) · 🟡 `IND-05` (Tests & Non-Régression).
+Répartition par criticité : 🔴 `IND-01` (Google Indexing API), `IND-02` (Protocole IndexNow), `IND-06` (Protection Quota & Flag en Base) · 🟠 `IND-03` (Balisages HowTo & WebApplication), `IND-04` (CLI & Orchestration) · 🟡 `IND-05` (Tests & Non-Régression).
 
 ---
 
@@ -39,6 +39,7 @@ Répartition par criticité : 🔴 `IND-01` (Google Indexing API), `IND-02` (Pro
 | **IND-03** | 🟠 | Balisages Schema.org Avancés : HowTo & WebApplication | `✅ Fait` | Schéma `HowTo` en 5 étapes calibré sur `/methode/` et `WebApplication` sur les pages de jeu (`/`, `/play/`, `/defi/`, `/battle/`). Preuve : `test_build_methode_page_contains_howto_schema` OK. |
 | **IND-04** | 🟠 | Déclenchement Automatique & Option CLI (`cemantix_rag.py`) | `✅ Fait` | Intégration dans `publish_seo_pages()` et ajout du flag `--notify-indexing`. Preuve : exécution Docker `cemantix --notify-indexing` validée. |
 | **IND-05** | 🟡 | Suite de Tests & Non-Régression | `✅ Fait` | 7 tests dans `tests/test_instant_indexing.py` + 386 tests globaux OK sous Docker. Preuve : `check_docs.py`, `check_seo.py`, `build_css_bundles.py --check` tous verts. |
+| **IND-06** | 🔴 | Protection de Quota Google Indexing & Flag en Base | `✅ Fait` | Colonne `google_indexed_at` ajoutée dans `database/init.sql` et `daily_puzzles` (`connection.py`, `daily.py`). Contrôle d'existence dans `notify_daily_urls_to_google` avec option `--force`. Preuve : tests `test_quota_guard_skips_when_indexed` et `test_quota_guard_force_bypasses` OK. |
 
 ---
 
@@ -48,3 +49,4 @@ Répartition par criticité : 🔴 `IND-01` (Google Indexing API), `IND-02` (Pro
 |---|---|---|
 | 05/11/2026 | — | Ouverture de l'évolution M11 et rédaction de la référence de conception. |
 | 05/11/2026 | IND-01→05 | Implémentation de Google Indexing API, IndexNow, intégration CLI et tests unitaires (386 tests OK sous Docker). |
+| 06/11/2026 | IND-06 | Ajout du flag `google_indexed_at` en base (`daily_puzzles`), protection de quota et option CLI `--force`. |

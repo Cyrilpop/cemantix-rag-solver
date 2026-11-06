@@ -11,6 +11,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Signal push `URL_UPDATED` pour notification immédiate des URLs chaudes (`/`, `/mot-du-jour/`, `/puzzles/AAAA-MM-JJ/`) dès leur publication quotidienne.
   - Extension des scopes OAuth avec `https://www.googleapis.com/auth/indexing`.
   - Endpoint `notify_daily_urls_to_google()` avec journalisation unifiée.
+  - **Protection de quota & flag en base (`google_indexed_at`)** : conservation de l'horodatage d'indexation dans la table `daily_puzzles` (`database/init.sql`, `src/db/`) afin d'éviter les surconsommations du quota quotidien Google (200 URLs/jour) lors des redémarrages ou régénérations web.
 - **Protocole IndexNow (`src/services/seo_indexnow.py`)** :
   - Notification multi-moteurs (Bing, Yahoo, DuckDuckGo, Naver, Seznam) de la mise à jour des pages sans OAuth complexe.
   - Génération et hébergement automatique du fichier de validation de clé (`/{key}.txt`) à la racine web.
@@ -20,9 +21,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Consolidation du schéma `WebApplication` sur les pages de jeu interactives.
 - **Option CLI & Automatisation (`cemantix_rag.py`)** :
   - Flag `--notify-indexing` pour déclencher manuellement la notification d'indexation instantanée (Google + IndexNow).
+  - Flag `--force` pour forcer la notification même si le puzzle du jour est déjà consigné comme indexé.
   - Déclenchement automatique intégré dans `publish_seo_pages()` à chaque rotation quotidienne de puzzle.
 - **Suite de tests unitaires dédiée (`tests/test_instant_indexing.py`)** :
-  - 7 tests unitaires couvrant l'appel API Google Indexing, le protocole IndexNow, la résilience aux erreurs HTTP et la validité du JSON-LD `HowTo`.
+  - 10 tests unitaires couvrant l'appel API Google Indexing, le protocole IndexNow, la protection de quota en base, la résilience aux erreurs HTTP et la validité du JSON-LD `HowTo`.
 
 ---
 
