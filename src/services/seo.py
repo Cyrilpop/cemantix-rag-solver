@@ -101,6 +101,12 @@ from .seo_google import (
     exchange_code_for_tokens,
     get_access_token,
     submit_sitemap_to_google,
+    notify_google_indexing,
+    notify_daily_urls_to_google,
+)
+from .seo_indexnow import (
+    get_indexnow_key,
+    submit_indexnow_urls,
 )
 
 
@@ -303,6 +309,27 @@ def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = No
         log(f"⚠️  [SEO] Soumission Google Search Console ignorée ({g_exc})")
         written["google_sitemap"] = False
 
+    # Notification push instantanée (Google Indexing API & IndexNow Bing/Yahoo)
+    try:
+        from .seo_google import notify_daily_urls_to_google
+        from .seo_indexnow import submit_indexnow_urls
+        hot_urls = [
+            f"{SITE_ORIGIN}/",
+            f"{SITE_ORIGIN}/mot-du-jour/",
+        ]
+        if entries:
+            newest_date = str(entries[0].get("date"))
+            if newest_date:
+                hot_urls.append(f"{SITE_ORIGIN}/puzzles/{newest_date}/")
+
+        written["google_indexing"] = notify_daily_urls_to_google(entries, site_origin=SITE_ORIGIN)
+        indexnow_res = submit_indexnow_urls(hot_urls, web_root=root)
+        written["indexnow"] = bool(indexnow_res.get("success"))
+    except Exception as ind_exc:
+        log(f"⚠️  [SEO] Notification d'indexation instantanée ignorée ({ind_exc})")
+        written["google_indexing"] = {}
+        written["indexnow"] = False
+
     log(
         f"🔎  SEO publié : {written['archives']} archive(s), "
         f"{written['index_pages']} page(s) d'index, {written['hub_pages']} page(s) hub, "
@@ -311,6 +338,7 @@ def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = No
         + (", accueil pré-rendu" if written["prerender"] else "")
         + (f", {written['agent_docs']} doc(s) agent rafraîchie(s)" if written["agent_docs"] else "")
         + (", sitemap soumis à Google Search Console" if written["google_sitemap"] else "")
+        + (", push IndexNow OK" if written.get("indexnow") else "")
     )
     return written
 
@@ -427,4 +455,9 @@ __all__ = [
     "exchange_code_for_tokens",
     "get_access_token",
     "submit_sitemap_to_google",
+    "notify_google_indexing",
+    "notify_daily_urls_to_google",
+    # IndexNow
+    "get_indexnow_key",
+    "submit_indexnow_urls",
 ]

@@ -50,6 +50,10 @@ def main():
                     help="régénère uniquement les pages d'archives /puzzles/<date>/, l'index paginé et sitemap.xml depuis l'historique")
     ap.add_argument("--submit-sitemap", action="store_true",
                     help="soumet immédiatement sitemap.xml à Google Search Console via l'API Webmasters")
+    ap.add_argument("--notify-indexing", action="store_true",
+                    help="notifie instantanément les URLs chaudes à Google Indexing API et IndexNow (Bing/Yahoo)")
+    ap.add_argument("--force", action="store_true",
+                    help="force l'exécution même si l'action a déjà été effectuée (ex: ré-indexation Google malgré le quota)")
     ap.add_argument("--google-auth", action="store_true",
                     help="affiche l'URL d'autorisation OAuth2 Google pour Search Console et permet d'échanger le code")
     ap.add_argument("--google-code", type=str, default="",
@@ -129,6 +133,21 @@ def main():
         else:
             log(f"❌ Échec de la soumission : {res.get('message')}")
             sys.exit(1)
+
+    if getattr(args, "notify_indexing", False):
+        from src.services import load_history, notify_daily_urls_to_google, submit_indexnow_urls, SITE_ORIGIN
+        history = load_history()
+        hot_urls = [f"{SITE_ORIGIN}/", f"{SITE_ORIGIN}/mot-du-jour/"]
+        if history:
+            hot_urls.append(f"{SITE_ORIGIN}/puzzles/{history[0].get('date')}/")
+        log("⚡ Notification d'indexation instantanée en cours...")
+        force_flag = getattr(args, "force", False)
+        g_res = notify_daily_urls_to_google(history, site_origin=SITE_ORIGIN, force=force_flag)
+        in_res = submit_indexnow_urls(hot_urls)
+        if g_res.get("skipped"):
+            log("ℹ️  [SEO-GOOGLE] Notification Google ignorée (puzzle déjà indexé, quota préservé).")
+        log(f"✅ Terminé : Google Indexing ({len(g_res)} éléments traités), IndexNow ({in_res.get('message')})")
+        return
 
     if getattr(args, "google_auth", False) or bool(getattr(args, "google_code", "")):
         from src.services.seo_google import generate_auth_url, exchange_code_for_tokens, get_google_credentials

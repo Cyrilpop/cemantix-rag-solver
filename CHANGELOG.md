@@ -4,6 +4,30 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-05 · Jalon M11 : Indexation Instantanée (Google Indexing API, IndexNow) & Balisages Schema.org Avancés
+
+### Ajouté
+- **Google Indexing API v3 (`src/services/seo_google.py`)** :
+  - Signal push `URL_UPDATED` pour notification immédiate des URLs chaudes (`/`, `/mot-du-jour/`, `/puzzles/AAAA-MM-JJ/`) dès leur publication quotidienne.
+  - Extension des scopes OAuth avec `https://www.googleapis.com/auth/indexing`.
+  - Endpoint `notify_daily_urls_to_google()` avec journalisation unifiée.
+  - **Protection de quota & flag en base (`google_indexed_at`)** : conservation de l'horodatage d'indexation dans la table `daily_puzzles` (`database/init.sql`, `src/db/`) afin d'éviter les surconsommations du quota quotidien Google (200 URLs/jour) lors des redémarrages ou régénérations web.
+- **Protocole IndexNow (`src/services/seo_indexnow.py`)** :
+  - Notification multi-moteurs (Bing, Yahoo, DuckDuckGo, Naver, Seznam) de la mise à jour des pages sans OAuth complexe.
+  - Génération et hébergement automatique du fichier de validation de clé (`/{key}.txt`) à la racine web.
+  - Découverte automatique ou configuration via variable d'environnement `INDEXNOW_KEY`.
+- **Enrichissement Schema.org JSON-LD (`src/services/seo_hubs.py`)** :
+  - Données structurées `HowTo` pour la page `/methode/` décrivant les 5 étapes de résolution Cémantix pour éligibilité aux Rich Snippets Google.
+  - Consolidation du schéma `WebApplication` sur les pages de jeu interactives.
+- **Option CLI & Automatisation (`cemantix_rag.py`)** :
+  - Flag `--notify-indexing` pour déclencher manuellement la notification d'indexation instantanée (Google + IndexNow).
+  - Flag `--force` pour forcer la notification même si le puzzle du jour est déjà consigné comme indexé.
+  - Déclenchement automatique intégré dans `publish_seo_pages()` à chaque rotation quotidienne de puzzle.
+- **Suite de tests unitaires dédiée (`tests/test_instant_indexing.py`)** :
+  - 10 tests unitaires couvrant l'appel API Google Indexing, le protocole IndexNow, la protection de quota en base, la résilience aux erreurs HTTP et la validité du JSON-LD `HowTo`.
+
+---
+
 ## [Non publié] - 2026-11-05 · Jalon M10 : Soumission Automatique du Sitemap à Google Search Console
 
 ### Ajouté

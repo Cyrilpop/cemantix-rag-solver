@@ -49,6 +49,10 @@ from .seo import (
     publish_ard_manifests,
     publish_seo_pages,
     submit_sitemap_to_google,
+    notify_google_indexing,
+    notify_daily_urls_to_google,
+    get_indexnow_key,
+    submit_indexnow_urls,
 )
 
 __all__ = [
@@ -83,6 +87,10 @@ __all__ = [
     "publish_ard_manifests",
     "publish_seo_pages",
     "submit_sitemap_to_google",
+    "notify_google_indexing",
+    "notify_daily_urls_to_google",
+    "get_indexnow_key",
+    "submit_indexnow_urls",
     "get_google_credentials",
     "DEFAULT_TIER_TARGETS",
     "generate_hints_for_word",

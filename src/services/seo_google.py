@@ -107,9 +107,9 @@ def get_google_credentials(dotenv_path: Optional[Path] = None) -> Dict[str, Any]
 def generate_auth_url(
     credentials: Optional[Dict[str, Any]] = None,
     redirect_uri: Optional[str] = None,
-    scope: str = "https://www.googleapis.com/auth/webmasters",
+    scope: str = "https://www.googleapis.com/auth/webmasters https://www.googleapis.com/auth/indexing",
 ) -> str:
-    """Génère l'URL d'autorisation OAuth 2.0 pour la Search Console."""
+    """Génère l'URL d'autorisation OAuth 2.0 pour Search Console et Indexing API."""
     creds = credentials or get_google_credentials()
     client_id = creds.get("client_id", "")
     auth_uri = creds.get("auth_uri", "https://accounts.google.com/o/oauth2/auth")
@@ -299,6 +299,130 @@ def submit_sitemap_to_google(
             "status_code": -1,
             "message": str(exc),
         }
+
+
+def notify_google_indexing(
+    url: str,
+    notification_type: str = "URL_UPDATED",
+    credentials: Optional[Dict[str, Any]] = None,
+    timeout: int = 15,
+) -> Dict[str, Any]:
+    """Pousse une notification immédiate à l'API Google Indexing v3.
+
+    Endpoint : POST https://indexing.googleapis.com/v3/urlNotifications:publish
+    Types supportés : 'URL_UPDATED' (par défaut) ou 'URL_DELETED'.
+    """
+    creds = credentials or get_google_credentials()
+    client_id = creds.get("client_id", "")
+    refresh_token = creds.get("refresh_token", "")
+
+    if not client_id or not refresh_token:
+        return {
+            "success": False,
+            "status_code": 0,
+            "message": "Identifiants Google ou GOOGLE_REFRESH_TOKEN manquants.",
+        }
+
+    token = get_access_token(creds, timeout=timeout)
+    if not token:
+        return {
+            "success": False,
+            "status_code": 0,
+            "message": "Impossible d'obtenir un jeton d'accès Google.",
+        }
+
+    api_url = "https://indexing.googleapis.com/v3/urlNotifications:publish"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json; charset=utf-8",
+    }
+    payload = {
+        "url": url,
+        "type": notification_type,
+    }
+
+    try:
+        resp = requests.post(api_url, json=payload, headers=headers, timeout=timeout)
+        if resp.status_code in (200, 202):
+            log(f"⚡ [SEO-GOOGLE] Notification d'indexation acceptée par Google ({url})")
+            return {
+                "success": True,
+                "status_code": resp.status_code,
+                "message": "Notification d'indexation acceptée.",
+            }
+        log(
+            f"ℹ️  [SEO-GOOGLE] Réponse Google Indexing API (HTTP {resp.status_code}) : {resp.text}"
+        )
+        return {
+            "success": False,
+            "status_code": resp.status_code,
+            "message": resp.text,
+        }
+    except Exception as exc:
+        log(f"⚠️  [SEO-GOOGLE] Exception Google Indexing API ({url}) : {exc}")
+        return {
+            "success": False,
+            "status_code": -1,
+            "message": str(exc),
+        }
+
+
+def notify_daily_urls_to_google(
+    entries: list,
+    site_origin: Optional[str] = None,
+    credentials: Optional[Dict[str, Any]] = None,
+    force: bool = False,
+) -> Dict[str, Any]:
+    """Notifie les URLs chaudes du jour (accueil, mot-du-jour, archive récente).
+
+    Vérifie au préalable si le puzzle du jour a déjà été indexé en base pour
+    préserver le quota quotidien de l'API Google (200 URLs/jour).
+    Le paramètre `force=True` contourne cette protection.
+    """
+    newest_date = str(entries[0].get("date")) if entries else ""
+
+    # Protection quota : vérifier si déjà indexé
+    if newest_date and not force:
+        try:
+            from ..db import is_daily_puzzle_indexed
+            if is_daily_puzzle_indexed(newest_date):
+                log(
+                    f"ℹ️  [SEO-GOOGLE] Puzzle du {newest_date} déjà notifié à Google Indexing API "
+                    "(quota quotidien préservé). Utilisez --force pour forcer."
+                )
+                return {
+                    "skipped": True,
+                    "reason": "already_indexed",
+                    "date": newest_date,
+                }
+        except Exception as check_exc:
+            log(f"⚠️  [SEO-GOOGLE] Impossible de vérifier l'état d'indexation ({check_exc})")
+
+    origin = (site_origin or SITE_ORIGIN).rstrip("/")
+    urls_to_notify = [
+        f"{origin}/",
+        f"{origin}/mot-du-jour/",
+    ]
+    if newest_date:
+        urls_to_notify.append(f"{origin}/puzzles/{newest_date}/")
+
+    results = {}
+    any_success = False
+    for u in urls_to_notify:
+        res = notify_google_indexing(u, credentials=credentials)
+        results[u] = res
+        if res.get("success"):
+            any_success = True
+
+    # Marquer comme indexé en base si au moins une notification a été acceptée
+    if newest_date and any_success:
+        try:
+            from ..db import mark_daily_puzzle_indexed
+            mark_daily_puzzle_indexed(newest_date)
+        except Exception as mark_exc:
+            log(f"⚠️  [SEO-GOOGLE] Erreur marquage d'indexation en base : {mark_exc}")
+
+    return results
 
 
 def reset_token_cache() -> None:

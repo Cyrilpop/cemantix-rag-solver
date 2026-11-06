@@ -13,7 +13,7 @@
 
 ## 0. Méthodologie & périmètre
 
-L'évolution met en place l'interaction sécurisée et asynchrone avec l'API Google Search Console pour soumettre le fichier [`volumes/web/sitemap.xml`](../../../volumes/web/sitemap.xml) dès sa génération :
+L'évolution met en place l'interaction sécurisée et asynchrone avec l'API Google Search Console pour soumettre le fichier `volumes/web/sitemap.xml` dès sa génération :
 
 1. Lecture sécurisée des variables d'environnement (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`).
 2. Client HTTP résilient pour l'obtention de jetons OAuth 2.0 et la soumission du sitemap.
