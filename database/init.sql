@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS daily_puzzles (
     top_guesses JSONB NOT NULL DEFAULT '[]'::jsonb,
     trajectory JSONB NOT NULL DEFAULT '[]'::jsonb,
     is_revealed BOOLEAN DEFAULT FALSE,
+    google_indexed_at TIMESTAMPTZ DEFAULT NULL,
     solved_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 

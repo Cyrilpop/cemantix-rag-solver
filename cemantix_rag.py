@@ -52,6 +52,8 @@ def main():
                     help="soumet immédiatement sitemap.xml à Google Search Console via l'API Webmasters")
     ap.add_argument("--notify-indexing", action="store_true",
                     help="notifie instantanément les URLs chaudes à Google Indexing API et IndexNow (Bing/Yahoo)")
+    ap.add_argument("--force", action="store_true",
+                    help="force l'exécution même si l'action a déjà été effectuée (ex: ré-indexation Google malgré le quota)")
     ap.add_argument("--google-auth", action="store_true",
                     help="affiche l'URL d'autorisation OAuth2 Google pour Search Console et permet d'échanger le code")
     ap.add_argument("--google-code", type=str, default="",
@@ -139,9 +141,12 @@ def main():
         if history:
             hot_urls.append(f"{SITE_ORIGIN}/puzzles/{history[0].get('date')}/")
         log("⚡ Notification d'indexation instantanée en cours...")
-        g_res = notify_daily_urls_to_google(history, site_origin=SITE_ORIGIN)
+        force_flag = getattr(args, "force", False)
+        g_res = notify_daily_urls_to_google(history, site_origin=SITE_ORIGIN, force=force_flag)
         in_res = submit_indexnow_urls(hot_urls)
-        log(f"✅ Terminé : Google Indexing ({len(g_res)} URLs notifiées), IndexNow ({in_res.get('message')})")
+        if g_res.get("skipped"):
+            log("ℹ️  [SEO-GOOGLE] Notification Google ignorée (puzzle déjà indexé, quota préservé).")
+        log(f"✅ Terminé : Google Indexing ({len(g_res)} éléments traités), IndexNow ({in_res.get('message')})")
         return
 
     if getattr(args, "google_auth", False) or bool(getattr(args, "google_code", "")):

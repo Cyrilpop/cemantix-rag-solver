@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS daily_puzzles (
     top_guesses JSONB NOT NULL DEFAULT '[]'::jsonb,
     trajectory JSONB NOT NULL DEFAULT '[]'::jsonb,
     is_revealed BOOLEAN DEFAULT FALSE,
+    google_indexed_at TIMESTAMPTZ DEFAULT NULL,
     solved_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -180,6 +181,7 @@ CREATE TABLE IF NOT EXISTS daily_puzzles (
     top_guesses TEXT NOT NULL DEFAULT '[]',
     trajectory TEXT NOT NULL DEFAULT '[]',
     is_revealed BOOLEAN DEFAULT 0,
+    google_indexed_at TEXT DEFAULT NULL,
     solved_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -555,10 +557,19 @@ class DatabaseManager:
                 if engine == "postgres":
                     with closing(conn.cursor()) as cur:
                         cur.execute(schema)
+                        # Migration idempotente de colonnes (M11 - Quota Google Indexing)
+                        cur.execute("ALTER TABLE daily_puzzles ADD COLUMN IF NOT EXISTS google_indexed_at TIMESTAMPTZ;")
                     conn.commit()
 
                 else:
                     conn.executescript(schema)
+                    # Migration idempotente SQLite
+                    try:
+                        cur = conn.cursor()
+                        cur.execute("ALTER TABLE daily_puzzles ADD COLUMN google_indexed_at TEXT;")
+                        conn.commit()
+                    except Exception:
+                        pass
                     conn.commit()
                 self._initialized = True
             except Exception as e:

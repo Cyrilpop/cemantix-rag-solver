@@ -65,11 +65,45 @@ class TestGoogleIndexingApi(unittest.TestCase):
     def test_notify_daily_urls(self, mock_notify):
         mock_notify.return_value = {"success": True}
         entries = [{"date": "2026-11-05"}]
-        results = notify_daily_urls_to_google(entries, site_origin="https://cemantix.cyril-randon.fr")
+        results = notify_daily_urls_to_google(entries, site_origin="https://cemantix.cyril-randon.fr", force=True)
         self.assertEqual(len(results), 3)
         self.assertIn("https://cemantix.cyril-randon.fr/", results)
         self.assertIn("https://cemantix.cyril-randon.fr/mot-du-jour/", results)
         self.assertIn("https://cemantix.cyril-randon.fr/puzzles/2026-11-05/", results)
+
+    @mock.patch("src.db.is_daily_puzzle_indexed", return_value=True)
+    @mock.patch("src.services.seo_google.notify_google_indexing")
+    def test_quota_guard_skips_when_indexed(self, mock_notify, mock_is_indexed):
+        entries = [{"date": "2026-11-06"}]
+        results = notify_daily_urls_to_google(entries, force=False)
+        self.assertTrue(results.get("skipped"))
+        self.assertEqual(results.get("reason"), "already_indexed")
+        mock_notify.assert_not_called()
+
+    @mock.patch("src.db.is_daily_puzzle_indexed", return_value=True)
+    @mock.patch("src.services.seo_google.notify_google_indexing")
+    def test_quota_guard_force_bypasses(self, mock_notify, mock_is_indexed):
+        mock_notify.return_value = {"success": True}
+        entries = [{"date": "2026-11-06"}]
+        results = notify_daily_urls_to_google(entries, force=True)
+        self.assertFalse(results.get("skipped", False))
+        self.assertEqual(len(results), 3)
+        self.assertEqual(mock_notify.call_count, 3)
+
+    def test_mark_and_check_daily_puzzle_indexed_integration(self):
+        from src.db import is_daily_puzzle_indexed, mark_daily_puzzle_indexed, save_daily_puzzle
+        # Initialiser avec un puzzle test
+        test_date = "2026-11-99"
+        save_daily_puzzle({
+            "date": test_date,
+            "puzzle_id": 9999,
+            "word": "test",
+            "tries": 1,
+            "attempts": 1,
+        })
+        self.assertFalse(is_daily_puzzle_indexed(test_date))
+        mark_daily_puzzle_indexed(test_date)
+        self.assertTrue(is_daily_puzzle_indexed(test_date))
 
 
 class TestIndexNow(unittest.TestCase):

@@ -371,21 +371,57 @@ def notify_daily_urls_to_google(
     entries: list,
     site_origin: Optional[str] = None,
     credentials: Optional[Dict[str, Any]] = None,
+    force: bool = False,
 ) -> Dict[str, Any]:
-    """Notifie les URLs chaudes du jour (accueil, mot-du-jour, archive récente)."""
+    """Notifie les URLs chaudes du jour (accueil, mot-du-jour, archive récente).
+
+    Vérifie au préalable si le puzzle du jour a déjà été indexé en base pour
+    préserver le quota quotidien de l'API Google (200 URLs/jour).
+    Le paramètre `force=True` contourne cette protection.
+    """
+    newest_date = str(entries[0].get("date")) if entries else ""
+
+    # Protection quota : vérifier si déjà indexé
+    if newest_date and not force:
+        try:
+            from ..db import is_daily_puzzle_indexed
+            if is_daily_puzzle_indexed(newest_date):
+                log(
+                    f"ℹ️  [SEO-GOOGLE] Puzzle du {newest_date} déjà notifié à Google Indexing API "
+                    "(quota quotidien préservé). Utilisez --force pour forcer."
+                )
+                return {
+                    "skipped": True,
+                    "reason": "already_indexed",
+                    "date": newest_date,
+                }
+        except Exception as check_exc:
+            log(f"⚠️  [SEO-GOOGLE] Impossible de vérifier l'état d'indexation ({check_exc})")
+
     origin = (site_origin or SITE_ORIGIN).rstrip("/")
     urls_to_notify = [
         f"{origin}/",
         f"{origin}/mot-du-jour/",
     ]
-    if entries:
-        newest_date = str(entries[0].get("date"))
-        if newest_date:
-            urls_to_notify.append(f"{origin}/puzzles/{newest_date}/")
+    if newest_date:
+        urls_to_notify.append(f"{origin}/puzzles/{newest_date}/")
 
     results = {}
+    any_success = False
     for u in urls_to_notify:
-        results[u] = notify_google_indexing(u, credentials=credentials)
+        res = notify_google_indexing(u, credentials=credentials)
+        results[u] = res
+        if res.get("success"):
+            any_success = True
+
+    # Marquer comme indexé en base si au moins une notification a été acceptée
+    if newest_date and any_success:
+        try:
+            from ..db import mark_daily_puzzle_indexed
+            mark_daily_puzzle_indexed(newest_date)
+        except Exception as mark_exc:
+            log(f"⚠️  [SEO-GOOGLE] Erreur marquage d'indexation en base : {mark_exc}")
+
     return results
 
 
