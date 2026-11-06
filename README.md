@@ -611,6 +611,29 @@ docker compose run --rm cemantix --notify-indexing
 docker compose run --rm cemantix --notify-indexing --force
 ```
 
+### Indices IA Google Gemini (Jalon M12)
+Le solveur s'appuie sur le modèle **Google Gemini 3.8 Flash** (`gemini-3.8-flash`) pour générer automatiquement 3 indices gradués pour chaque mot du jour :
+1. **Niveau 1 (Éloigné, poids 0.33)** : Domaine général, cadre thématique large ou concept abstrait englobant.
+2. **Niveau 2 (Intermédiaire, poids 0.66)** : Fonction, usage courant, contexte pratique ou caractéristique physique/symbolique.
+3. **Niveau 3 (Proche, poids 1.00)** : Indice sémantique très ciblé, quasi-synonyme ou analogie déterminante sans révéler le mot.
+
+Chaque indice est stocké sous un format dual :
+- Un **mot repère** (`hint_word`) concis en minuscules.
+- Une **phrase guide** (`hint_phrase`) descriptive de 15 à 30 mots.
+
+**Sécurité & Filtre Anti-Fuite (Leak-Guard) :** Le parseur contrôle et rejette strictement toute mention du mot secret, de son pluriel ou de son radical étymologique (`check_leak_guard`).
+
+**Persistance relationnelle :** Les indices sont stockés dans la table `daily_puzzle_ai_hints` (PostgreSQL et repli SQLite) avec contrainte d'unicité `(puzzle_date, hint_level)` et génération automatique nocturne par le démon.
+
+Pour générer ou afficher les indices IA d'un puzzle en ligne de commande :
+```bash
+# Générer ou consulter les indices du dernier puzzle :
+docker compose run --rm cemantix --generate-ai-hints
+
+# Pour une date spécifique (avec régénération forcée) :
+docker compose run --rm cemantix --generate-ai-hints --date 2026-11-06 --force
+```
+
 ### Cache HTTP : cohérence avec la politique « no-cache »
 Le projet applique `Cache-Control: "no-cache, must-revalidate"` sur le code applicatif
 (voir l'encadré « Pourquoi aucun paramètre de version (`?v=...`) » plus haut) : la
@@ -992,10 +1015,16 @@ cemantix-rag-solver/
     │   ├── ui.py            # Rendu console, jauges ASCII, dashboard duel & débriefing
     │   ├── menu.py          # Menu interactif textuel avec configuration dynamique
     │   └── modes.py         # Boucles d'exécution interactives (solo, duel, battle, benchmark)
+    ├── ai/                  # Module IA générative Google Gemini (M12)
+    │   ├── __init__.py      # Point d'entrée du sous-paquet IA et exports
+    │   ├── gemini_client.py # Client HTTP REST vers generativelanguage.googleapis.com
+    │   ├── model_selector.py# Modèle cible (gemini-3.8-flash), température basse et timeouts
+    │   └── prompts.py       # Prompts calibrés, format JSON dual et filtre Leak-Guard anti-triche
     └── services/            # Services d'arrière-plan & synchronisation (Background Services)
         ├── __init__.py      # Point d'entrée des services
         ├── daemon.py        # Démon planificateur 24h/24 (veille, heartbeat threadé et résolution quotidienne)
         ├── hints.py         # Service sémantique RAG, calcul des paliers d'indices et bootstrap_database()
+        ├── ai_hints.py      # Orchestration et génération idempotente des indices IA Gemini (M12)
         ├── web.py           # Générateur et exportateur de données web avec masquage anti-spoiler
         └── seo.py           # Orchestrateur SEO (archives avec 10 indices, hubs, sitemap.xml et manifestes ARD)
 ```

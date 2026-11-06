@@ -60,6 +60,10 @@ def main():
                     help="code d'autorisation OAuth2 Google à échanger contre un refresh token")
     ap.add_argument("--backfill-hints", action="store_true",
                     help="exécute le rattrapage idempotent des indices de tous les puzzles quotidiens (M6)")
+    ap.add_argument("--generate-ai-hints", action="store_true",
+                    help="génère les indices sémantiques IA Google Gemini pour un puzzle quotidien (M12)")
+    ap.add_argument("--date", type=str, default="",
+                    help="date cible au format AAAA-MM-JJ pour les opérations datées (ex: --generate-ai-hints)")
     ap.add_argument("--force-solve", action="store_true",
                     help="force la résolution immédiate du mot du jour et régénère l'historique complet avec trajectoire dans data.json")
     ap.add_argument("--api", action="store_true",
@@ -185,6 +189,13 @@ def main():
     if getattr(args, "backfill_hints", False):
         from src.services.hints import bootstrap_database
         bootstrap_database()
+        return
+
+    if getattr(args, "generate_ai_hints", False):
+        from src.services.ai_hints import generate_ai_hints_cli
+        target_date = getattr(args, "date", "").strip() or None
+        force_flag = getattr(args, "force", False)
+        generate_ai_hints_cli(target_date=target_date, force=force_flag)
         return
 
     if getattr(args, "force_solve", False):

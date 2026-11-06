@@ -4,6 +4,27 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-06 · Jalon M12 : Génération & Persistance d'Indices IA par Google Gemini
+
+### Ajouté
+- **Module IA Google Gemini (`src/ai/`)** :
+  - `src/ai/gemini_client.py` : Client HTTP REST (`GeminiClient`) communiquant avec l'API v1beta de Google Gemini (`generateContent`), avec gestion des clés d'API (`GEMINI_API_KEY`), des quotas et des erreurs réseau.
+  - `src/ai/model_selector.py` : Sélecteur de modèle centralisé ciblant obligatoirement `gemini-3.8-flash`, température basse (0.3) et timeout (10s).
+  - `src/ai/prompts.py` : Prompt système (`SYSTEM_PROMPT`) imposant le rôle de Maître du jeu Cémantix, prompt utilisateur (`build_user_prompt`), et parseur JSON (`parse_gemini_hints_response`) avec filtre de sécurité anti-triche **Leak-Guard** (`check_leak_guard`) rejetant toute fuite du mot secret, de son pluriel ou de son radical étymologique.
+- **Stockage relationnel pérenne (`database/init.sql` & `src/db/`)** :
+  - Table relationnelle `daily_puzzle_ai_hints` déclarée sous PostgreSQL (`database/init.sql`, `PG_SCHEMA`) et SQLite local (`SQLITE_SCHEMA`), stockant le niveau d'indice (`hint_level` 1, 2, 3), la pondération (`weight` 0.33, 0.66, 1.00), le format dual mot (`hint_word`) et phrase (`hint_phrase`), et le modèle utilisé.
+  - Fonctions CRUD `save_daily_ai_hints(puzzle_date, hints)` et `get_daily_ai_hints(puzzle_date, revealed_only)` dans `src/db/daily.py`, exportées dans `src/db/__init__.py`.
+- **Service d'orchestration & Intégration Démon (`src/services/ai_hints.py`, `src/services/daemon.py`)** :
+  - Fonctions `generate_and_store_ai_hints()` et `backfill_ai_hints()` avec gestion de l'idempotence pour préserver les quotas d'API.
+  - Intégration automatique dans le démon de calcul nocturne (`src/services/daemon.py`) déclenchée immédiatement après la résolution quotidienne.
+- **Interface en ligne de commande (`cemantix_rag.py`)** :
+  - Commande CLI `--generate-ai-hints` avec options `--date AAAA-MM-JJ` et `--force` pour générer manuellement ou réécrire les indices d'un puzzle.
+  - Affichage console formaté récapitulant les 3 paliers d'indices.
+- **Suite de tests unitaires complète (`tests/test_ai_hints.py`)** :
+  - 23 tests unitaires validant le client Gemini, les prompts et le Leak-Guard, la persistance SQL (SQLite) et le service d'orchestration.
+
+---
+
 ## [Non publié] - 2026-11-05 · Jalon M11 : Indexation Instantanée (Google Indexing API, IndexNow) & Balisages Schema.org Avancés
 
 ### Ajouté

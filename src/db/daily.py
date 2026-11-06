@@ -270,6 +270,71 @@ def reveal_daily_hint_tier(puzzle_date: str, tier: str) -> int:
     return db.execute(query, (True, str(puzzle_date), str(tier)))
 
 
+def save_daily_ai_hints(puzzle_date: str, hints: list[dict]) -> int:
+    """Insère ou met à jour les indices IA générés pour un puzzle quotidien (M12).
+
+    Chaque indice du lot peut contenir:
+      - hint_level (ou level): int (1, 2, 3)
+      - weight: float (0.33, 0.66, 1.00)
+      - hint_word (ou word): str
+      - hint_phrase (ou phrase): str
+      - model: str (défaut 'gemini-3.8-flash')
+      - is_revealed: bool (défaut False)
+    """
+    query = """
+    INSERT INTO daily_puzzle_ai_hints (puzzle_date, hint_level, weight, hint_word, hint_phrase, model, is_revealed)
+    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    ON CONFLICT (puzzle_date, hint_level) DO UPDATE SET
+        weight = EXCLUDED.weight,
+        hint_word = EXCLUDED.hint_word,
+        hint_phrase = EXCLUDED.hint_phrase,
+        model = EXCLUDED.model,
+        is_revealed = EXCLUDED.is_revealed;
+    """
+    inserted = 0
+    with db.transaction() as conn:
+        for hint in hints:
+            level = int(hint.get("hint_level", hint.get("level", 1)))
+            weight = float(hint.get("weight", 0.0))
+            word = str(hint.get("hint_word", hint.get("word", "")))
+            phrase = str(hint.get("hint_phrase", hint.get("phrase", "")))
+            model = str(hint.get("model", "gemini-3.8-flash"))
+            is_revealed = bool(hint.get("is_revealed", False))
+
+            q, p = db._format_query(query, (
+                str(puzzle_date),
+                level,
+                weight,
+                word,
+                phrase,
+                model,
+                is_revealed,
+            ), db._determine_engine())
+            conn.execute(q, p)
+            inserted += 1
+    return inserted
+
+
+def get_daily_ai_hints(puzzle_date: str, revealed_only: bool = False) -> list[dict]:
+    """Récupère les indices IA d'un puzzle quotidien, triés par niveau croissant (1, 2, 3)."""
+    if revealed_only:
+        query = "SELECT * FROM daily_puzzle_ai_hints WHERE puzzle_date = %s AND is_revealed = %s ORDER BY hint_level ASC;"
+        return db.fetch_all(query, (str(puzzle_date), True))
+    query = "SELECT * FROM daily_puzzle_ai_hints WHERE puzzle_date = %s ORDER BY hint_level ASC;"
+    return db.fetch_all(query, (str(puzzle_date),))
+
+
+def has_daily_ai_hints(puzzle_date: str) -> bool:
+    """Vérifie rapidement si les indices IA pour une date sont déjà complets (3 indices)."""
+    if not puzzle_date:
+        return False
+    query = "SELECT COUNT(*) as count FROM daily_puzzle_ai_hints WHERE puzzle_date = %s;"
+    row = db.fetch_one(query, (str(puzzle_date),))
+    return bool(row and row.get("count", 0) >= 3)
+
+
+
+
 def backfill_daily_puzzles_from_json(filepath: Optional[object] = None) -> int:
     """Rattrapage idempotent de daily_puzzles depuis l'historique JSON.
 
