@@ -37,7 +37,7 @@ class TestGoogleCredentials(unittest.TestCase):
         with tempfile.NamedTemporaryFile("w+", delete=False, encoding="utf-8") as tf:
             tf.write("# Commentaire\n")
             tf.write("GOOGLE_CLIENT_ID=\"client-id-123\"\n")
-            tf.write("GOOCLE_CLIENT_SECRET='secret-456'\n")
+            tf.write("GOOGLE_CLIENT_SECRET='secret-456'\n")
             tf.write("GOOGLE_REDIRECT_URIS=[\"https://cemantix.cyril-randon.fr\"]\n")
             tf.write("CLE_VIDE=\n")
             temp_path = Path(tf.name)
@@ -45,7 +45,7 @@ class TestGoogleCredentials(unittest.TestCase):
         try:
             parsed = parse_dotenv(temp_path)
             self.assertEqual(parsed.get("GOOGLE_CLIENT_ID"), "client-id-123")
-            self.assertEqual(parsed.get("GOOCLE_CLIENT_SECRET"), "secret-456")
+            self.assertEqual(parsed.get("GOOGLE_CLIENT_SECRET"), "secret-456")
             self.assertEqual(parsed.get("GOOGLE_REDIRECT_URIS"), '["https://cemantix.cyril-randon.fr"]')
         finally:
             if temp_path.exists():
@@ -54,7 +54,7 @@ class TestGoogleCredentials(unittest.TestCase):
     def test_get_google_credentials_from_env_with_typo_fallback(self):
         fake_env = {
             "GOOGLE_CLIENT_ID": "client-abc",
-            "GOOCLE_CLIENT_SECRET": "secret-xyz",
+            "GOOGLE_CLIENT_SECRET": "secret-xyz",
             "GOOGLE_REFRESH_TOKEN": "refresh-123",
             "GOOGLE_PROJECT_ID": "proj-99",
             "GOOGLE_REDIRECT_URIS": "https://custom.domaine.fr",

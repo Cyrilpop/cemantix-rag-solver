@@ -73,7 +73,7 @@ def get_google_credentials(dotenv_path: Optional[Path] = None) -> Dict[str, Any]
     # Tolérance sur la faute de frappe constatée dans le .env
     client_secret = (
         _get("GOOGLE_CLIENT_SECRET")
-        or _get("GOOCLE_CLIENT_SECRET")
+        or _get("GOOGLE_CLIENT_SECRET")
         or _get("GOOGLE_CLIENT_SECRET_TYPO")
     )
     refresh_token = _get("GOOGLE_REFRESH_TOKEN")
