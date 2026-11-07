@@ -33,6 +33,7 @@ from .routes import (
     handle_challenge_stream,
     handle_multi_get,
     handle_multi_post,
+    handle_player_post,
     handle_solo_get,
     handle_solo_post,
     handle_system_get,
@@ -100,12 +101,29 @@ class GameAPIHandler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.send_header("Access-Control-Max-Age", "86400")
 
-    def _security_headers(self):
+    def _security_headers(self, cache_control: Optional[str] = None):
         for name, value in SECURITY_HEADERS.items():
-            self.send_header(name, value)
+            if name == "Cache-Control" and cache_control:
+                self.send_header(name, cache_control)
+            else:
+                self.send_header(name, value)
+
+    def _send_player_json(self, data: dict, status: int = 200):
+        """Réponse JSON joueur : toujours 'Cache-Control: no-store, private'."""
+        payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self._set_cors_headers()
+        self._security_headers(cache_control="no-store, private")
+        self.end_headers()
+        try:
+            self.wfile.write(payload)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def _admin_headers(self):
         """Aucune réponse d'administration ne doit être mise en cache ni indexée."""
@@ -298,6 +316,11 @@ class GameAPIHandler(BaseHTTPRequestHandler):
         data, rejected = self._read_json()
         if rejected:
             return  # _read_json a déjà renvoyé l'erreur 413.
+
+        if path.startswith("/api/player/"):
+            res, status = handle_player_post(path, data, self.headers)
+            self._send_player_json(res, status=status)
+            return
 
         if not _manager:
             self._send_error_json("Gestionnaire non initialisé", 503)

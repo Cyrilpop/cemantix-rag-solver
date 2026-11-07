@@ -17,6 +17,7 @@ from .admin import (
     is_admin_path,
 )
 from .multi import handle_multi_get, handle_multi_post
+from .player import handle_player_post
 from .solo import handle_solo_get, handle_solo_post
 from .system import handle_system_get, handle_system_post
 
@@ -30,6 +31,7 @@ __all__ = [
     "ADMIN_BASE_PATH",
     "handle_solo_get",
     "handle_solo_post",
+    "handle_player_post",
     "handle_battle_post",
     "handle_multi_get",
     "handle_multi_post",

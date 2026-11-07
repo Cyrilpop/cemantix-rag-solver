@@ -432,6 +432,13 @@ def handle_admin_get(
     elif sub == "whitelist":
         from ...db import get_whitelist
         send_json({"entries": get_whitelist()}, 200)
+    elif sub == "dictionary":
+        from ...db import get_dictionary_words
+        all_words = get_dictionary_words()
+        nouns = [w for w in all_words if w["word_type"] == "noun"]
+        adjectives = [w for w in all_words if w["word_type"] == "adjective"]
+        recovery = [w for w in all_words if w["word_type"] == "recovery"]
+        send_json({"nouns": nouns, "adjectives": adjectives, "recovery": recovery}, 200)
     elif sub == "whoami":
         send_json({"ok": True, "expires_in": int(ADMIN_TOKEN_TTL)}, 200)
     else:
@@ -484,6 +491,20 @@ def handle_admin_post(manager, path: str, data: dict, headers, client_ip: str) -
         log("🛡️  [ADMIN] Whitelist des défis au bot : adresse ajoutée")
         return {"ok": True, "entries": get_whitelist()}, 200
 
+    if sub == "dictionary":
+        from ...db import add_dictionary_word
+        from ...services.player_auth import invalidate_dictionary_cache
+        word_type = str((data or {}).get("word_type", "")).strip().lower()
+        word = str((data or {}).get("word", "")).strip()
+        if word_type not in ("noun", "adjective", "recovery"):
+            return {"error": "word_type invalide ('noun', 'adjective' ou 'recovery' attendu)."}, 400
+        if not word or len(word) < 2 or len(word) > 32:
+            return {"error": "Le mot doit comporter entre 2 et 32 caractères."}, 400
+        new_id = add_dictionary_word(word_type, word)
+        invalidate_dictionary_cache()
+        log(f"🛡️  [ADMIN] Dictionnaire joueur mis à jour : {word_type} '{word}' (id {new_id})")
+        return {"success": True, "id": new_id}, 200
+
     return {"error": "Route introuvable"}, 404
 
 
@@ -521,6 +542,20 @@ def handle_admin_delete(manager, path: str, headers, client_ip: str) -> tuple[di
         if removed:
             log("🛡️  [ADMIN] Whitelist des défis au bot : adresse retirée")
         return {"ok": bool(removed), "entries": get_whitelist()}, (200 if removed else 404)
+
+    if sub.startswith("dictionary/"):
+        from ...db import delete_dictionary_word
+        from ...services.player_auth import invalidate_dictionary_cache
+        raw_id = sub.split("/", 1)[1]
+        try:
+            word_id = int(raw_id)
+        except ValueError:
+            return {"error": "ID de mot invalide (entier attendu)."}, 400
+        removed = delete_dictionary_word(word_id)
+        if removed:
+            invalidate_dictionary_cache()
+            log(f"🛡️  [ADMIN] Mot de dictionnaire supprimé (id {word_id})")
+        return {"success": bool(removed)}, (200 if removed else 404)
 
     return {"error": "Route introuvable"}, 404
 
