@@ -50,6 +50,9 @@ volumes/web/puzzles/
 # elles sont recréées par ensure_seo_published() au démarrage des conteneurs.
 volumes/web/mot-du-jour/
 volumes/web/methode/
+# Fichiers de validation IndexNow générés dynamiquement au démarrage :
+volumes/web/indexnow-key.txt
+volumes/web/[0-9a-f]*.txt
 
 # --- Cache & modèles lourds (téléchargés au premier lancement) ---------------
 cemantix_data/*.bin
@@ -82,6 +85,9 @@ project-memory.md
 Caddyfile
 docker-compose.local.yml
 volumes/nginx/
+update_vps.sh
+tools/sync_js_to_nginx.sh
+*.local.sh
 
 # --- Données et scripts spécifiques cemantix_data --------------------------
 cemantix_data/check_frwac.py
