@@ -9,9 +9,30 @@
 import { initErrorHandling } from "./utils.js";
 import { initTheme } from "./theme.js";
 
+function openDetailsOnHash() {
+  const hash = window.location.hash;
+  if (!hash) return;
+  try {
+    const el = document.querySelector(hash);
+    if (el) {
+      if (el.tagName === "DETAILS") {
+        el.open = true;
+      } else {
+        const parent = el.closest("details");
+        if (parent) parent.open = true;
+      }
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  } catch {
+    // Ignore les sélecteurs de hash invalides
+  }
+}
+
 function bootstrap() {
   initErrorHandling();
   initTheme();
+  openDetailsOnHash();
+  window.addEventListener("hashchange", openDetailsOnHash);
 
   const isDashboardPresent = document.getElementById("view-dashboard") || document.getElementById("secret-word-card");
   const isGamePresent = document.getElementById("view-play") || document.getElementById("game-guess-form");
