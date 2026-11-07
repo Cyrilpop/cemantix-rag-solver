@@ -97,7 +97,7 @@ def render_footer(depth: str = "") -> str:
     <div class="footer-container">
       <div class="footer-left">
         <p><strong>Cémantix Solver</strong> — Propulsé par RAG vectoriel (frWac Word2Vec + ChromaDB).</p>
-        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. Projets <a href="https://github.com/Cyrilpop" target="_blank" rel="noopener noreferrer" class="footer-author-link">Github</a></span>
+        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. Projets <a href="https://github.com/Cyrilpop" target="_blank" rel="noopener noreferrer" class="footer-author-link">Github</a> · <a href="{home}#confidentialite" class="footer-author-link">Politique de confidentialité</a> · <a href="{home}#conditions-utilisation" class="footer-author-link">Conditions d'utilisation</a></span>
       </div>
       <div class="footer-right">
         <a href="{home}" class="btn btn-ghost btn-sm" title="Mot du Jour">
