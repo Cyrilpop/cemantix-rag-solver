@@ -181,6 +181,34 @@ CREATE TABLE IF NOT EXISTS daily_puzzle_ai_hints (
     UNIQUE(puzzle_date, hint_level)
 );
 CREATE INDEX IF NOT EXISTS idx_ai_hints_date ON daily_puzzle_ai_hints(puzzle_date);
+
+CREATE TABLE IF NOT EXISTS players (
+    id UUID PRIMARY KEY,
+    auth_token VARCHAR(64) NOT NULL UNIQUE,
+    username VARCHAR(32) NOT NULL UNIQUE,
+    can_change_username BOOLEAN NOT NULL DEFAULT TRUE,
+    is_claimed BOOLEAN NOT NULL DEFAULT FALSE,
+    password_hash VARCHAR(255),
+    recovery_key_hash VARCHAR(255),
+    auth_provider VARCHAR(16) NOT NULL DEFAULT 'local',
+    google_sub VARCHAR(64) UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    renamed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_players_token ON players(auth_token);
+CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
+CREATE INDEX IF NOT EXISTS idx_players_google_sub ON players(google_sub);
+
+CREATE TABLE IF NOT EXISTS player_dictionary (
+    id SERIAL PRIMARY KEY,
+    word_type VARCHAR(16) NOT NULL,
+    word VARCHAR(32) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(word_type, word)
+);
+CREATE INDEX IF NOT EXISTS idx_dict_type ON player_dictionary(word_type, is_active);
 """
 
 SQLITE_SCHEMA = """
@@ -309,6 +337,34 @@ CREATE TABLE IF NOT EXISTS daily_puzzle_ai_hints (
     UNIQUE(puzzle_date, hint_level)
 );
 CREATE INDEX IF NOT EXISTS idx_ai_hints_date ON daily_puzzle_ai_hints(puzzle_date);
+
+CREATE TABLE IF NOT EXISTS players (
+    id TEXT PRIMARY KEY,
+    auth_token TEXT NOT NULL UNIQUE,
+    username TEXT NOT NULL UNIQUE,
+    can_change_username BOOLEAN NOT NULL DEFAULT 1,
+    is_claimed BOOLEAN NOT NULL DEFAULT 0,
+    password_hash TEXT,
+    recovery_key_hash TEXT,
+    auth_provider TEXT NOT NULL DEFAULT 'local',
+    google_sub TEXT UNIQUE,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    renamed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_players_token ON players(auth_token);
+CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
+CREATE INDEX IF NOT EXISTS idx_players_google_sub ON players(google_sub);
+
+CREATE TABLE IF NOT EXISTS player_dictionary (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    word_type TEXT NOT NULL,
+    word TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(word_type, word)
+);
+CREATE INDEX IF NOT EXISTS idx_dict_type ON player_dictionary(word_type, is_active);
 """
 
 
@@ -616,6 +672,12 @@ class DatabaseManager:
                 # Le thread qui initialise ne doit pas rester propriétaire d'une
                 # connexion du pool : il peut ne plus rien demander ensuite.
                 self.release_connection(conn)
+
+            try:
+                from .players import seed_default_dictionary_if_empty
+                seed_default_dictionary_if_empty()
+            except Exception as seed_err:
+                log(f"⚠️  [BASE] Erreur amorçage dictionnaire joueurs : {seed_err}")
 
     @contextmanager
     def transaction(self):
