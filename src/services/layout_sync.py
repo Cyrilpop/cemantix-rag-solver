@@ -19,7 +19,7 @@ NAV_START = "<!-- NAV-TABS:START -->"
 NAV_END = "<!-- NAV-TABS:END -->"
 
 TABS_CONFIG = [
-    ("tab-dashboard", "dashboard", "", "📊", "Tableau de Bord", None),
+    ("tab-dashboard", "dashboard", "", "🎯", "Mot du Jour", None),
     ("tab-play", "play", "play/", "🎮", "Jouer Solo", None),
     ("tab-battle", "battle", "battle/", "⚔️", "Mode Battle", "Versus IA"),
     ("tab-multi", "multi", "multi/", "👥", "Mode Multijoueur", "1v1 Ami"),
@@ -100,8 +100,8 @@ def render_footer(depth: str = "") -> str:
         <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. Projets <a href="https://github.com/Cyrilpop" target="_blank" rel="noopener noreferrer" class="footer-author-link">Github</a></span>
       </div>
       <div class="footer-right">
-        <a href="{home}" class="btn btn-ghost btn-sm" title="Tableau de Bord">
-          <span>📊</span> Dashboard
+        <a href="{home}" class="btn btn-ghost btn-sm" title="Mot du Jour">
+          <span>🎯</span> Mot du Jour
         </a>
         <a href="{depth}play/" class="btn btn-ghost btn-sm" title="Jouer Solo">
           <span>🎮</span> Jouer Solo

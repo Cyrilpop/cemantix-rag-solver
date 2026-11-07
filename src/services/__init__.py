@@ -59,6 +59,7 @@ from .seo import (
     notify_daily_urls_to_google,
     get_indexnow_key,
     submit_indexnow_urls,
+    notify_daily_urls_to_indexnow,
 )
 
 __all__ = [
@@ -97,6 +98,7 @@ __all__ = [
     "notify_daily_urls_to_google",
     "get_indexnow_key",
     "submit_indexnow_urls",
+    "notify_daily_urls_to_indexnow",
     "get_google_credentials",
     "DEFAULT_TIER_TARGETS",
     "generate_hints_for_word",

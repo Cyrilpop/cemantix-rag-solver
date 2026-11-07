@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS daily_puzzles (
     trajectory JSONB NOT NULL DEFAULT '[]'::jsonb,
     is_revealed BOOLEAN DEFAULT FALSE,
     google_indexed_at TIMESTAMPTZ DEFAULT NULL,
+    indexnow_indexed_at TIMESTAMPTZ DEFAULT NULL,
     solved_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -196,6 +197,7 @@ CREATE TABLE IF NOT EXISTS daily_puzzles (
     trajectory TEXT NOT NULL DEFAULT '[]',
     is_revealed BOOLEAN DEFAULT 0,
     google_indexed_at TEXT DEFAULT NULL,
+    indexnow_indexed_at TEXT DEFAULT NULL,
     solved_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -585,8 +587,9 @@ class DatabaseManager:
                 if engine == "postgres":
                     with closing(conn.cursor()) as cur:
                         cur.execute(schema)
-                        # Migration idempotente de colonnes (M11 - Quota Google Indexing)
+                        # Migration idempotente de colonnes (M11 - Quota Google Indexing & IndexNow)
                         cur.execute("ALTER TABLE daily_puzzles ADD COLUMN IF NOT EXISTS google_indexed_at TIMESTAMPTZ;")
+                        cur.execute("ALTER TABLE daily_puzzles ADD COLUMN IF NOT EXISTS indexnow_indexed_at TIMESTAMPTZ;")
                     conn.commit()
 
                 else:
@@ -595,6 +598,12 @@ class DatabaseManager:
                     try:
                         cur = conn.cursor()
                         cur.execute("ALTER TABLE daily_puzzles ADD COLUMN google_indexed_at TEXT;")
+                        conn.commit()
+                    except Exception:
+                        pass
+                    try:
+                        cur = conn.cursor()
+                        cur.execute("ALTER TABLE daily_puzzles ADD COLUMN indexnow_indexed_at TEXT;")
                         conn.commit()
                     except Exception:
                         pass

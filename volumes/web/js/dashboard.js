@@ -68,15 +68,17 @@ export function initDashboard() {
       // Masquer partout
       secretWordCard?.classList.add("is-spoiled");
       secretWordCard?.setAttribute("aria-expanded", "false");
-      if (dashboardState.data?.current?.top_guesses) {
-        renderClues(dashboardState.data.current.top_guesses);
+      const secretWord = document.getElementById("secret-word");
+      if (secretWord) secretWord.textContent = "MOTDUJOUR";
+      if (dashboardState.data?.current) {
+        renderClues(dashboardState.data.current);
       }
       renderHistoryTable();
     } else {
       // Révéler partout : récupérer et afficher le mot secret s'il n'est pas déjà là
       revealSecretWord();
-      if (dashboardState.data?.current?.top_guesses) {
-        renderClues(dashboardState.data.current.top_guesses);
+      if (dashboardState.data?.current) {
+        renderClues(dashboardState.data.current);
       }
       renderHistoryTable();
     }
@@ -90,6 +92,8 @@ export function initDashboard() {
       } else {
         secretWordCard?.classList.add("is-spoiled");
         secretWordCard?.setAttribute("aria-expanded", "false");
+        const secretWord = document.getElementById("secret-word");
+        if (secretWord) secretWord.textContent = "MOTDUJOUR";
       }
     });
   }
@@ -124,13 +128,50 @@ export function initDashboard() {
     });
   }
 
-  // Clic sur le mot spoiler dans les indices
+  // Commutateur de format des indices du jour (Phrases vs Mots)
+  const btnDashboardPhrase = document.getElementById("btn-dashboard-phrase");
+  const btnDashboardWord = document.getElementById("btn-dashboard-word");
+  if (btnDashboardPhrase && btnDashboardWord) {
+    btnDashboardPhrase.addEventListener("click", () => {
+      btnDashboardPhrase.classList.add("active");
+      btnDashboardPhrase.setAttribute("aria-checked", "true");
+      btnDashboardWord.classList.remove("active");
+      btnDashboardWord.setAttribute("aria-checked", "false");
+      dashboardState.hintsFormat = "phrase";
+      document.querySelectorAll("#clues-container .hint-view-phrase").forEach((el) => el.classList.add("active"));
+      document.querySelectorAll("#clues-container .hint-view-word").forEach((el) => el.classList.remove("active"));
+    });
+
+    btnDashboardWord.addEventListener("click", () => {
+      btnDashboardWord.classList.add("active");
+      btnDashboardWord.setAttribute("aria-checked", "true");
+      btnDashboardPhrase.classList.remove("active");
+      btnDashboardPhrase.setAttribute("aria-checked", "false");
+      dashboardState.hintsFormat = "word";
+      document.querySelectorAll("#clues-container .hint-view-word").forEach((el) => el.classList.add("active"));
+      document.querySelectorAll("#clues-container .hint-view-phrase").forEach((el) => el.classList.remove("active"));
+    });
+  }
+
+  // Démasquage anti-spoiler dans les indices (cartes IA ou mots RAG)
   const cluesContainer = document.getElementById("clues-container");
   if (cluesContainer) {
     cluesContainer.addEventListener("click", (e) => {
+      // Cas 1 : Révélation d'une boîte spoiler d'indice IA
+      const box = e.target.closest(".dashboard-spoiler-box");
+      if (box) {
+        if (!box.classList.contains("revealed")) {
+          box.classList.add("revealed");
+          const btn = box.querySelector(".btn-reveal");
+          if (btn) btn.style.display = "none";
+        }
+        return;
+      }
+
+      // Cas 2 : Révélation d'un mot spoiler (repli RAG)
       const spoilerEl = e.target.closest("[data-action='spoiler']");
       if (spoilerEl) {
-        if (!dashboardState.secretWord) {
+        if (spoilerEl.dataset.targetWord === "true" && !dashboardState.secretWord) {
           revealSecretWord();
         } else {
           spoilerEl.classList.toggle("is-hidden");
@@ -204,26 +245,17 @@ export function initDashboard() {
     });
   }
 
-  initMidnightCountdown();
+  initMidnightCountdown(() => {
+    // Le renouvellement du mot du jour intervient à minuit (00h00 heure de Paris).
+    // Une fois le mot résolu par le démon autonome, on actualise automatiquement les données.
+    setTimeout(() => fetchDashboardData(true), 3000);
+    setTimeout(() => fetchDashboardData(true), 12000);
+  });
   initTrajectoryModal();
   fetchDashboardData();
 
-  // Resynchronisation toutes les 30 s, suspendue quand l'onglet est masqué :
-  // les données ne bougent qu'à minuit, et un onglet en arrière-plan n'a rien à
-  // afficher. Au retour, on resynchronise immédiatement pour ne pas montrer un
-  // état périmé pendant les 30 s suivantes.
-  let dashboardTimer = setInterval(() => fetchDashboardData(false), 30000);
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      clearInterval(dashboardTimer);
-      dashboardTimer = null;
-      return;
-    }
-    fetchDashboardData(false);
-    if (!dashboardTimer) {
-      dashboardTimer = setInterval(() => fetchDashboardData(false), 30000);
-    }
-  });
+  // Aucun auto-refresh périodique : les données sont stables et ne changent
+  // qu'à minuit lors de la parution du mot du jour (géré par initMidnightCountdown).
 }
 
 export function revealSecretWord() {
@@ -234,8 +266,8 @@ export function revealSecretWord() {
     if (secretWord) secretWord.textContent = dashboardState.secretWord.toUpperCase();
     secretWordCard?.classList.remove("is-spoiled");
     secretWordCard?.setAttribute("aria-expanded", "true");
-    if (dashboardState.data?.current?.top_guesses) {
-      renderClues(dashboardState.data.current.top_guesses);
+    if (dashboardState.data?.current) {
+      renderClues(dashboardState.data.current);
     }
     renderHistoryTable();
     return;
@@ -266,8 +298,8 @@ export function revealSecretWord() {
           }
         }
         // Met à jour la liste des indices et le tableau d'historique pour le jour en cours
-        if (dashboardState.data?.current?.top_guesses) {
-          renderClues(dashboardState.data.current.top_guesses);
+        if (dashboardState.data?.current) {
+          renderClues(dashboardState.data.current);
         }
         renderHistoryTable();
       } else if (json.pending) {
@@ -278,7 +310,7 @@ export function revealSecretWord() {
     })
     .catch((err) => {
       console.warn("Échec révélation mot secret :", err);
-      if (secretWord) secretWord.textContent = "--------";
+      if (secretWord) secretWord.textContent = "MOTDUJOUR";
       secretWordCard?.classList.add("is-spoiled");
       secretWordCard?.setAttribute("aria-expanded", "false");
       showToast(err.message || "Impossible de révéler le mot secret");
@@ -356,11 +388,7 @@ export function renderDashboard(data) {
       secretWordCard?.classList.remove("is-spoiled");
       secretWordCard?.setAttribute("aria-expanded", "true");
     } else {
-      if (wordToDisplay) {
-        secretWord.textContent = wordToDisplay.toUpperCase();
-      } else {
-        secretWord.textContent = "--------";
-      }
+      secretWord.textContent = "MOTDUJOUR";
       secretWordCard?.classList.add("is-spoiled");
       secretWordCard?.setAttribute("aria-expanded", "false");
     }
@@ -387,7 +415,7 @@ export function renderDashboard(data) {
   }
 
   updateDaemonBadge(daemon.status);
-  renderClues(current.top_guesses);
+  renderClues(current);
 
   if (statTotal) statTotal.textContent = stats.total_solved || 0;
   if (statAvgTries) statAvgTries.textContent = stats.avg_tries ? `${stats.avg_tries}` : "--";
@@ -434,9 +462,84 @@ export function updateDaemonBadge(status) {
   }
 }
 
-export function renderClues(guesses) {
+const DASHBOARD_AI_META = {
+  1: { tier: "tier-cold", badge: "Indice #1 · Éloigné", weight: "Similarité ~20%" },
+  2: { tier: "tier-warm", badge: "Indice #2 · Intermédiaire", weight: "Similarité ~45%" },
+  3: { tier: "tier-fire", badge: "Indice #3 · Proche", weight: "Zone brûlante" },
+};
+
+export function renderClues(currentOrGuesses, aiHintsParam = null) {
   const cluesContainer = document.getElementById("clues-container");
   if (!cluesContainer) return;
+
+  const formatToolbar = document.getElementById("dashboard-hints-format");
+
+  let guesses = [];
+  let aiHints = [];
+
+  if (Array.isArray(currentOrGuesses)) {
+    guesses = currentOrGuesses;
+    aiHints = aiHintsParam || dashboardState.data?.current?.ai_hints || [];
+  } else if (currentOrGuesses && typeof currentOrGuesses === "object") {
+    guesses = currentOrGuesses.top_guesses || [];
+    aiHints = currentOrGuesses.ai_hints || dashboardState.data?.current?.ai_hints || [];
+  }
+
+  const activeFormat = dashboardState.hintsFormat || "phrase";
+
+  // Mode 1 : Indices IA Gemini disponibles
+  if (Array.isArray(aiHints) && aiHints.length > 0) {
+    if (formatToolbar) formatToolbar.style.display = "";
+
+    // Synchroniser l'état des boutons du commutateur
+    const btnPhrase = document.getElementById("btn-dashboard-phrase");
+    const btnWord = document.getElementById("btn-dashboard-word");
+    if (btnPhrase && btnWord) {
+      btnPhrase.classList.toggle("active", activeFormat === "phrase");
+      btnPhrase.setAttribute("aria-checked", activeFormat === "phrase" ? "true" : "false");
+      btnWord.classList.toggle("active", activeFormat === "word");
+      btnWord.setAttribute("aria-checked", activeFormat === "word" ? "true" : "false");
+    }
+
+    const sortedAiHints = [...aiHints].sort((a, b) => (a.hint_level || 0) - (b.hint_level || 0));
+
+    const html = sortedAiHints.map((hint) => {
+      const level = hint.hint_level || 1;
+      const meta = DASHBOARD_AI_META[level] || DASHBOARD_AI_META[1];
+      const rawPhrase = String(hint.hint_phrase || "").trim();
+      const cleanPhrase = rawPhrase.replace(/^[«"'\s]+|[»"'\s]+$/g, "");
+      const formattedPhrase = cleanPhrase ? `« ${escapeHtml(cleanPhrase)} »` : "";
+      const rawWord = String(hint.hint_word || "").trim();
+      const formattedWord = rawWord ? escapeHtml(rawWord.charAt(0).toUpperCase() + rawWord.slice(1).toLowerCase()) : "";
+
+      const isPhraseActive = activeFormat === "phrase";
+
+      return `
+        <div class="dashboard-hint-card ${meta.tier}" data-level="${level}">
+          <div class="dashboard-hint-header">
+            <span class="dashboard-hint-badge">${meta.badge}</span>
+            <span class="dashboard-hint-weight">${meta.weight}</span>
+          </div>
+          <div class="dashboard-spoiler-box" data-action="reveal-box">
+            <div class="hint-view-phrase ${isPhraseActive ? "active" : ""}">
+              <span class="spoiler-text">${formattedPhrase}</span>
+            </div>
+            <div class="hint-view-word ${!isPhraseActive ? "active" : ""}">
+              <span class="spoiler-text">${formattedWord}</span>
+            </div>
+            <button type="button" class="btn-reveal" data-action="reveal-btn" aria-label="Révéler l'indice ${level}">👁️ Révéler l'indice</button>
+          </div>
+        </div>`;
+    }).join("");
+
+    cluesContainer.className = "clues-list has-ai-hints";
+    cluesContainer.innerHTML = html;
+    return;
+  }
+
+  // Mode 2 (Repli gracieux) : Mots candidats du solveur RAG
+  if (formatToolbar) formatToolbar.style.display = "none";
+  cluesContainer.className = "clues-list";
 
   if (!guesses || !Array.isArray(guesses) || guesses.length === 0) {
     cluesContainer.innerHTML = `
@@ -447,18 +550,22 @@ export function renderClues(guesses) {
   }
 
   const resolvedSecret = (dashboardState.secretWord || "").trim().toLowerCase();
+  const candidates = guesses.slice(0, 8);
 
-  const html = guesses.slice(0, 8).map((g, idx) => {
+  // Ordonner du plus froid au plus chaud (commence par le plus froid)
+  const sortedGuesses = [...candidates].sort((a, b) => {
+    const scoreA = typeof a.score === "number" ? a.score : 0;
+    const scoreB = typeof b.score === "number" ? b.score : 0;
+    return scoreA - scoreB;
+  });
+
+  const html = sortedGuesses.map((g, idx) => {
     const score = typeof g.score === "number" ? g.score : 0;
     const permille = g.permille ? `${g.permille} ‰` : "";
     const weather = getTierWeatherIcon(score, g.permille);
     const tierClass = getTierClass(score);
 
     const rawWord = String(g.word || "").trim();
-    // Est-ce le mot cible / secret ?
-    // - score maximal (100°C ou 1000‰)
-    // - chaîne masquée par le backend "••••••••"
-    // - ou correspond au mot secret résolu
     const isTargetWord =
       score >= 100 ||
       g.permille === 1000 ||
@@ -468,15 +575,20 @@ export function renderClues(guesses) {
     let wordContent = "";
     if (isTargetWord) {
       const displayWord = (resolvedSecret || (rawWord !== "••••••••" ? rawWord : "MOT SECRET")).toUpperCase();
-      const hideWord = themeState.globalSpoiler;
       wordContent = `
-        <span class="word-spoiler ${hideWord ? "is-hidden" : ""}"
+        <span class="word-spoiler is-hidden"
               data-action="spoiler"
+              data-target-word="true"
               title="Cliquer pour afficher / masquer le mot secret">
           ${escapeHtml(displayWord)}
         </span>`;
     } else {
-      wordContent = escapeHtml(rawWord);
+      wordContent = `
+        <span class="word-spoiler is-hidden"
+              data-action="spoiler"
+              title="Cliquer pour afficher / masquer l'indice">
+          ${escapeHtml(rawWord)}
+        </span>`;
     }
 
     return `

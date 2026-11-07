@@ -136,7 +136,7 @@ export function buildTrajectoryStepHtml(item, options = {}) {
         <div class="step-left">
           <span class="step-num">#${escapeHtml(String(item.step || ""))}</span>
           <span class="step-source-badge ${sourceClass}">${sourceLabel}</span>
-          <strong class="step-word copyable-word" data-copy="${escapeHtml(item.word)}" title="Cliquer pour copier le mot">
+          <strong class="step-word copyable-word word-spoiler is-hidden" data-action="spoiler" data-copy="${escapeHtml(item.word)}" title="Cliquer pour afficher / masquer le mot">
             ${escapeHtml(String(item.word || ""))}
           </strong>
           ${isRecord ? '<span class="step-record-star" title="Nouveau record thermique du bot !">⭐ Record</span>' : ""}
@@ -205,6 +205,16 @@ export function initTrajectoryModal() {
       renderTrajectoryList();
     });
   });
+
+  const listEl = document.getElementById("trajectory-list");
+  if (listEl) {
+    listEl.addEventListener("click", (e) => {
+      const spoilerEl = e.target.closest('[data-action="spoiler"]');
+      if (spoilerEl) {
+        spoilerEl.classList.toggle("is-hidden");
+      }
+    });
+  }
 }
 
 export function openTrajectoryModal(puzzleId, data, secretWordOverride = null) {
@@ -351,6 +361,13 @@ function renderTrajectoryList() {
       </div>`;
     return;
   }
+
+  // Commencer par les coups les plus froids (tri par score croissant)
+  filtered = [...filtered].sort((a, b) => {
+    const scoreA = typeof a.score === "number" ? a.score : 0;
+    const scoreB = typeof b.score === "number" ? b.score : 0;
+    return scoreA - scoreB;
+  });
 
   const html = filtered.map((item) => buildTrajectoryStepHtml(item, { showGauge: true })).join("");
   listEl.innerHTML = html;
