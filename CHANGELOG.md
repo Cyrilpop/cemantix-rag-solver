@@ -14,6 +14,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Remplacement du doublon d'URL `/puzzles/` par la page hub de méthode `/methode/`.
 
 ### Corrigé
+- **Responsive Mobile & Débordement des Indices sur Smartphone (`volumes/web/css/dashboard.css`, `volumes/web/css/dist/dashboard.css`, `volumes/web/index.html`)** :
+  - Correction de la hauteur contrainte (`height: 250px`) dans la media query `@media (max-width: 640px)` sur `.clues-wrapper` et `.clues-list`, passant en hauteur fluide (`height: auto`, `max-height: none`, `min-height: auto`, `overflow: visible`), éliminant la superposition du 3ème indice IA sur l'échelle thermique et le compte à rebours minuit.
+  - Ajout de `overflow-wrap: anywhere` sur `.dashboard-spoiler-box .spoiler-text` pour prévenir tout débordement horizontal de mot ou phrase sur écrans étroits.
+  - Recompilation synchronisée des bundles CSS de distribution (`css/dist/dashboard.css`) et injection du CSS critique inline dans `volumes/web/index.html`.
 - **Import Typage `List` (`src/services/seo_google.py`)** :
   - Ajout de `List` dans l'import `from typing import Any, Dict, List, Optional` pour prévenir l'erreur `NameError: name 'List' is not defined` à l'exécution de Python.
 

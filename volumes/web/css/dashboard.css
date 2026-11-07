@@ -786,6 +786,7 @@
   font-size: 0.92rem;
   line-height: 1.45;
   color: var(--text-main, #f0f6fc);
+  overflow-wrap: anywhere;
 }
 
 .dashboard-spoiler-box.revealed .spoiler-text {
@@ -1006,9 +1007,10 @@
 @media (max-width: 640px) {
   .clues-wrapper,
   .clues-list {
-    height: 250px;
-    max-height: 250px;
-    min-height: 250px;
+    height: auto;
+    max-height: none;
+    min-height: auto;
+    overflow: visible;
   }
 
   .clue-item {
