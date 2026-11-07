@@ -2,7 +2,7 @@
 
 **Dépôt :** `Cyrilpop/cemantix-rag-solver`  
 **Branche visée :** `feature/m14-authentification-joueurs` (base `main`)  
-**Statut :** ⏳ En préparation / Cadrage initial  
+**Statut :** ✅ Réalisé & Validé (435/435 tests passants sous Docker)  
 **Périmètre exclusif :** `database/init.sql`, `src/db/connection.py`, `src/db/players.py` (ou `src/db/` associé), `src/services/player_auth.py`, routes API backend HTTP (`src/api/` ou serveur dédié), dictionnaire de mots loufoques et phrase de secours, injection layout header (`src/services/layout_sync.py`), composants UI frontend (`volumes/web/js/auth.js`, `volumes/web/css/auth.css`), suite de tests unitaires sous Docker (`tests/test_player_auth.py`), et documentation associée (`docs/roadmap/2026-11-07-authentification-joueurs/`, `docs/roadmap/README.md`, `README.md`, `CHANGELOG.md`).  
 **Périmètre exclu pour ce jalon :** Pas d'intégration directe de Google Sign-In / OAuth (le schéma et l'architecture prévoient la colonne et l'extensibilité, mais le flux Google OAuth sera activé ultérieurement). Aucune dépendance externe payante ni outil hors conteneur.  
 **Suite de validation requise :** Tests unitaires automatisés sous Docker Python 3.12 (`docker compose run --rm -v ./tests:/app/tests --entrypoint python cemantix -m unittest discover -s tests`), `tools/check_docs.py`, `tools/check_seo.py`, `tools/build_css_bundles.py --check`.  
@@ -253,12 +253,12 @@ Conformément aux directives de développement :
 
 ## 4. Critères d'Acceptation & Validation
 
-- [ ] `database/init.sql` crée la table `players` et ses index sans erreur lors d'un `docker compose up` initial.
-- [ ] Le démarrage Python initialise automatiquement la table `players` dans SQLite et PostgreSQL sans erreur même si la table existe déjà (idempotence totale).
-- [ ] Un visiteur arrivant sur le site se voit attribuer un pseudo loufoque et un UUID sans aucune action de sa part.
-- [ ] Le renommage fonctionne une seule fois et est définitivement verrouillé ensuite côté serveur.
-- [ ] La protection du compte renvoie 4 mots de vocabulaire cohérents et permet ensuite la reconnexion avec pseudo + mot de passe depuis un autre navigateur.
-- [ ] La phrase de secours permet de restaurer l'accès au compte en cas d'oubli du mot de passe.
-- [ ] La suite de tests unitaires Docker s'exécute avec 100 % de succès.
-- [ ] `tools/check_docs.py` et `tools/check_seo.py` sortent verts.
+- [x] `database/init.sql` crée la table `players` et ses index sans erreur lors d'un `docker compose up` initial.
+- [x] Le démarrage Python initialise automatiquement la table `players` dans SQLite et PostgreSQL sans erreur même si la table existe déjà (idempotence totale).
+- [x] Un visiteur arrivant sur le site se voit attribuer un pseudo loufoque et un UUID sans aucune action de sa part.
+- [x] Le renommage fonctionne une seule fois et est définitivement verrouillé ensuite côté serveur.
+- [x] La protection du compte renvoie 4 mots de vocabulaire cohérents et permet ensuite la reconnexion avec pseudo + mot de passe depuis un autre navigateur.
+- [x] La phrase de secours permet de restaurer l'accès au compte en cas d'oubli du mot de passe.
+- [x] La suite de tests unitaires Docker s'exécute avec 100 % de succès.
+- [x] `tools/check_docs.py` et `tools/check_seo.py` sortent verts.
 

@@ -22,11 +22,15 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - En-tête de sécurité HTTP obligatoire `Cache-Control: no-store, private` sur l'ensemble des routes joueurs.
   - Endpoints d'administration sécurisés `GET/POST/DELETE /api/snap-9x/dictionary` pour la maintenance en direct des vocabulaires.
 - **Interface Utilisateur & Expérience Joueur (`src/services/layout_sync.py`, `volumes/web/js/auth.js`, `volumes/web/css/auth.css`, `volumes/web/panier-9x/`)** :
-  - Badge permanent interactif `[ 👤 CastorCosmique ▾ ]` dans l'en-tête commun synchronisé sur toutes les vues applicatives.
+  - Message d'accueil animé personnalisé `👋 Bienvenue <PSEUDO>` dans l'en-tête commun (en remplacement du badge technique « Démon en veille ») et badge interactif `[ 👤 Mon compte ▾ ]`.
   - Toast / bannière d'accueil non intrusive à la première visite (CLS = 0, préservation des Core Web Vitals) avec fermeture mémorisée.
   - Modale native `<dialog>` gérant 3 vues : consultation/renommage unique, protection par mot de passe avec copie de la phrase de 4 mots, et reconnexion/réinitialisation multi-appareils.
-  - Section de maintenance des dictionnaires dans la console d'exploitation `/panier-9x`.
+  - Section de maintenance des dictionnaires dans la console d'exploitation `/panier-9x` (dimensionnée à 62vh pour éliminer les espaces vides) et déconnexion en un seul clic réinitialisant la session vers l'accueil.
   - Intégration dans `tools/build_css_bundles.py` et recompilation des bundles de production.
+- **Enrichissement des Vocabulaires & Robustesse Système (`src/db/players.py`, `src/ai/gemini_client.py`)** :
+  - Extension massive des listes de génération : 166 noms décalés/absurdes, 104 adjectifs loufoques et 275 mots concrets de secours.
+  - Fiabilisation de l'amorçage SQL sous PostgreSQL et SQLite avec contrôle granulaire par catégorie de mots.
+  - Nettoyage automatique des guillemets résiduels sur les clés d'environnement (`GEMINI_API_KEY`).
 - **Conformité Juridique, FAQ & Tests Automatisés (`volumes/web/index.html`, `tests/test_player_auth.py`)** :
   - Mise à jour de la FAQ (#confidentialite et #conditions-utilisation) et du graphe Schema.org JSON-LD `FAQPage` : exemption CNIL du localStorage fonctionnel, hachage sécurisé, zéro email collecté, responsabilité de la phrase de 4 mots.
   - Suite de 8 tests complets couvrant 100 % du cycle de vie joueur, l'idempotence et les endpoints d'administration, portant la suite globale à 435 tests automatisés sous Docker.
