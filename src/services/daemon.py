@@ -36,7 +36,9 @@ from .challenges import (
 )
 
 PARIS_TZ = ZoneInfo("Europe/Paris")
-DAILY_HISTORY_FILE = DATA_DIR / "daily_history.json"
+DAILY_HISTORY_FILE = Path(
+    os.environ.get("DAILY_HISTORY_FILE", str(DATA_DIR / "daily_history.json"))
+)
 # Le battement doit être lisible par le service web : `/tmp` est propre à chaque
 # conteneur, l'y écrire rendait le widget « État du démon » du tableau de bord
 # structurellement faux (il affichait « inactif » pendant que le worker travaillait).

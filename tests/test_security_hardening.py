@@ -207,6 +207,8 @@ class TestDockerSocketIsolation(unittest.TestCase):
     def test_docker_socket_absent_de_docker_compose_web(self):
         """Le service cemantix_web ne doit plus monter /var/run/docker.sock."""
         compose_path = os.path.join(os.path.dirname(__file__), "..", "docker-compose.yml")
+        if not os.path.isfile(compose_path):
+            self.skipTest("docker-compose.yml non disponible dans le conteneur de test")
         with open(compose_path, "r", encoding="utf-8") as f:
             content = f.read()
 

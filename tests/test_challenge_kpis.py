@@ -15,6 +15,8 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 
+import _context  # noqa: F401
+
 from src.db.challenges import (
     anonymize_player_token,
     format_player_display,

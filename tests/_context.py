@@ -27,7 +27,36 @@ for _var in ("DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASS"):
 
 TMP_DIR = Path(tempfile.mkdtemp(prefix="cemantix_tests_"))
 os.environ["SQLITE_PATH"] = str(TMP_DIR / "suite.sqlite3")
+os.environ["DAILY_HISTORY_FILE"] = str(TMP_DIR / "daily_history.json")
+os.environ["DASHBOARD_DATA_FILE"] = str(TMP_DIR / "data.json")
+os.environ["DAEMON_HEARTBEAT_FILE"] = str(TMP_DIR / "daemon_heartbeat.json")
+
+# Neutralise les appels réseau réels externes (Google Search Console, Google Indexing, IndexNow)
+os.environ["SKIP_SEO_PUSH"] = "1"
+
+# Neutralise la pollution console des logs métier pendant les tests unitaires
+# (garantit un alignement strict à gauche des points de progression unittest
+# tout en préservant le tampon mémoire pour les tests d'administration).
+os.environ["TEST_SILENT_LOGS"] = "1"
+
+import logging
+_test_logger = logging.getLogger("cemantix")
+_test_logger.setLevel(logging.INFO)
+for _h in list(_test_logger.handlers):
+    if isinstance(_h, logging.StreamHandler) and not isinstance(_h, logging.FileHandler):
+        _test_logger.removeHandler(_h)
 
 RACINE = Path(__file__).resolve().parent.parent
+TESTS_DIR = Path(__file__).resolve().parent
+if str(TESTS_DIR) not in sys.path:
+    sys.path.insert(0, str(TESTS_DIR))
 if str(RACINE) not in sys.path:
     sys.path.insert(0, str(RACINE))
+
+# Enregistre le runner structuré avec résumé clair à la fin
+import unittest
+try:
+    from runner import install_runner
+    install_runner()
+except Exception:
+    pass

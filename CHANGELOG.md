@@ -14,6 +14,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Remplacement du doublon d'URL `/puzzles/` par la page hub de méthode `/methode/`.
 
 ### Corrigé
+- **Résilience de la Suite de Tests sous Docker (`tests/test_agent_find.py`, `tests/test_security_hardening.py`, `tests/test_seo_hubs.py`, `README.md`)** :
+  - Gestion du repli gracieux avec `unittest.skipIf` et `skipTest` lorsque des fichiers ou outils spécifiques au dépôt hôte (`tools/agent_find.py`, `docker-compose.yml`, `.gitignore`) sont absents du conteneur applicatif de production.
+  - Exécution 100% au vert de la suite complète sous Docker (`docker compose run --rm -v ./tests:/app/tests --entrypoint python cemantix -m unittest discover -s tests`) sans modifier l'image minimale de production ni `docker-compose.yml`.
+  - Mise à jour et enrichissement de la documentation des tests dans `README.md` (passage à plus de 420 tests automatisés, guide des commandes et description de la CI).
 - **Responsive Mobile & Débordement des Indices sur Smartphone (`volumes/web/css/dashboard.css`, `volumes/web/css/dist/dashboard.css`, `volumes/web/index.html`)** :
   - Correction de la hauteur contrainte (`height: 250px`) dans la media query `@media (max-width: 640px)` sur `.clues-wrapper` et `.clues-list`, passant en hauteur fluide (`height: auto`, `max-height: none`, `min-height: auto`, `overflow: visible`), éliminant la superposition du 3ème indice IA sur l'échelle thermique et le compte à rebours minuit.
   - Ajout de `overflow-wrap: anywhere` sur `.dashboard-spoiler-box .spoiler-text` pour prévenir tout débordement horizontal de mot ou phrase sur écrans étroits.

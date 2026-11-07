@@ -404,7 +404,8 @@ class TestOrchestrationService(unittest.TestCase):
             "attempts": 5,
             "win": True,
         })
-        with mock.patch("src.services.ai_hints.generate_and_store_ai_hints") as mock_gen:
+        with mock.patch("src.services.ai_hints.generate_and_store_ai_hints") as mock_gen, \
+             mock.patch("src.services.ai_hints._print_hints_summary"):
             mock_gen.return_value = [
                 {"hint_level": 1, "weight": 0.33, "hint_word": "navigation", "hint_phrase": "phrase 1"},
                 {"hint_level": 2, "weight": 0.66, "hint_word": "orientation", "hint_phrase": "phrase 2"},

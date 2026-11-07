@@ -78,6 +78,15 @@ def submit_indexnow_urls(
     if not requests:
         return {"success": False, "status_code": 0, "message": "Module requests indisponible."}
 
+    # Garde-fou anti-quota en test : neutralise tout appel réseau réel
+    if os.getenv("SKIP_SEO_PUSH") == "1" and not hasattr(requests.post, "assert_called"):
+        return {
+            "success": True,
+            "status_code": 200,
+            "skipped": True,
+            "message": "Soumission IndexNow neutralisée (mode test anti-quota).",
+        }
+
     active_host = host or urllib.parse.urlparse(SITE_ORIGIN).netloc or "cemantix.cyril-randon.fr"
     active_key = key or get_indexnow_key(web_root=web_root)
 

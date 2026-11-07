@@ -400,7 +400,7 @@ def backfill_daily_puzzles_from_json(filepath: Optional[object] = None) -> int:
     from pathlib import Path
     from ..config import DATA_DIR, log
 
-    json_path = Path(str(filepath)) if filepath else (DATA_DIR / "daily_history.json")
+    json_path = Path(str(filepath)) if filepath else Path(os.environ.get("DAILY_HISTORY_FILE", str(DATA_DIR / "daily_history.json")))
     if not json_path.exists():
         return 0
 
@@ -430,8 +430,11 @@ def backfill_daily_puzzles_from_json(filepath: Optional[object] = None) -> int:
     log(f"🧩  [DB] Rattrapage SQL de {len(missing)} puzzle(s) depuis {json_path.name}...")
     inserted_count = 0
     for entry in missing:
-        if save_daily_puzzle(entry):
-            inserted_count += 1
+        try:
+            if save_daily_puzzle(entry):
+                inserted_count += 1
+        except Exception as e:
+            log(f"⚠️  [DB] Impossible d'importer le puzzle {entry.get('date')} depuis {json_path.name} : {e}")
 
     log(f"✨  [DB] Rattrapage SQL achevé : {inserted_count} puzzle(s) importé(s) dans daily_puzzles.")
     return inserted_count
