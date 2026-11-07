@@ -48,3 +48,4 @@ Répartition par criticité : 🔴 `AUTH-01` (Schéma Relationnel Idempotent Pos
 | Date | ID | Action & preuve |
 |---|---|---|
 | 07/11/2026 | — | Création de la branche `feature/m14-authentification-joueurs`, rédaction du jalon `docs/milestones/M14_AUTHENTIFICATION_JOUEURS.md`, du plan d'évolution `01-plan.md` et initialisation du suivi `02-avancement.md`. |
+

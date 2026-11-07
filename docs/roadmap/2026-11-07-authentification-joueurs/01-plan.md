@@ -66,7 +66,7 @@ L'objectif de cette évolution est de déployer un système d'authentification i
   4. **Validation des pseudos :**
      - Longueur de 3 à 24 caractères, caractères alphanumériques et tirets/underscores uniquement, rejet des mots réservés ou injurieux.
 
-### AUTH-04 — Endpoints API REST HTTP
+### AUTH-04 — Endpoints API REST HTTP & Routage Caddy
 - **Cible :** Serveur HTTP applicatif (`src/services/server.py` ou routeur API dédié).
 - **Besoin :**
   - `POST /api/player/guest` : création ou validation d'une session invité.
@@ -74,7 +74,11 @@ L'objectif de cette évolution est de déployer un système d'authentification i
   - `POST /api/player/claim` : sécurisation par mot de passe et émission de la phrase de 4 mots.
   - `POST /api/player/login` : reconnexion multi-appareils par pseudo + mot de passe.
   - `POST /api/player/reset-password` : réinitialisation du mot de passe via phrase de 4 mots.
-- **Règles :** Codes HTTP propres (200, 400 Bad Request, 401 Unauthorized, 409 Conflict si pseudo déjà pris). Réponses JSON standards.
+- **Règles & Routage Caddy (`Caddyfile`) :**
+  - **Routage automatique :** La directive globale `handle /api/* { reverse_proxy cemantix_web:8000 }` dans `Caddyfile` relaie déjà nativement tous les chemins sous `/api/player/*` vers le conteneur backend. Aucune modification de route n'est donc requise dans `Caddyfile`.
+  - **En-têtes obligatoires :** Émettre systématiquement `Cache-Control: no-store, private` sur toutes les réponses `/api/player/*`.
+  - **Codes HTTP propres :** Codes HTTP propres (200, 400 Bad Request, 401 Unauthorized, 409 Conflict si pseudo déjà pris). Réponses JSON standards.
+  - **Rappel Caddyfile hors Git :** Le fichier `Caddyfile` étant ignoré dans `.gitignore`, si une règle de filtrage ou de rate-limiting Caddy venait à être ajoutée, elle devra être reportée manuellement sur l'hôte et le VPS (`/docker/cemantix-rag-solver/Caddyfile`) avec `caddy reload`.
 
 ### AUTH-05 — Interface Utilisateur & Intégration Layout
 - **Cible :** `src/services/layout_sync.py`, `volumes/web/js/auth.js`, `volumes/web/css/auth.css` (intégré dans les bundles via `tools/build_css_bundles.py`).
@@ -107,3 +111,4 @@ flowchart TD
     Step3 --> Step4["Étape 4 : Interface Web & Layout (AUTH-05)"]
     Step4 --> Step5["Étape 5 : Tests Unitaires Docker & Clôture (AUTH-06)"]
 ```
+

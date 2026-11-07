@@ -112,7 +112,7 @@ Ce service centralise :
    - Vérification du token de session `auth_token` sur chaque requête authentifiée.
    - Mise à jour atomique de `last_seen_at`.
 
-### 2.4 Endpoints API REST Dédiés
+### 2.4 Endpoints API REST Dédiés & Routage Caddy (`Caddyfile`)
 
 | Méthode | Route | Description | Entrée | Réponse |
 |---|---|---|---|---|
@@ -121,6 +121,18 @@ Ce service centralise :
 | `POST` | `/api/player/claim` | Protection du compte par mot de passe | `{ "password": "..." }` + Header `Authorization: Bearer <auth_token>` | `{ "success": true, "is_claimed": true, "recovery_phrase": "mot1 mot2 mot3 mot4" }` |
 | `POST` | `/api/player/login` | Connexion depuis un autre appareil | `{ "username": "...", "password": "..." }` | `{ "player_id", "auth_token", "username", "can_change_username", "is_claimed" }` |
 | `POST` | `/api/player/reset-password` | Réinitialisation par phrase secrète | `{ "username": "...", "recovery_phrase": "...", "new_password": "..." }` | `{ "success": true, "message": "Mot de passe réinitialisé avec succès" }` |
+
+#### Précision Routage & Reverse-Proxy (`Caddyfile` hors Git) :
+- **Règle de routage existante :** Dans `Caddyfile`, toutes les requêtes préfixées par `/api/*` sont déjà captées et transmises au conteneur web :
+  ```caddy
+  handle /api/* {
+      header X-Robots-Tag "noindex, nofollow"
+      reverse_proxy cemantix_web:8000
+  }
+  ```
+- **Conséquence directe :** En positionnant l'intégralité des endpoints d'authentification sous `/api/player/*`, **aucune modification de route n'est nécessaire dans `Caddyfile`**. Tout arrive directement sur `cemantix_web:8000`.
+- **Cache-Control & Sécurité :** Le backend Python doit impérativement émettre les en-têtes `Cache-Control: no-store, private` sur tous les endpoints `/api/player/*` afin d'éviter toute mise en cache de jetons de session ou de phrases de secours par les mandataires ou navigateurs.
+- **Rappel opérationnel (`Caddyfile` hors Git) :** Le fichier `Caddyfile` étant ignoré par Git (`.gitignore`), si une directive spécifique venait à être ajoutée (ex: limitation de débit *rate-limiting* ou en-têtes spécifiques), elle devra être appliquée manuellement sur le fichier local et sur le VPS `/docker/cemantix-rag-solver/Caddyfile` puis rechargée via `docker compose exec caddy caddy reload`.
 
 ### 2.5 Composants Frontend & Expérience Utilisateur
 
@@ -168,3 +180,4 @@ Conformément aux directives de développement :
 - [ ] La phrase de secours permet de restaurer l'accès au compte en cas d'oubli du mot de passe.
 - [ ] La suite de tests unitaires Docker s'exécute avec 100 % de succès.
 - [ ] `tools/check_docs.py` et `tools/check_seo.py` sortent verts.
+
