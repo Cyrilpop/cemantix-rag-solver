@@ -35,3 +35,4 @@ pre#log { background:#0a0c11; border:1px solid var(--line); border-radius:8px; p
 .modal-box h3 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
 .modal-box p { margin: 0 0 20px; font-size: 13px; line-height: 1.5; color: var(--mut); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.dict-list { height: 62vh; min-height: 350px; overflow-y: auto; border: 1px solid var(--line); background: #0d1017; padding: 8px; border-radius: 6px; font-size: 13px; }

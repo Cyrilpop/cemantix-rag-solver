@@ -2,6 +2,61 @@
    Cémantix Solver — Styles d'Identité & Authentification Joueur (M14)
    ========================================================================== */
 
+/* Message d'accueil personnalisé dans le Header */
+.player-welcome-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  height: 36px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.player-welcome-badge:hover {
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.player-welcome-badge .welcome-wave {
+  font-size: 1rem;
+  display: inline-block;
+  animation: wave 2.4s infinite ease-in-out;
+  transform-origin: 70% 70%;
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  20%, 60% { transform: rotate(14deg); }
+  40%, 80% { transform: rotate(-10deg); }
+}
+
+.player-welcome-badge .welcome-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-welcome-badge strong {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .player-welcome-badge {
+    display: none;
+  }
+}
+
 /* Badge Permanent dans le Header */
 .player-badge {
   display: inline-flex;

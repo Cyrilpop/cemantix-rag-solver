@@ -10,6 +10,7 @@ const STORAGE_DISMISSED_KEY = "cemantix_welcome_dismissed";
 const API_BASE = "/api/player";
 
 let currentSession = null;
+let initAuthPromise = null;
 
 export function getStoredSession() {
   try {
@@ -44,11 +45,17 @@ export function clearStoredSession() {
 function updateHeaderBadge(username) {
   const badgeNameEl = document.getElementById("player-badge-name");
   const badgeBtn = document.getElementById("player-badge");
-  if (badgeNameEl && username) {
-    badgeNameEl.textContent = `Bienvenue ${username}`;
+  const welcomeNameEl = document.getElementById("player-welcome-name");
+
+  if (badgeNameEl) {
+    badgeNameEl.textContent = "Mon compte";
   }
-  if (badgeBtn && username) {
-    badgeBtn.title = `Bienvenue ${username} — Profil Joueur`;
+  if (badgeBtn) {
+    badgeBtn.title = username ? `Mon compte (${username})` : "Mon compte";
+    badgeBtn.setAttribute("aria-label", "Mon compte");
+  }
+  if (welcomeNameEl && username) {
+    welcomeNameEl.textContent = username;
   }
 }
 
@@ -118,14 +125,14 @@ function ensurePlayerModal() {
   modal.innerHTML = `
     <div class="player-modal-card">
       <div class="player-modal-header">
-        <h3>👤 Identité Joueur</h3>
+        <h3>👤 Mon compte</h3>
         <button type="button" id="modal-close-cross" class="btn-icon btn-sm" aria-label="Fermer la modale">✕</button>
       </div>
 
       <nav class="player-nav-tabs" aria-label="Onglets profil">
         <button type="button" class="player-tab-btn active" data-tab="profile">Mon Profil</button>
         <button type="button" class="player-tab-btn" data-tab="claim">🔒 Protéger</button>
-        <button type="button" class="player-tab-btn" data-tab="login">Reconnexion</button>
+        <button type="button" class="player-tab-btn" data-tab="login">📱 Connexion</button>
       </nav>
 
       <!-- Onglet 1 : Profil & Renommage -->
@@ -133,7 +140,7 @@ function ensurePlayerModal() {
         <div class="player-profile-summary">
           <div class="player-profile-info">
             <span class="player-field-note">Pseudo actuel :</span>
-            <span id="player-modal-current-name" class="player-profile-name">...</span>
+            <span id="player-modal-current-name" class="player-profile-name">Profil invité</span>
           </div>
           <span id="player-modal-status-badge" class="player-badge-status status-guest">Invité</span>
         </div>
@@ -151,8 +158,12 @@ function ensurePlayerModal() {
 
         <div id="player-rename-msg" class="player-msg"></div>
 
+        <div class="player-actions-row" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
+          <button type="button" id="btn-player-claim-shortcut" class="btn btn-secondary btn-sm">🔒 Protéger par mot de passe</button>
+          <button type="button" id="btn-player-login-shortcut" class="btn btn-secondary btn-sm">📱 Changer d'appareil / Se connecter</button>
+        </div>
+
         <div class="player-danger-zone">
-          <button type="button" id="btn-player-claim-shortcut" class="btn btn-secondary btn-sm">🔒 Sécuriser par mot de passe</button>
           <button type="button" id="btn-player-delete-account" class="btn btn-ghost btn-sm" style="color: var(--danger);">🗑️ Réinitialiser mon profil</button>
         </div>
       </div>
@@ -197,9 +208,12 @@ function ensurePlayerModal() {
 
       <!-- Onglet 3 : Connexion Multi-Appareils & Récupération -->
       <div id="tab-login" class="player-tab-pane">
+        <p class="player-field-note" style="line-height: 1.4; margin-bottom: 0.75rem;">
+          Vous changez d'appareil ou souhaitez retrouver votre progression ? Connectez-vous ici avec votre pseudo et votre mot de passe :
+        </p>
         <div class="pill-group" style="width: 100%; margin-bottom: 0.5rem;">
           <button type="button" class="pill-btn active" id="btn-subtab-login" style="flex: 1;">Se connecter</button>
-          <button type="button" class="pill-btn" id="btn-subtab-reset" style="flex: 1;">Mot de passe oublié</button>
+          <button type="button" class="pill-btn" id="btn-subtab-reset" style="flex: 1;">Mot de passe oublié (4 mots)</button>
         </div>
 
         <!-- Formulaire Connexion -->
@@ -301,6 +315,15 @@ function attachModalEvents(modal) {
     });
   }
 
+  // Raccourci vers la connexion sur un autre appareil
+  const btnLoginShortcut = modal.querySelector("#btn-player-login-shortcut");
+  if (btnLoginShortcut) {
+    btnLoginShortcut.addEventListener("click", () => {
+      const loginTabBtn = modal.querySelector('.player-tab-btn[data-tab="login"]');
+      if (loginTabBtn) loginTabBtn.click();
+    });
+  }
+
   // Action Renommage
   const btnRename = modal.querySelector("#btn-player-rename");
   if (btnRename) {
@@ -353,7 +376,7 @@ function attachModalEvents(modal) {
  */
 function refreshModalView() {
   const modal = document.getElementById("player-modal");
-  if (!modal || !currentSession) return;
+  if (!modal) return;
 
   const currentNameEl = modal.querySelector("#player-modal-current-name");
   const statusBadgeEl = modal.querySelector("#player-modal-status-badge");
@@ -361,6 +384,11 @@ function refreshModalView() {
   const renameLocked = modal.querySelector("#player-rename-locked");
   const renameMsg = modal.querySelector("#player-rename-msg");
   const btnClaimShortcut = modal.querySelector("#btn-player-claim-shortcut");
+
+  if (!currentSession) {
+    if (currentNameEl) currentNameEl.textContent = "Chargement du compte…";
+    return;
+  }
 
   if (currentNameEl) currentNameEl.textContent = currentSession.username;
   if (renameMsg) {
@@ -392,8 +420,15 @@ function refreshModalView() {
 /**
  * Ouvre la modale de profil joueur.
  */
-export function openPlayerModal(tab = "profile") {
+export async function openPlayerModal(tab = "profile") {
   const modal = ensurePlayerModal();
+  if (!currentSession && initAuthPromise) {
+    try {
+      await initAuthPromise;
+    } catch (e) {
+      // Ignorer l'erreur réseau éventuelle
+    }
+  }
   refreshModalView();
   const tabBtn = modal.querySelector(`.player-tab-btn[data-tab="${tab}"]`);
   if (tabBtn) tabBtn.click();
@@ -646,42 +681,91 @@ function escapeHtml(str) {
  * Initialisation automatique au chargement de la page.
  */
 export async function initAuth() {
-  // Attache le clic sur le badge Header
+  // Attache le clic sur les badges Header une seule fois
   const badgeBtn = document.getElementById("player-badge");
-  if (badgeBtn) {
+  if (badgeBtn && !badgeBtn.dataset.authBound) {
+    badgeBtn.dataset.authBound = "true";
     badgeBtn.addEventListener("click", () => openPlayerModal("profile"));
   }
 
+  const welcomeBadge = document.getElementById("player-welcome-badge");
+  if (welcomeBadge && !welcomeBadge.dataset.authBound) {
+    welcomeBadge.dataset.authBound = "true";
+    welcomeBadge.addEventListener("click", () => openPlayerModal("profile"));
+  }
+
+  // Pré-chargement immédiat depuis le localStorage
   let session = getStoredSession();
   const isFirstVisit = !session;
 
-  try {
-    const payload = session ? { player_id: session.player_id, auth_token: session.auth_token } : {};
-    const res = await fetch(`${API_BASE}/guest`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      saveStoredSession(data);
-      updateHeaderBadge(data.username);
-
-      if (isFirstVisit) {
-        showWelcomeToast(data.username);
-      }
-    } else if (session) {
-      // Token invalide ou joueur supprimé : réinitialise un nouvel invité
-      clearStoredSession();
-      initAuth();
-    }
-  } catch (e) {
-    // Mode déconnecté ou erreur réseau : réutilise la session locale si présente
-    if (session) {
-      updateHeaderBadge(session.username);
-    }
+  if (session && session.username) {
+    currentSession = session;
+    updateHeaderBadge(session.username);
+    refreshModalView();
+  } else {
+    updateHeaderBadge(null);
   }
+
+  // Lancement de la synchronisation asynchrone avec le backend
+  initAuthPromise = (async () => {
+    try {
+      const payload = session ? {
+        player_id: session.player_id,
+        auth_token: session.auth_token,
+        username: session.username,
+      } : {};
+
+      const res = await fetch(`${API_BASE}/guest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        saveStoredSession(data);
+        updateHeaderBadge(data.username);
+        refreshModalView();
+
+        if (isFirstVisit) {
+          showWelcomeToast(data.username);
+        }
+      } else if (session) {
+        // En cas de token expiré ou corrompu, recrée un profil propre
+        clearStoredSession();
+        const retryRes = await fetch(`${API_BASE}/guest`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        if (retryRes.ok) {
+          const retryData = await retryRes.json();
+          saveStoredSession(retryData);
+          updateHeaderBadge(retryData.username);
+          refreshModalView();
+          if (isFirstVisit) {
+            showWelcomeToast(retryData.username);
+          }
+        }
+      }
+    } catch (e) {
+      // Mode déconnecté ou erreur réseau : s'il n'y a pas de session, génère un profil local
+      if (!currentSession) {
+        const localFallback = {
+          player_id: "local-" + Math.random().toString(36).substring(2, 10),
+          auth_token: "offline",
+          username: "Castor" + Math.floor(100 + Math.random() * 900),
+          can_change_username: true,
+          is_claimed: false,
+        };
+        saveStoredSession(localFallback);
+        updateHeaderBadge(localFallback.username);
+        refreshModalView();
+      }
+    }
+  })();
+
+  return initAuthPromise;
 }
 
 // Auto-démarrage si le DOM est déjà prêt

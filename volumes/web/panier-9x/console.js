@@ -28,18 +28,9 @@
 
   function logout() {
     stopFollow();
-    var wasLoggedIn = !!token;
     token = '';
     sessionStorage.removeItem('cemantix_admin_token');
-    el('app').classList.add('hide');
-    el('gate').classList.remove('hide');
-    el('btn-refresh').disabled = true;
-    el('state-dot').className = 'dot';
-    el('password').value = '';
-    el('uptime').textContent = '';
-    if (!wasLoggedIn) {
-      window.location.href = '/';
-    }
+    window.location.href = '/';
   }
 
   function api(path, options) {
@@ -226,12 +217,16 @@
   }
 
   function switchTab(name) {
-    ['stats', 'logs', 'actions'].forEach(function (t) {
-      el('tab-' + t).classList.toggle('hide', t !== name);
+    ['stats', 'logs', 'actions', 'dictionary'].forEach(function (t) {
+      var elem = el('tab-' + t);
+      if (elem) elem.classList.toggle('hide', t !== name);
     });
     document.querySelectorAll('.tabs button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-tab') === name);
     });
+    if (name === 'dictionary') {
+      loadDictionary();
+    }
   }
 
   var ACTION_INFOS = {

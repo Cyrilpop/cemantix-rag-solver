@@ -42,14 +42,14 @@ def render_header(depth: str = "") -> str:
       </div>
 
       <div class="header-actions">
-        <div id="daemon-badge" class="status-badge status-sleeping" title="État du démon d'automatisation">
-          <span class="status-pulse"></span>
-          <span id="daemon-status-text">Veille active (00h00)</span>
+        <div id="player-welcome-badge" class="player-welcome-badge" title="Bienvenue sur Cémantix Solver">
+          <span class="welcome-wave">👋</span>
+          <span class="welcome-text">Bienvenue <strong id="player-welcome-name">Joueur</strong></span>
         </div>
 
-        <button id="player-badge" class="player-badge" aria-label="Profil Joueur" title="Mon Profil Joueur">
+        <button id="player-badge" class="player-badge" aria-label="Mon compte" title="Mon compte">
           <span class="player-icon">👤</span>
-          <span id="player-badge-name" class="player-name">Bienvenue</span>
+          <span id="player-badge-name" class="player-name">Mon compte</span>
           <span class="player-caret">▾</span>
         </button>
 

@@ -23,7 +23,8 @@ class TestLayoutSync(unittest.TestCase):
         self.assertIn('class="brand-icon"', h)
         self.assertIn('Cémantix Solver', h)
         self.assertIn('id="theme-toggle"', h)
-        self.assertIn('id="daemon-badge"', h)
+        self.assertIn('id="player-welcome-badge"', h)
+        self.assertIn('id="player-badge"', h)
         self.assertIn('id="global-spoiler-toggle"', h)
 
         h_sub = render_header("../")
