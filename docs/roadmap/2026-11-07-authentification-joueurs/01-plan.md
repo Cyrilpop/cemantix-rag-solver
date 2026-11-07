@@ -72,17 +72,25 @@ L'objectif de cette évolution est de déployer un système d'authentification i
   - **En-têtes obligatoires :** Émettre systématiquement `Cache-Control: no-store, private` sur toutes les réponses `/api/player/*`.
   - **Codes HTTP propres :** Codes HTTP propres (200, 400 Bad Request, 401 Unauthorized, 409 Conflict si pseudo déjà pris). Réponses JSON standards.
 
-### AUTH-05 — Interface Utilisateur & Intégration Layout
+### AUTH-05 — Interface Utilisateur, Intégration Layout & Garantie SEO
 - **Cible :** `src/services/layout_sync.py`, `volumes/web/js/auth.js`, `volumes/web/css/auth.css` (intégré dans les bundles via `tools/build_css_bundles.py`).
-- **Besoin :**
-  1. **Badge dans l'en-tête commun :**
+- **Besoin UX & Contraintes SEO :**
+  1. **Garantie d'Innocuité SEO (Zéro Pénalité Google & CLS = 0) :**
+     - Pas de modale intrusive au chargement initial. Le contenu principal du jeu reste 100 % accessible.
+     - Injection de l'identité joueur 100 % côté client via JS après lecture du `localStorage` (Googlebot voit le contenu pur du mot du jour).
+  2. **Toast / Bannière d'Accueil Première Visite :**
+     - Bandeau non intrusif affiché uniquement si absence de session joueur :
+       *« 👋 Bienvenue ! Ton identité de jeu est CastorCosmique. »* avec actions `[ ✏️ Personnaliser mon pseudo ]`, `[ C'est parti ! ]` et croix `[×]`.
+     - Clic sur "C'est parti !" ou la croix : fermeture immédiate et enregistrement de `cemantix_welcome_dismissed = true` dans `localStorage`.
+  3. **Badge Permanent dans le Header Commun :**
      - Ajout dans le Header standardisé (synchronisé par `layout_sync.py`) d'une pilule affichant l'icône utilisateur et le pseudo courant : `[ 👤 CastorCosmique ▾ ]`.
-  2. **Modale de gestion de profil :**
-     - Affichage des 3 états (invité avec option renommage unique, formulaire de protection avec affichage de la phrase de secours et bouton copier, formulaire de connexion / mot de passe oublié).
-  3. **Console d'administration (`volumes/web/panier-9x`) :**
+  4. **Modale Profil Joueur (`<dialog class="modal">`) :**
+     - Accessible au clic sur le bouton "Personnaliser" du bandeau ou au clic sur le badge Header.
+     - Gestion des 3 vues : consultation & renommage unique (avec validation longueur 8-24 car.), protection par mot de passe & phrase de secours de 4 mots copiables, et reconnexion multi-appareils.
+  5. **Console d'administration (`volumes/web/panier-9x`) :**
      - Ajout d'une section de gestion des listes de mots (`nouns`, `adjectives`, `recovery`) dans l'interface sécurisée avec ajout direct et bascule d'activation.
-  4. **Gestion du `localStorage` :**
-     - Stockage propre sous `cemantix_player_session`. Initialisation transparente sans impact CLS.
+  6. **Gestion du `localStorage` :**
+     - Clé `cemantix_player_session` et `cemantix_welcome_dismissed`. Initialisation en tâche de fond sans blocage de l'interactivité.
   3. **Gestion du `localStorage` :**
      - Stockage propre sous `cemantix_player_session`.
      - Initialisation transparente au premier chargement sans bloquer le rendu de la page (CLS = 0).

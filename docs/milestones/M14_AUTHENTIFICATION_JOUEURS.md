@@ -169,19 +169,47 @@ Ajout d'un panneau d'administration dans la console sécurisée `/panier-9x` (se
   - Formulaire d'ajout immédiat avec validation (pas d'espaces, pas de caractères spéciaux, respect de la casse).
   - Suppression ou bascule actif/inactif sans redémarrage de conteneur.
 
-### 2.6 Composants Frontend & Expérience Utilisateur
+### 2.6 Spécification UX Détaillée & Garantie d'Innocuité SEO
 
-1. **Badge Header (`src/services/layout_sync.py`) :**
-   - Insertion dans le composant réutilisable d'en-tête (à côté du switch dark/light theme) d'un conteneur discret :
-     `<div id="player-badge" class="player-badge">...</div>`.
-2. **Modale Profil Joueur (`volumes/web/js/auth.js`, `volumes/web/css/auth.css`) :**
-   - Interface dynamique gérant les 3 états :
-     - Consultation du profil et renommage unique.
-     - Sécurisation du compte (saisie du mot de passe et affichage de la phrase de 4 mots avec bouton copier).
-     - Connexion / Récupération de compte.
-3. **Synchronisation `localStorage` :**
-   - Clé persistante `cemantix_player_session` contenant `{ playerId, authToken, username, isClaimed, canChangeUsername }`.
-   - Si la clé est absente, appel transparent à `/api/player/guest` au chargement de n'importe quelle vue.
+L'architecture UX concilie une découverte immédiate et ludique pour le joueur avec le respect absolu des critères **Core Web Vitals** et des directives Google sur les interstitiels mobiles :
+
+1. **Garantie d'Innocuité SEO (Zéro Pénalité Google & CLS = 0) :**
+   - **Interdiction formelle des modales bloquantes à l'arrivée :** Conformément à l'algorithme Google contre les *« Intrusive Interstitials »*, aucune boîte de dialogue modale masquant le plateau de jeu ne doit s'ouvrir automatiquement au chargement initial.
+   - **Zéro pollution pour Googlebot :** Les composants d'accueil et d'identité joueur sont injectés côté client via JavaScript (`volumes/web/js/auth.js`) après vérification du `localStorage`. Le HTML initial servi aux moteurs de recherche demeure 100 % dédié au jeu et au mot du jour.
+   - **Stabilité visuelle (CLS = 0) :** L'emplacement du badge d'identité dans le Header réserve sa largeur ou s'intègre en flexbox sans provoquer de décalage d'éléments lors de son initialisation asynchrone.
+
+2. **Toast / Bannière d'Accueil Non Intrusive (Première Visite) :**
+   - Lors de la toute première visite d'un joueur (absence de session dans le `localStorage`), un bandeau élégant et flottant glisse discrètement en bas de l'écran ou sous l'en-tête, sans recouvrir les champs de saisie du jeu :
+     ```text
+     ┌──────────────────────────────────────────────────────────────────────────────┐
+     │ 👋 Bienvenue ! Ton identité de jeu est CastorCosmique.                       │
+     │    [ ✏️ Personnaliser mon pseudo ]       [ C'est parti ! ]       [×]         │
+     └──────────────────────────────────────────────────────────────────────────────┘
+     ```
+   - **Comportement des actions :**
+     - Clic sur `[ ✏️ Personnaliser mon pseudo ]` : ouvre immédiatement la modale de profil centrée sur le champ de renommage.
+     - Clic sur `[ C'est parti ! ]` ou sur la croix `[×]` : masque immédiatement le bandeau et enregistre la préférence `cemantix_welcome_dismissed = true` dans le `localStorage`.
+     - Case à cocher ou comportement automatique « Ne plus afficher ce message ».
+
+3. **Badge Permanent dans l'En-tête (`src/services/layout_sync.py`) :**
+   - Dans le Header unifié (à côté de la bascule thème sombre/clair), affichage d'une pilule interactive discrète :
+     ```text
+     [ 👤 CastorCosmique ▾ ]
+     ```
+   - Cliquer sur ce badge ouvre à tout moment la modale de profil, sur n'importe quelle vue (`/`, `/play/`, `/battle/`, `/multi/`, `/defi/`).
+
+4. **Modale Profil Joueur (`<dialog class="modal">`) :**
+   - Utilisation de la balise HTML standard native `<dialog>` avec le style déjà éprouvé dans le projet (`volumes/web/panier-9x/console.css` et `volumes/web/css/`).
+   - L'ouverture de la modale ne s'effectue **qu'à la suite d'un clic volontaire du joueur** (bouton "Personnaliser" ou clic sur le badge Header), ce qui garantit une expérience utilisateur optimale et zéro pénalité SEO.
+   - La modale gère 3 vues dynamiques :
+     - **Vue A (Profil & Renommage unique) :** Affiche le pseudo actuel, un avertissement clair *"Personnalisation possible une seule fois"*, le champ de saisie du nouveau pseudo (validé côté serveur 8 à 24 car.), et un bouton `[ 🔒 Protéger mon compte ]`.
+     - **Vue B (Sécurisation & Phrase de 4 mots) :** Saisie du mot de passe souhaité, génération et affichage de la phrase de 4 mots concrets (`navire - falaise - citron - vortex`) avec bouton 📋 `[Copier la phrase]` et avertissement sans email.
+     - **Vue C (Connexion / Récupération multi-appareils) :** Formulaire de reconnexion pour restaurer son identité sur un nouveau smartphone ou PC (`Pseudo + Mot de passe`), avec onglet de secours par phrase secrète en cas d'oubli.
+
+5. **Cycle de Vie & Synchronisation `localStorage` :**
+   - Clé `cemantix_player_session` : `{ playerId, authToken, username, isClaimed, canChangeUsername }`.
+   - Clé `cemantix_welcome_dismissed` : `true`.
+   - Initialisation silencieuse : si aucune session n'est détectée, un appel transparent en tâche de fond est émis vers `POST /api/player/guest` pour enregistrer l'UUID et le pseudo loufoque sans bloquer l'interactivité de la page.
 
 ---
 
