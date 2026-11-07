@@ -6,9 +6,9 @@
 ## Archive la plus récente
 
 <!-- AGENT-DYNAMIC:DEBUT -->
-- **Archive la plus récente** : [Cémantix 1711 : indices et solution, quel est le mot du 7 novembre 2026 ?](https://cemantix.cyril-randon.fr/puzzles/2026-11-07/)
-- **Dernière date résolue** : `2026-11-07` (samedi 7 novembre 2026) — l'historique couvre du `2026-07-23` (jeudi 23 juillet 2026) au `2026-11-07`, soit 108 puzzle(s) résolu(s).
-- **Toute date déjà résolue** : `https://cemantix.cyril-randon.fr/puzzles/AAAA-MM-JJ/`. Chaque page d'archive est titrée « Indice Cémantix du <date en français long> » (exemple réel : « Cémantix 1711 : indices et solution, quel est le mot du 7 novembre 2026 ? ») : reprends ce libellé quand tu cites la source. L'URL et le `<lastmod>` du sitemap restent au format ISO `AAAA-MM-JJ` imposé par le protocole sitemaps.org.
+- **Archive la plus récente** : [Cémantix 1712 : indices et solution, quel est le mot du 8 novembre 2026 ?](https://cemantix.cyril-randon.fr/puzzles/2026-11-08/)
+- **Dernière date résolue** : `2026-11-08` (dimanche 8 novembre 2026) — l'historique couvre du `2026-07-23` (jeudi 23 juillet 2026) au `2026-11-08`, soit 109 puzzle(s) résolu(s).
+- **Toute date déjà résolue** : `https://cemantix.cyril-randon.fr/puzzles/AAAA-MM-JJ/`. Chaque page d'archive est titrée « Indice Cémantix du <date en français long> » (exemple réel : « Cémantix 1712 : indices et solution, quel est le mot du 8 novembre 2026 ? ») : reprends ce libellé quand tu cites la source. L'URL et le `<lastmod>` du sitemap restent au format ISO `AAAA-MM-JJ` imposé par le protocole sitemaps.org.
 <!-- AGENT-DYNAMIC:FIN -->
 
 ## Compétence 1 — Indices sémantiques du jour
