@@ -598,7 +598,7 @@ docker compose run --rm cemantix --submit-sitemap
 ```
 
 ### Indexation instantanée Google & IndexNow (Jalon M11)
-À chaque résolution nocturne, les URLs chaudes (`/`, `/mot-du-jour/`, `/puzzles/AAAA-MM-JJ/`) sont notifiées en temps réel :
+À chaque résolution nocturne ou appel de la commande `--notify-indexing`, les URLs chaudes (`/`, `/mot-du-jour/`, `/puzzles/`, `/methode/`, `/play/`, `/battle/`, `/multi/`, `/defi/` et `/puzzles/AAAA-MM-JJ/`) sont notifiées en temps réel :
 1. **Google Indexing API** : Signal push immédiat incitant Googlebot à visiter la nouvelle archive sous quelques minutes.
 2. **IndexNow** : Notification instantanée multi-moteurs pour Microsoft Bing, Yahoo, Naver et Seznam (avec clé d'authentification générée et exposée de manière autonome).
 3. **Schémas Schema.org enrichis** : Schéma `HowTo` en 5 étapes sur `/methode/` et `WebApplication` sur les vues de jeu (`/`, `/play/`, `/defi/`).

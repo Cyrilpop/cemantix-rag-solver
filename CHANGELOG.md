@@ -4,6 +4,21 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-07 · Indexation Instantanée Exhaustive des Pages Hubs & Archives
+
+### Modifié
+- **Transmission Complète des URLs Chaudes à Google Indexing API (`src/services/seo_google.py`, `cemantix_rag.py`)** :
+  - Support du paramètre optionnel `urls: Optional[List[str]] = None` dans la fonction `notify_daily_urls_to_google()`, permettant la transmission d'une liste personnalisée d'URLs tout en préservant le mécanisme anti-quota quotidien en base de données.
+  - Déduplication automatique des URLs transmises via `list(dict.fromkeys(urls))`.
+  - Enrichissement de la commande CLI `--notify-indexing` dans `cemantix_rag.py` pour transmettre l'ensemble complet des URLs de hubs et de jeu (`/`, `/mot-du-jour/`, `/puzzles/`, `/methode/`, `/play/`, `/battle/`, `/multi/`, `/defi/`) ainsi que l'archive du jour (`/puzzles/AAAA-MM-JJ/`) de façon synchrone à Google Indexing API et IndexNow.
+  - Remplacement du doublon d'URL `/puzzles/` par la page hub de méthode `/methode/`.
+
+### Corrigé
+- **Import Typage `List` (`src/services/seo_google.py`)** :
+  - Ajout de `List` dans l'import `from typing import Any, Dict, List, Optional` pour prévenir l'erreur `NameError: name 'List' is not defined` à l'exécution de Python.
+
+---
+
 ## [Non publié] - 2026-11-06 · Jalon M13 : Affichage des Indices IA Gemini sur la Page Mot du Jour avec Double Commutateur Dynamique
 
 ### Ajouté
