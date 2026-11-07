@@ -173,7 +173,7 @@ docker compose run --rm cemantix --rag-only
 # Lancer un tournoi Battle de 3 manches
 docker compose run --rm cemantix --battle 3
 
-# Exécuter l'intégralité des 81 tests unitaires sous Docker
+# Exécuter l'intégralité de la suite de tests unitaires sous Docker (420+ tests)
 docker compose run --rm -v ./tests:/app/tests --entrypoint python cemantix -m unittest discover -s tests
 ```
 
@@ -952,6 +952,40 @@ jamais par git** :
 > La CSP doit autoriser les origines GTM et son mode prévisualisation / Tag Assistant (`script-src 'unsafe-inline' https://www.googletagmanager.com
 > https://www.google-analytics.com https://tagassistant.google.com`, `style-src` avec `fonts.googleapis.com`, `font-src` avec `fonts.gstatic.com`, plus `img-src`/`connect-src` pour les hits) : le script inline
 > `dataLayer`/`gtag` est imposé par Google. Voir le Caddyfile de la section déploiement.
+
+---
+
+## 🧪 Tests & Intégration Continue
+
+Le projet dispose d'une suite exhaustive de plus de **420 tests automatisés** (`unittest`), garantissant la robustesse de l'accès aux données, des règles de jeu, des algorithmes RAG, de l'API web et du durcissement de sécurité.
+
+### 1. Caractéristiques de la Suite de Tests
+- **Affichage structuré & Résumé synthétique** : L'exécution affiche la progression par module de test (`📦 test_...`), le décompte de succès et d'éventuels replis gracieux, suivi d'un encart de synthèse clair et lisible en fin de session.
+- **Autonomie complète & Repli SQLite automatique** : Les tests ne nécessitent pas d'instance PostgreSQL active ; un repli hermétique sur SQLite jetable est appliqué automatiquement dès l'import (`_context.py`), éliminant tout effet de bord avec les données de production.
+- **Exécution hermétique sous Docker** : Conformément aux standards du projet, la suite s'exécute dans un conteneur éphémère sans nécessiter d'installation Python sur la machine hôte.
+- **Résilience environnementale** : Les tests ciblant des métadonnées du dépôt (`.gitignore`, `docker-compose.yml`, outillage `tools/`) basculent gracieusement en statut `skipped` lors de l'exécution dans le conteneur applicatif épuré et s'exécutent intégralement en CI.
+
+### 2. Commandes de Test
+
+```bash
+# Exécuter l'intégralité de la suite sous Docker avec rapport synthétique :
+docker compose run --rm -v ./tests:/app/tests --entrypoint python cemantix -m unittest discover -s tests
+
+# Raccourci direct équivalent :
+docker compose run --rm -v ./tests:/app/tests --entrypoint python cemantix -m tests
+
+# Exécuter une suite ou un module de test spécifique :
+docker compose run --rm -v ./tests:/app/tests --entrypoint python cemantix -m unittest tests/test_security_hardening.py
+docker compose run --rm -v ./tests:/app/tests --entrypoint python cemantix -m unittest tests/test_ai_hints.py
+```
+
+### 3. Pipeline d'Intégration Continue (GitHub Actions)
+La pipeline `.github/workflows/ci.yml` valide automatiquement chaque push et pull request :
+1. **Tests unitaires** : Exécution de l'intégralité des tests sous Python 3.12.
+2. **Linting statique** : Détection des erreurs de syntaxe et variables indéfinies avec Ruff (`E9, F63, F7, F82`).
+3. **Contrôle documentaire & SEO** : Exécution de `tools/check_docs.py`, `tools/check_seo.py` et `tools/check_og_image.py`.
+4. **Audit de sécurité des dépendances** : Examen des vulnérabilités avec `pip-audit`.
+5. **Audit de performance & accessibilité** : Audit Lighthouse CI statique.
 
 ---
 
