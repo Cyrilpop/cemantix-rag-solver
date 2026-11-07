@@ -226,3 +226,4 @@ if __name__ == "__main__":
             blob = func(sz)
             (out_dir / filename).write_bytes(blob)
             print(f"Generated {filename} ({sz}x{sz}, {len(blob)} bytes)")
+

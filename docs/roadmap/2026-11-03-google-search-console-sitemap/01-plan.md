@@ -27,7 +27,7 @@ L'évolution met en place l'interaction sécurisée et asynchrone avec l'API Goo
 
 ### GSC-01 (🔴) — Module Client API Google Search Console (`src/services/seo_google.py`)
 - **Problème :** Aucun client n'existe pour interagir avec les endpoints OAuth2 de Google et l'API Search Console `webmasters.sitemaps.submit`. L'ancien protocole de ping (`/ping?sitemap=...`) a été désactivé par Google début 2024 (HTTP 404).
-- **Correctif :** Implémentation de `src/services/seo_google.py` avec extraction robuste des credentials (tolérant `GOOCLE_CLIENT_SECRET`), rafraîchissement automatique de token d'accès OAuth 2.0, et soumission REST HTTP `PUT`.
+- **Correctif :** Implémentation de `src/services/seo_google.py` avec extraction robuste des credentials (tolérant `GOOGLE_CLIENT_SECRET`), rafraîchissement automatique de token d'accès OAuth 2.0, et soumission REST HTTP `PUT`.
 - **Vérification :** Test unitaire simulant les échanges OAuth2 et les réponses de l'API Search Console (succès 204, erreurs HTTP 401/403/500).
 
 ### GSC-02 (🔴) — Déclenchement Automatique dans le Cycle de Vie SEO (`src/services/seo.py`)
