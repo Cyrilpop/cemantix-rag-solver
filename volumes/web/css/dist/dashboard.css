@@ -143,14 +143,14 @@ a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hov
 .footer-right{flex-direction:column;gap:0.4rem;align-items:center;justify-content:center;}
 }
 /* auth.css */
-.player-badge{display:inline-flex;align-items:center;gap:0.4rem;padding:0.35rem 0.75rem;border-radius:9999px;font-size:0.82rem;font-weight:600;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-main);cursor:pointer;transition:var(--transition);max-width:180px;height:36px;box-sizing:border-box;white-space:nowrap;}
+.player-badge{display:inline-flex;align-items:center;gap:0.4rem;padding:0.35rem 0.75rem;border-radius:9999px;font-size:0.82rem;font-weight:600;border:1px solid var(--border-color);background:var(--bg-input);color:var(--text-main);cursor:pointer;transition:var(--transition);max-width:250px;height:36px;box-sizing:border-box;white-space:nowrap;}
 .player-badge:hover{border-color:var(--accent);background:var(--bg-card-hover);box-shadow:0 0 10px var(--accent-glow);}
 .player-badge .player-icon{font-size:0.95rem;flex-shrink:0;}
 .player-badge .player-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
 .player-badge .player-caret{font-size:0.7rem;color:var(--text-muted);flex-shrink:0;}
-@media (max-width:640px){.player-badge{max-width:140px;padding:0.3rem 0.55rem;font-size:0.78rem;}
+@media (max-width:640px){.player-badge{max-width:180px;padding:0.3rem 0.55rem;font-size:0.78rem;}
 }
-@media (max-width:380px){.player-badge{max-width:110px;padding:0.25rem 0.45rem;}
+@media (max-width:380px){.player-badge{max-width:120px;padding:0.25rem 0.45rem;}
 }
 .player-welcome-toast{position:fixed;bottom:5.5rem;right:2rem;max-width:480px;background:var(--bg-card);border:1px solid var(--accent);box-shadow:0 10px 30px rgba(0,0,0,0.45),0 0 20px var(--accent-glow);border-radius:var(--radius-lg);padding:1rem 1.25rem;z-index:1001;animation:popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);}
 .player-welcome-content{display:flex;flex-direction:column;gap:0.75rem;}

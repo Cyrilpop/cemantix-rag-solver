@@ -49,7 +49,7 @@ def render_header(depth: str = "") -> str:
 
         <button id="player-badge" class="player-badge" aria-label="Profil Joueur" title="Mon Profil Joueur">
           <span class="player-icon">👤</span>
-          <span id="player-badge-name" class="player-name">Invité</span>
+          <span id="player-badge-name" class="player-name">Bienvenue</span>
           <span class="player-caret">▾</span>
         </button>
 

@@ -43,8 +43,12 @@ export function clearStoredSession() {
  */
 function updateHeaderBadge(username) {
   const badgeNameEl = document.getElementById("player-badge-name");
+  const badgeBtn = document.getElementById("player-badge");
   if (badgeNameEl && username) {
-    badgeNameEl.textContent = username;
+    badgeNameEl.textContent = `Bienvenue ${username}`;
+  }
+  if (badgeBtn && username) {
+    badgeBtn.title = `Bienvenue ${username} — Profil Joueur`;
   }
 }
 
