@@ -254,7 +254,7 @@ class TestDashboardSecretWordReveal(unittest.TestCase):
         self.assertRegex(self.html, r'id="secret-word-card"[^>]*aria-expanded="false"')
         self.assertRegex(self.html, r'id="secret-word-card"[^>]*aria-label=')
         self.assertIn('id="secret-word"', self.html)
-        self.assertIn('--------</h2>', self.html)
+        self.assertRegex(self.html, r'id="secret-word"[^>]*>(?:--------|MOTDUJOUR)</h2>')
 
         # Dans le state initial JS
         self.assertRegex(self.js, r"secretWord:\s*null")
@@ -300,7 +300,7 @@ class TestDashboardSecretWordReveal(unittest.TestCase):
         self.assertIn(".catch(", reveal_func)
         self.assertIn('secretWordCard?.classList.add("is-spoiled")', reveal_func)
         self.assertIn('secretWordCard?.setAttribute("aria-expanded", "false")', reveal_func)
-        self.assertIn('secretWord.textContent = "--------"', reveal_func)
+        self.assertRegex(reveal_func, r'secretWord\.textContent\s*=\s*"(?:--------|MOTDUJOUR)"')
         # Gère le cas json.pending
         self.assertIn("json.pending", reveal_func)
 

@@ -78,20 +78,19 @@
   height: 100%;
   min-height: 230px;
   box-sizing: border-box;
-  background: var(--bg-input);
-  border: 2px dashed var(--border-color);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   text-align: center;
   overflow: hidden;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .secret-word-card:not(.is-spoiled) {
-  border-style: solid;
   border-color: var(--accent);
   box-shadow: 0 0 30px var(--accent-glow);
 }
@@ -102,47 +101,52 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.2s ease, filter 0.2s ease;
-}
-
-/* Spoiler Overlay en position absolue */
-.spoiler-overlay {
-  display: none;
-  position: absolute;
-  inset: 0;
-  background: var(--bg-input);
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 1.5rem;
-  z-index: 10;
-  border-radius: calc(var(--radius-lg) - 2px);
+  transition: opacity 0.25s ease;
 }
 
 .secret-word-card.is-spoiled {
   cursor: pointer;
 }
 
-.secret-word-card.is-spoiled .spoiler-overlay {
-  display: flex;
+.secret-word-card.is-spoiled:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px var(--accent-glow);
 }
 
 .secret-word-card.is-spoiled .secret-word-revealed {
+  user-select: none;
+}
+
+.secret-word-card.is-spoiled .secret-word-text {
   filter: blur(14px);
   user-select: none;
+  -webkit-user-select: none;
+  transition: filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.secret-word-card.is-spoiled:hover .secret-word-text {
+  filter: blur(10px);
+}
+
+.secret-word-card:not(.is-spoiled) .secret-word-text {
+  filter: none;
+  transition: filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.secret-word-card.is-spoiled .secret-actions {
+  opacity: 0;
   pointer-events: none;
-  opacity: 0.15;
+  transform: translateY(6px);
+  max-height: 0;
+  overflow: hidden;
+  margin: 0;
 }
 
-.spoiler-icon-large {
-  font-size: 2.5rem;
-}
-
-.spoiler-prompt {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  max-width: 320px;
+.secret-word-card:not(.is-spoiled) .secret-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
 .secret-label {
@@ -673,9 +677,9 @@
 }
 
 .segment-btn.active {
-  background: var(--accent, #58a6ff);
+  background: var(--accent-btn, #1668dc);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(88, 166, 255, 0.35);
+  box-shadow: 0 2px 8px rgba(22, 104, 220, 0.35);
 }
 
 /* Cartes d'indices IA Dashboard */
@@ -707,7 +711,7 @@
 }
 
 .dashboard-hint-card.tier-fire {
-  border-left: 4px solid #f85149;
+  border-left: 4px solid #ff7b72;
 }
 
 .dashboard-hint-header {
@@ -728,17 +732,17 @@
 
 .tier-cold .dashboard-hint-badge {
   background: rgba(88, 166, 255, 0.15);
-  color: #58a6ff;
+  color: #79c0ff;
 }
 
 .tier-warm .dashboard-hint-badge {
   background: rgba(240, 136, 62, 0.15);
-  color: #f0883e;
+  color: #ffa657;
 }
 
 .tier-fire .dashboard-hint-badge {
-  background: rgba(248, 81, 73, 0.15);
-  color: #f85149;
+  background: rgba(255, 123, 114, 0.22);
+  color: #ffb4ab;
 }
 
 .dashboard-hint-weight {
@@ -809,15 +813,15 @@
 }
 
 .tier-cold .hint-view-word .spoiler-text {
-  color: #58a6ff;
+  color: #79c0ff;
 }
 
 .tier-warm .hint-view-word .spoiler-text {
-  color: #f0883e;
+  color: #ffa657;
 }
 
 .tier-fire .hint-view-word .spoiler-text {
-  color: #f85149;
+  color: #ffa198;
 }
 
 .dashboard-spoiler-box .btn-reveal {
@@ -897,8 +901,8 @@
 }
 
 [data-theme="light"] .tier-fire .dashboard-hint-badge {
-  background: rgba(207, 34, 46, 0.1);
-  color: #cf222e;
+  background: rgba(207, 34, 46, 0.12);
+  color: #b91c1c;
 }
 
 [data-theme="light"] .dashboard-spoiler-box {

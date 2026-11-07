@@ -68,6 +68,8 @@ export function initDashboard() {
       // Masquer partout
       secretWordCard?.classList.add("is-spoiled");
       secretWordCard?.setAttribute("aria-expanded", "false");
+      const secretWord = document.getElementById("secret-word");
+      if (secretWord) secretWord.textContent = "MOTDUJOUR";
       if (dashboardState.data?.current) {
         renderClues(dashboardState.data.current);
       }
@@ -90,6 +92,8 @@ export function initDashboard() {
       } else {
         secretWordCard?.classList.add("is-spoiled");
         secretWordCard?.setAttribute("aria-expanded", "false");
+        const secretWord = document.getElementById("secret-word");
+        if (secretWord) secretWord.textContent = "MOTDUJOUR";
       }
     });
   }
@@ -306,7 +310,7 @@ export function revealSecretWord() {
     })
     .catch((err) => {
       console.warn("Échec révélation mot secret :", err);
-      if (secretWord) secretWord.textContent = "--------";
+      if (secretWord) secretWord.textContent = "MOTDUJOUR";
       secretWordCard?.classList.add("is-spoiled");
       secretWordCard?.setAttribute("aria-expanded", "false");
       showToast(err.message || "Impossible de révéler le mot secret");
@@ -384,11 +388,7 @@ export function renderDashboard(data) {
       secretWordCard?.classList.remove("is-spoiled");
       secretWordCard?.setAttribute("aria-expanded", "true");
     } else {
-      if (wordToDisplay) {
-        secretWord.textContent = wordToDisplay.toUpperCase();
-      } else {
-        secretWord.textContent = "--------";
-      }
+      secretWord.textContent = "MOTDUJOUR";
       secretWordCard?.classList.add("is-spoiled");
       secretWordCard?.setAttribute("aria-expanded", "false");
     }

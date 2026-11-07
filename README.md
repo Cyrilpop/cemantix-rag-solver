@@ -644,6 +644,12 @@ La page hub à forte audience **`/mot-du-jour/`** propose un système de consult
    - **Indice #1 (Poids 0.33) · Éloigné :** Ambiance abstraite ou toile de fond (zone froide, `.tier-cold`).
    - **Indice #2 (Poids 0.66) · Intermédiaire :** Fonction et usage courant (zone tiède, `.tier-warm`).
    - **Indice #3 (Poids 1.00) · Proche :** Analogie forte ou composant distinctif (zone brûlante, `.tier-fire`).
+4. **Épuration de la carte Mot Secret & Anti-fuite de longueur :**
+   - Le libellé `MOT SECRET DU JOUR` reste net et contrasté.
+   - En mode masqué, un mot factice `MOTDUJOUR` est affiché sous flou (`filter: blur(14px)`), interdisant toute déduction de la longueur réelle du secret du jour.
+   - La révélation s'opère par clic direct ou activation clavier (Entrée / Espace).
+5. **Accessibilité & Contraste WCAG AAA :** Rehaussement des contrastes sur les boutons actifs et les badges thermiques (`#ffb4ab` / `#b91c1c` avec ratio > 7:1).
+6. **Fiabilité IndexNow & Navigation :** Vérification de l'état d'indexation au démarrage (anti-429) et ancre dédiée `#history-table` pour la navigation fluide vers l'historique des puzzles.
 
 ### Cache HTTP : cohérence avec la politique « no-cache »
 Le projet applique `Cache-Control: "no-cache, must-revalidate"` sur le code applicatif

@@ -22,8 +22,19 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Contrôles segmentés (pill-switches), cartes responsives en grille et support complet des thèmes sombre et clair.
 - **Interactions Client Vanilla (`volumes/web/js/hints.js`, `src/services/seo_templates.py`)** :
   - Contrôleur JavaScript vanilla ultra-léger sans framework tiers ni requête HTTP bloquante.
-- **Suite de Tests Unitaires Dédiée (`tests/test_ui_indices_ia.py`)** :
-  - 7 nouveaux tests validant les commutateurs par défaut, l'ordre des cartes, l'anti-spoiler, le repli RAG et l'accessibilité ARIA (suite globale portée à 420 tests).
+- **Suite de Tests Unitaires Dédiée (`tests/test_ui_indices_ia.py`, `tests/test_frontend_characterization.py`)** :
+  - Tests validant les commutateurs par défaut, l'ordre des cartes, l'anti-spoiler, le repli RAG et l'accessibilité ARIA.
+- **Épuration de la Carte Mot Secret & Effet Flou Anti-Fuite (`volumes/web/index.html`, `volumes/web/css/dashboard.css`, `volumes/web/js/dashboard.js`)** :
+  - Suppression du cadenas opaque et du bouton flottant au profit d'un effet flou épuré avec clic direct ou activation clavier (Entrée / Espace).
+  - Préservation intégrale de la netteté du libellé « MOT SECRET DU JOUR » (`.secret-label`).
+  - Masquage initial avec le mot factice `MOTDUJOUR` flouté (`filter: blur(14px)`), empêchant toute fuite sur la longueur du vrai mot secret du jour.
+- **Accessibilité & Contraste WCAG AAA (`volumes/web/css/dashboard.css`)** :
+  - Conformité WCAG AA sur les boutons actifs des commutateurs (`.segment-btn.active`).
+  - Rehaussement du contraste des badges thermiques d'indice `tier-fire` (`#ffb4ab` sur fond sombre et `#b91c1c` sur fond clair) dépassant un ratio de 7:1 (WCAG AAA).
+- **Navigation Dashboard & Fiabilité SEO (`src/db/daily.py`, `src/services/daemon.py`, `volumes/web/index.html`, `volumes/web/js/countdown.js`)** :
+  - Renommage officiel de l'interface d'accueil en « Mot du Jour » et désactivation du rafraîchissement périodique au profit d'un renouvellement unique à minuit via `countdown.js`.
+  - Ajout de l'ancre `id="history-table"` avec défilement fluide et marge supérieure (`scroll-margin-top`) pour les liens vers l'historique des puzzles.
+  - Vérification de l'état d'indexation IndexNow (`is_daily_puzzle_indexnow_indexed`) au démarrage pour prévenir les blocages HTTP 429 (TooManyRequests).
 
 ---
 

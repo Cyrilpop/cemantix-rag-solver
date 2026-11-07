@@ -133,9 +133,9 @@
 }
 
 .segment-btn.active {
-    background: var(--accent, #58a6ff);
+    background: var(--accent-btn, #1668dc);
     color: #ffffff;
-    box-shadow: 0 2px 8px rgba(88, 166, 255, 0.35);
+    box-shadow: 0 2px 8px rgba(22, 104, 220, 0.35);
 }
 
 .hints-panel {
@@ -179,7 +179,7 @@
 }
 
 .ai-hint-card.tier-fire {
-    border-left: 4px solid #f85149;
+    border-left: 4px solid #ff7b72;
 }
 
 .ai-hint-header {
@@ -200,17 +200,17 @@
 
 .tier-cold .hint-badge {
     background: rgba(88, 166, 255, 0.15);
-    color: #58a6ff;
+    color: #79c0ff;
 }
 
 .tier-warm .hint-badge {
     background: rgba(240, 136, 62, 0.15);
-    color: #f0883e;
+    color: #ffa657;
 }
 
 .tier-fire .hint-badge {
-    background: rgba(248, 81, 73, 0.15);
-    color: #f85149;
+    background: rgba(255, 123, 114, 0.18);
+    color: #ffa198;
 }
 
 .hint-weight {
@@ -275,15 +275,15 @@
     font-size: 1.25rem;
     font-weight: 700;
     letter-spacing: 0.05em;
-    color: var(--accent, #58a6ff);
+    color: var(--accent, #79c0ff);
 }
 
 .tier-warm .hint-view-word .spoiler-text {
-    color: #f0883e;
+    color: #ffa657;
 }
 
 .tier-fire .hint-view-word .spoiler-text {
-    color: #f85149;
+    color: #ffa198;
 }
 
 .btn-reveal {
