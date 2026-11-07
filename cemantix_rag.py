@@ -141,12 +141,22 @@ def main():
     if getattr(args, "notify_indexing", False):
         from src.services import load_history, notify_daily_urls_to_google, submit_indexnow_urls, SITE_ORIGIN
         history = load_history()
-        hot_urls = [f"{SITE_ORIGIN}/", f"{SITE_ORIGIN}/mot-du-jour/"]
+        hot_urls = [
+            f"{SITE_ORIGIN}/",
+            f"{SITE_ORIGIN}/mot-du-jour/",
+            f"{SITE_ORIGIN}/puzzles/",
+            f"{SITE_ORIGIN}/methode/",
+            f"{SITE_ORIGIN}/play/",
+            f"{SITE_ORIGIN}/battle/",
+            f"{SITE_ORIGIN}/multi/",
+            f"{SITE_ORIGIN}/defi/",
+        ]
         if history:
             hot_urls.append(f"{SITE_ORIGIN}/puzzles/{history[0].get('date')}/")
+        hot_urls = list(dict.fromkeys(hot_urls))
         log("⚡ Notification d'indexation instantanée en cours...")
         force_flag = getattr(args, "force", False)
-        g_res = notify_daily_urls_to_google(history, site_origin=SITE_ORIGIN, force=force_flag)
+        g_res = notify_daily_urls_to_google(history, site_origin=SITE_ORIGIN, force=force_flag, urls=hot_urls)
         in_res = submit_indexnow_urls(hot_urls)
         if g_res.get("skipped"):
             log("ℹ️  [SEO-GOOGLE] Notification Google ignorée (puzzle déjà indexé, quota préservé).")
