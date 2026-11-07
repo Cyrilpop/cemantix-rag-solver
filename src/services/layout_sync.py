@@ -47,6 +47,12 @@ def render_header(depth: str = "") -> str:
           <span id="daemon-status-text">Veille active (00h00)</span>
         </div>
 
+        <button id="player-badge" class="player-badge" aria-label="Profil Joueur" title="Mon Profil Joueur">
+          <span class="player-icon">👤</span>
+          <span id="player-badge-name" class="player-name">Invité</span>
+          <span class="player-caret">▾</span>
+        </button>
+
         <button id="theme-toggle" class="btn-icon" aria-label="Changer de thème" title="Basculer Mode Clair / Sombre">
           <span class="theme-icon">☀️</span>
         </button>

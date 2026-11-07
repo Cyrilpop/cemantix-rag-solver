@@ -1,0 +1,328 @@
+/* ==========================================================================
+   Cémantix Solver — Styles d'Identité & Authentification Joueur (M14)
+   ========================================================================== */
+
+/* Badge Permanent dans le Header */
+.player-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: var(--transition);
+  max-width: 180px;
+  height: 36px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.player-badge:hover {
+  border-color: var(--accent);
+  background: var(--bg-card-hover);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.player-badge .player-icon {
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.player-badge .player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.player-badge .player-caret {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .player-badge {
+    max-width: 140px;
+    padding: 0.3rem 0.55rem;
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .player-badge {
+    max-width: 110px;
+    padding: 0.25rem 0.45rem;
+  }
+}
+
+/* Bannière / Toast d'Accueil Première Visite */
+.player-welcome-toast {
+  position: fixed;
+  bottom: 5.5rem;
+  right: 2rem;
+  max-width: 480px;
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 20px var(--accent-glow);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  z-index: 1001;
+  animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.player-welcome-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.player-welcome-msg {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--text-main);
+}
+
+.player-welcome-msg strong {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.player-welcome-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .player-welcome-toast {
+    bottom: max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem));
+    right: 1rem;
+    left: 1rem;
+    max-width: calc(100% - 2rem);
+  }
+}
+
+/* Modale Profil Joueur (<dialog>) */
+.player-modal {
+  border: none;
+  background: transparent;
+  padding: 0;
+  max-width: 520px;
+  width: 92vw;
+  margin: auto;
+}
+
+.player-modal::backdrop {
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.player-modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), var(--shadow-glow);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  color: var(--text-main);
+}
+
+.player-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
+}
+
+.player-modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.player-nav-tabs {
+  display: flex;
+  gap: 0.35rem;
+  background: var(--bg-input);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.player-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 0.4rem 0.5rem;
+  border-radius: calc(var(--radius-md) - 3px);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+}
+
+.player-tab-btn.active {
+  background: var(--accent-btn, #1668dc);
+  color: #ffffff;
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.player-tab-pane {
+  display: none;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.player-tab-pane.active {
+  display: flex;
+}
+
+/* Identité et Badges de Statut */
+.player-profile-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+}
+
+.player-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.player-profile-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.player-badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  width: fit-content;
+}
+
+.status-guest {
+  background: rgba(210, 153, 34, 0.15);
+  color: var(--warning);
+  border: 1px solid rgba(210, 153, 34, 0.4);
+}
+
+.status-claimed {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(63, 185, 80, 0.4);
+}
+
+/* Zone de Phrase de Secours */
+.recovery-box {
+  background: rgba(88, 166, 255, 0.08);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-md);
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  text-align: center;
+}
+
+.recovery-phrase {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  user-select: all;
+  background: var(--bg-card);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Formulaires et Champs */
+.player-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.player-field-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.player-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.75rem;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  outline: none;
+  transition: var(--transition);
+}
+
+.player-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.player-field-note {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.player-msg {
+  font-size: 0.82rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  display: none;
+}
+
+.player-msg.is-error {
+  display: block;
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.player-msg.is-success {
+  display: block;
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.player-danger-zone {
+  border-top: 1px solid var(--border-color);
+  padding-top: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+

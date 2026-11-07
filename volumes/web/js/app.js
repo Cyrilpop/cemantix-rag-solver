@@ -8,6 +8,7 @@
  */
 import { initErrorHandling } from "./utils.js";
 import { initTheme } from "./theme.js";
+import { initAuth } from "./auth.js";
 
 function openDetailsOnHash() {
   const hash = window.location.hash;
@@ -31,6 +32,7 @@ function openDetailsOnHash() {
 function bootstrap() {
   initErrorHandling();
   initTheme();
+  initAuth();
   openDetailsOnHash();
   window.addEventListener("hashchange", openDetailsOnHash);
 

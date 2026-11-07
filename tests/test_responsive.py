@@ -16,19 +16,19 @@ DIST_DIR = CSS_DIR / "dist"
 JS_DIR = WEB_DIR / "js"
 
 BUNDLES: dict[str, tuple[str, ...]] = {
-    "dashboard": ("variables.css", "base.css", "layout.css", "dashboard.css", "modal.css"),
-    "play": ("variables.css", "base.css", "layout.css", "game.css", "modal.css"),
-    "battle": ("variables.css", "base.css", "layout.css", "game.css", "modal.css", "battle.css"),
-    "multi": ("variables.css", "base.css", "layout.css", "game.css", "modal.css", "multi.css"),
+    "dashboard": ("variables.css", "base.css", "layout.css", "auth.css", "dashboard.css", "modal.css"),
+    "play": ("variables.css", "base.css", "layout.css", "auth.css", "game.css", "modal.css"),
+    "battle": ("variables.css", "base.css", "layout.css", "auth.css", "game.css", "modal.css", "battle.css"),
+    "multi": ("variables.css", "base.css", "layout.css", "auth.css", "game.css", "modal.css", "multi.css"),
     "modal": ("modal.css",),
     "puzzle": ("puzzle.css",),
 }
 
 CRITICAL_PAGES: dict[str, tuple[Path, tuple[str, ...]]] = {
-    "dashboard": (WEB_DIR / "index.html", ("variables.css", "base.css", "layout.css", "dashboard.css")),
-    "play": (WEB_DIR / "play" / "index.html", ("variables.css", "base.css", "layout.css", "game.css")),
-    "battle": (WEB_DIR / "battle" / "index.html", ("variables.css", "base.css", "layout.css", "game.css", "battle.css")),
-    "multi": (WEB_DIR / "multi" / "index.html", ("variables.css", "base.css", "layout.css", "game.css", "multi.css")),
+    "dashboard": (WEB_DIR / "index.html", ("variables.css", "base.css", "layout.css", "auth.css", "dashboard.css")),
+    "play": (WEB_DIR / "play" / "index.html", ("variables.css", "base.css", "layout.css", "auth.css", "game.css")),
+    "battle": (WEB_DIR / "battle" / "index.html", ("variables.css", "base.css", "layout.css", "auth.css", "game.css", "battle.css")),
+    "multi": (WEB_DIR / "multi" / "index.html", ("variables.css", "base.css", "layout.css", "auth.css", "game.css", "multi.css")),
 }
 
 

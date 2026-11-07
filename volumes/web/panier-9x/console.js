@@ -99,6 +99,61 @@
       .catch(function (e) { toast(e.message, 'ko'); });
   }
 
+  // --- Dictionnaires Joueurs M14 -------------------------------------------
+  function renderDictList(containerId, countId, items) {
+    var box = el(containerId);
+    var countEl = el(countId);
+    if (countEl) countEl.textContent = (items || []).length;
+    if (!box) return;
+    if (!items || !items.length) { box.textContent = 'Aucun mot.'; return; }
+    box.innerHTML = items.map(function (w) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;border-bottom:1px solid #21262d">'
+        + '<span>' + esc(w.word) + '</span>'
+        + '<button class="secondary dict-del" data-id="' + esc(w.id) + '" style="padding:1px 6px;font-size:11px">✕</button>'
+        + '</div>';
+    }).join('');
+    box.querySelectorAll('.dict-del').forEach(function (b) {
+      b.addEventListener('click', function () { deleteDictWord(b.getAttribute('data-id')); });
+    });
+  }
+
+  function renderDictionary(data) {
+    renderDictList('list-nouns', 'count-nouns', (data && data.nouns) || []);
+    renderDictList('list-adjectives', 'count-adjectives', (data && data.adjectives) || []);
+    renderDictList('list-recovery', 'count-recovery', (data && data.recovery) || []);
+  }
+
+  function loadDictionary() {
+    api('/dictionary', { headers: authHeaders() })
+      .then(function (r) { renderDictionary(r); })
+      .catch(function () {});
+  }
+
+  function addDictWord() {
+    var type = (el('dict-type').value || '').trim();
+    var word = (el('dict-word').value || '').trim();
+    if (!word) { toast('Mot requis', 'ko'); return; }
+    api('/dictionary', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ word_type: type, word: word })
+    })
+      .then(function () {
+        el('dict-word').value = '';
+        toast('Mot ajouté au dictionnaire', 'ok');
+        loadDictionary();
+      })
+      .catch(function (e) { toast(e.message, 'ko'); });
+  }
+
+  function deleteDictWord(id) {
+    api('/dictionary/' + encodeURIComponent(id), { method: 'DELETE', headers: authHeaders() })
+      .then(function () {
+        toast('Mot supprimé', 'ok');
+        loadDictionary();
+      })
+      .catch(function (e) { toast(e.message, 'ko'); });
+  }
+
   function unlock() {
     el('gate').classList.add('hide');
     el('app').classList.remove('hide');
@@ -107,6 +162,7 @@
     el('state-dot').className = 'dot on';
     loadStats();
     loadWhitelist();
+    loadDictionary();
   }
 
   function fmt(n) { return (n === null || n === undefined) ? '—' : n; }
@@ -282,6 +338,8 @@
   });
   var wlAdd = el('wl-add');
   if (wlAdd) wlAdd.addEventListener('click', addWhitelist);
+  var dictAdd = el('dict-add');
+  if (dictAdd) dictAdd.addEventListener('click', addDictWord);
 
   if (token) {
     api('/whoami', { headers: authHeaders() }).then(unlock).catch(function () { logout(); });

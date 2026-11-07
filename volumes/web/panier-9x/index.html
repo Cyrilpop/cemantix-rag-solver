@@ -38,6 +38,7 @@
       <button data-tab="stats" class="active">Statistiques</button>
       <button data-tab="logs">Journaux</button>
       <button data-tab="actions">Actions</button>
+      <button data-tab="dictionary">Dictionnaires</button>
     </div>
 
     <div id="tab-stats">
@@ -92,6 +93,39 @@
           <button id="wl-add">Ajouter</button>
         </div>
         <div id="wl-list" class="muted" style="margin-top:8px">—</div>
+      </div>
+    </div>
+
+    <div id="tab-dictionary" class="hide">
+      <div class="card">
+        <h3 style="margin:0 0 6px;font-size:13px">Ajouter un mot au dictionnaire joueur (M14)</h3>
+        <p class="muted" style="margin:0 0 10px">Ajoute un mot actif pour la génération des pseudos loufoques [Nom][Adjectif] ou de la phrase secrète de secours.</p>
+        <div class="row" style="align-items:center">
+          <select id="dict-type" style="padding:6px;border-radius:4px;background:#161b22;color:#f0f6fc;border:1px solid #30363d">
+            <option value="noun">Nom (1er élément pseudo)</option>
+            <option value="adjective">Adjectif (2nd élément pseudo)</option>
+            <option value="recovery">Mot de secours (phrase 4 mots)</option>
+          </select>
+          <input type="text" id="dict-word" placeholder="Mot (ex: Faucon, Cosmique, boussole)" style="flex:1 1 200px" autocomplete="off">
+          <button id="dict-add">Ajouter</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 8px;font-size:13px">Vocabulaires actifs</h3>
+        <div class="row" style="gap:1rem;flex-wrap:wrap">
+          <div style="flex:1 1 220px">
+            <h4 style="margin:0 0 6px;font-size:12px">🐻 Noms (<span id="count-nouns">0</span>)</h4>
+            <div id="list-nouns" style="max-height:260px;overflow-y:auto;border:1px solid #30363d;padding:6px;border-radius:4px;font-size:12px" class="muted">—</div>
+          </div>
+          <div style="flex:1 1 220px">
+            <h4 style="margin:0 0 6px;font-size:12px">✨ Adjectifs (<span id="count-adjectives">0</span>)</h4>
+            <div id="list-adjectives" style="max-height:260px;overflow-y:auto;border:1px solid #30363d;padding:6px;border-radius:4px;font-size:12px" class="muted">—</div>
+          </div>
+          <div style="flex:1 1 220px">
+            <h4 style="margin:0 0 6px;font-size:12px">🔑 Récupération (<span id="count-recovery">0</span>)</h4>
+            <div id="list-recovery" style="max-height:260px;overflow-y:auto;border:1px solid #30363d;padding:6px;border-radius:4px;font-size:12px" class="muted">—</div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
