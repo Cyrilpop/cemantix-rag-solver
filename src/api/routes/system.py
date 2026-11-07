@@ -45,6 +45,11 @@ def _scrub_secret(data: dict) -> dict:
             if isinstance(step, dict) and str(step.get("word", "")).strip().lower() == secret:
                 step["word"] = MASK
 
+    if secret and isinstance(current.get("ai_hints"), list):
+        for hint in current["ai_hints"]:
+            if isinstance(hint, dict) and str(hint.get("hint_word", "")).strip().lower() == secret:
+                hint["hint_word"] = MASK
+
     # L'historique complet expose aussi le mot du jour (même entrée, clé "word").
     history = data.get("history")
     if isinstance(history, list):

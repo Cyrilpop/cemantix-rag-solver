@@ -61,6 +61,7 @@ from .seo_templates import (
     format_duration_fr,
     hub_url,
     parse_puzzle_date,
+    render_hints_component,
     render_page,
 )
 from .seo_archives import (
@@ -412,6 +413,7 @@ __all__ = [
     "_archive_href",
     "_tier_class",
     "_clue_rows",
+    "render_hints_component",
     # Archives
     "build_archive_page",
     "build_archives_index_page",

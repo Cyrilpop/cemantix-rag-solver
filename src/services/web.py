@@ -52,6 +52,27 @@ def build_web_data(
     else:
         current = None
 
+    if current is not None:
+        current = dict(current)
+        puzzle_date = str(current.get("date") or "")
+        if puzzle_date:
+            try:
+                from ..db import get_daily_ai_hints
+                raw_hints = get_daily_ai_hints(puzzle_date)
+                cleaned_hints = []
+                for h in (raw_hints or []):
+                    weight = h.get("weight")
+                    cleaned_hints.append({
+                        "hint_level": int(h.get("hint_level") or 1),
+                        "weight": float(weight) if weight is not None else 0.0,
+                        "hint_word": str(h.get("hint_word") or ""),
+                        "hint_phrase": str(h.get("hint_phrase") or ""),
+                        "is_revealed": bool(h.get("is_revealed")),
+                    })
+                current["ai_hints"] = cleaned_hints
+            except Exception:
+                current["ai_hints"] = []
+
     # 2. Statistiques globales (priorité calcul SQL direct PERF-04, repli mémoire)
     sql_stats = None
     try:

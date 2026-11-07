@@ -634,6 +634,17 @@ docker compose run --rm cemantix --generate-ai-hints
 docker compose run --rm cemantix --generate-ai-hints --date 2026-11-06 --force
 ```
 
+### Affichage des Indices IA sur la Page Mot du Jour & Double Commutateur (Jalon M13)
+La page hub à forte audience **`/mot-du-jour/`** propose un système de consultation d'indices intelligent, interactif et conforme aux exigences d'accessibilité ARIA (`role="tablist"`, `role="radiogroup"`) :
+1. **Double commutateur dynamique (zéro rechargement de page) :**
+   - **Commutateur 1 (Source) :** `[ 🤖 Indices IA (Gemini) ]` (par défaut) vs `[ 🌡️ Mots du solveur RAG ]`. En l'absence d'indices IA en base, le système bascule automatiquement sur les mots du solveur RAG sans rupture de mise en page.
+   - **Commutateur 2 (Format IA) :** `[ 📝 Phrases d'énigme ]` (par défaut) vs `[ 🎯 Mots repères ]`.
+2. **Masquage anti-spoiler strict :** Tous les indices sont initialement masqués par floutage (`filter: blur(8px)`, classe `.spoiler-text` avec `data-spoiler="true"`). Un clic sur la boîte ou sur le bouton « 👁️ Révéler l'indice » démasque l'indice choisi sans décalage de mise en page (CLS = 0).
+3. **Ordonnancement thermique gradué :**
+   - **Indice #1 (Poids 0.33) · Éloigné :** Ambiance abstraite ou toile de fond (zone froide, `.tier-cold`).
+   - **Indice #2 (Poids 0.66) · Intermédiaire :** Fonction et usage courant (zone tiède, `.tier-warm`).
+   - **Indice #3 (Poids 1.00) · Proche :** Analogie forte ou composant distinctif (zone brûlante, `.tier-fire`).
+
 ### Cache HTTP : cohérence avec la politique « no-cache »
 Le projet applique `Cache-Control: "no-cache, must-revalidate"` sur le code applicatif
 (voir l'encadré « Pourquoi aucun paramètre de version (`?v=...`) » plus haut) : la

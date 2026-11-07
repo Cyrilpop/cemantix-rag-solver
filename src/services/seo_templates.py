@@ -940,6 +940,93 @@ def render_page(
         var saved = localStorage.getItem("cemantix_theme");
         if (saved) document.documentElement.setAttribute("data-theme", saved);
       }} catch(e) {{}}
+
+      // M13 — Double Commutateur Dynamique & Masquage Anti-Spoiler
+      var tabAi = document.getElementById("tab-hints-ai");
+      var tabRag = document.getElementById("tab-hints-rag");
+      var panelAi = document.getElementById("panel-hints-ai");
+      var panelRag = document.getElementById("panel-hints-rag");
+      var formatToolbar = document.getElementById("hints-ai-format");
+      var btnPhrase = document.getElementById("btn-format-phrase");
+      var btnWord = document.getElementById("btn-format-word");
+
+      if (tabAi && tabRag && panelAi && panelRag) {{
+        tabAi.addEventListener("click", function() {{
+          tabAi.classList.add("active");
+          tabAi.setAttribute("aria-selected", "true");
+          tabRag.classList.remove("active");
+          tabRag.setAttribute("aria-selected", "false");
+          panelAi.classList.add("active");
+          panelAi.removeAttribute("hidden");
+          panelRag.classList.remove("active");
+          panelRag.setAttribute("hidden", "");
+          if (formatToolbar) formatToolbar.style.display = "";
+        }});
+
+        tabRag.addEventListener("click", function() {{
+          tabRag.classList.add("active");
+          tabRag.setAttribute("aria-selected", "true");
+          tabAi.classList.remove("active");
+          tabAi.setAttribute("aria-selected", "false");
+          panelRag.classList.add("active");
+          panelRag.removeAttribute("hidden");
+          panelAi.classList.remove("active");
+          panelAi.setAttribute("hidden", "");
+          if (formatToolbar) formatToolbar.style.display = "none";
+        }});
+      }}
+
+      if (btnPhrase && btnWord) {{
+        btnPhrase.addEventListener("click", function() {{
+          btnPhrase.classList.add("active");
+          btnPhrase.setAttribute("aria-checked", "true");
+          btnWord.classList.remove("active");
+          btnWord.setAttribute("aria-checked", "false");
+          var phrases = document.querySelectorAll(".hint-view-phrase");
+          var words = document.querySelectorAll(".hint-view-word");
+          phrases.forEach(function(el) {{ el.classList.add("active"); }});
+          words.forEach(function(el) {{ el.classList.remove("active"); }});
+        }});
+
+        btnWord.addEventListener("click", function() {{
+          btnWord.classList.add("active");
+          btnWord.setAttribute("aria-checked", "true");
+          btnPhrase.classList.remove("active");
+          btnPhrase.setAttribute("aria-checked", "false");
+          var phrases = document.querySelectorAll(".hint-view-phrase");
+          var words = document.querySelectorAll(".hint-view-word");
+          words.forEach(function(el) {{ el.classList.add("active"); }});
+          phrases.forEach(function(el) {{ el.classList.remove("active"); }});
+        }});
+      }}
+
+      var spoilerBoxes = document.querySelectorAll(".spoiler-box");
+      spoilerBoxes.forEach(function(box) {{
+        function reveal(e) {{
+          if (box.classList.contains("revealed")) return;
+          box.classList.add("revealed");
+          var btn = box.querySelector(".btn-reveal");
+          if (btn) btn.style.display = "none";
+          var texts = box.querySelectorAll(".spoiler-text");
+          texts.forEach(function(t) {{ t.removeAttribute("data-spoiler"); }});
+        }}
+        box.addEventListener("click", reveal);
+        var btn = box.querySelector(".btn-reveal");
+        if (btn) {{
+          btn.addEventListener("click", function(e) {{
+            e.stopPropagation();
+            reveal(e);
+          }});
+        }}
+      }});
+
+      // Révélation au clic des mots spoilers dans les tableaux RAG
+      document.addEventListener("click", function(e) {{
+        var sp = e.target.closest(".word-spoiler");
+        if (sp) {{
+          sp.classList.toggle("is-hidden");
+        }}
+      }});
     }});
   </script>
   {GTM_SNIPPET}
@@ -986,11 +1073,11 @@ def _tier_class(score) -> str:
     return "tier-fire"
 
 
-def _clue_rows(guesses: list, limit: int = 10, secret_word: Optional[str] = None) -> str:
-    """Lignes de tableau des mots les plus proches (indices sans spoiler)."""
+def _clue_rows(guesses: list, limit: int = 10, secret_word: Optional[str] = None, order_by_cold: bool = True) -> str:
+    """Lignes de tableau des mots les plus proches (indices sans spoiler, masqués par défaut)."""
     rows = []
     secret_norm = str(secret_word or "").strip().lower()
-    count = 0
+    valid_candidates = []
     for guess in (guesses or []):
         word = str(guess.get("word") or "").strip()
         if not word or word == "••••••••":
@@ -1001,18 +1088,171 @@ def _clue_rows(guesses: list, limit: int = 10, secret_word: Optional[str] = None
         permille = guess.get("permille")
         if (isinstance(score, (int, float)) and score >= 100.0) or (isinstance(permille, (int, float)) and permille >= 1000):
             continue
-        count += 1
+        valid_candidates.append(guess)
+        if len(valid_candidates) >= limit:
+            break
+
+    # Commence par les plus froids (tri par score croissant)
+    if order_by_cold and valid_candidates:
+        valid_candidates.sort(
+            key=lambda g: (
+                float(g.get("score") if g.get("score") is not None else 999.0),
+                float(g.get("permille") if g.get("permille") is not None else 999.0),
+            )
+        )
+
+    for count, guess in enumerate(valid_candidates, start=1):
+        word = str(guess.get("word") or "").strip()
+        score = guess.get("score")
+        permille = guess.get("permille")
         score_txt = f"{float(score):+.2f} °C" if isinstance(score, (int, float)) else "--"
         perm_txt = f"{int(permille)} ‰" if isinstance(permille, (int, float)) else "--"
         rows.append(
             f'          <tr><td class="num">{count}</td>'
-            f'<td><strong>{escape(word.capitalize())}</strong></td>'
+            f'<td><span class="word-spoiler is-hidden" data-action="spoiler" title="Cliquer pour afficher / masquer l\'indice"><strong>{escape(word.capitalize())}</strong></span></td>'
             f'<td class="num {escape(_tier_class(score))}">{escape(score_txt)}</td>'
             f'<td class="num">{escape(perm_txt)}</td></tr>'
         )
-        if count >= limit:
-            break
     return "\n".join(rows)
+
+
+_AI_HINT_LEVELS_META = {
+    1: {"tier": "tier-cold", "badge": "Indice #1 · Éloigné", "weight": "Similarité ~20%"},
+    2: {"tier": "tier-warm", "badge": "Indice #2 · Intermédiaire", "weight": "Similarité ~45%"},
+    3: {"tier": "tier-fire", "badge": "Indice #3 · Proche", "weight": "Zone brûlante"},
+}
+
+
+def render_hints_component(
+    *,
+    guesses: list,
+    ai_hints: Optional[list] = None,
+    date_fr: str = "",
+    secret_word: Optional[str] = None,
+    rel_methode: str = "methode/",
+) -> str:
+    """Rend le composant d'indices pour la page mot du jour avec double commutateur ou repli RAG."""
+    valid_ai_hints = [h for h in (ai_hints or []) if isinstance(h, dict)]
+    if valid_ai_hints:
+        sorted_hints = sorted(
+            valid_ai_hints,
+            key=lambda h: int(h.get("hint_level") or h.get("level") or 1),
+        )
+        cards = []
+        for h in sorted_hints:
+            level = int(h.get("hint_level") or h.get("level") or 1)
+            meta = _AI_HINT_LEVELS_META.get(level, {
+                "tier": "tier-cold",
+                "badge": f"Indice #{level}",
+                "weight": f"Poids {float(h.get('weight', 0)):.2f}",
+            })
+            raw_phrase = str(h.get("hint_phrase") or h.get("phrase") or "").strip()
+            clean_phrase = raw_phrase.strip('«»"\' ')
+            formatted_phrase = f"« {escape(clean_phrase)} »" if clean_phrase else ""
+
+            raw_word = str(h.get("hint_word") or h.get("word") or "").strip()
+            formatted_word = escape(raw_word.capitalize()) if raw_word else ""
+
+            cards.append(f"""      <!-- Carte Indice #{level} -->
+      <article class="ai-hint-card {meta['tier']}" data-level="{level}">
+        <header class="ai-hint-header">
+          <span class="hint-badge">{meta['badge']}</span>
+          <span class="hint-weight">{meta['weight']}</span>
+        </header>
+        <div class="ai-hint-content spoiler-box">
+          <div class="hint-view-phrase active">
+            <span class="spoiler-text" data-spoiler="true">{formatted_phrase}</span>
+          </div>
+          <div class="hint-view-word">
+            <span class="spoiler-text" data-spoiler="true">{formatted_word}</span>
+          </div>
+          <button type="button" class="btn-reveal" aria-label="Révéler l'indice {level}">👁️ Révéler l'indice</button>
+        </div>
+      </article>""")
+
+        cards_html = "\n".join(cards)
+        rag_rows = _clue_rows(guesses, limit=10, secret_word=secret_word)
+        rag_count = min(len(guesses or []), 10)
+
+        return f"""      <section class="card hints-section" id="hints-hub">
+        <h2>💡 Indices du mot du jour</h2>
+        <p class="hints-intro">
+          Besoin d'un coup de pouce sans gâcher votre partie ? Choisissez votre type d'aide.
+          Tous les indices sont masqués par défaut pour éviter tout spoiler.
+        </p>
+
+        <!-- Commutateur 1 : Source d'indices -->
+        <div class="hints-toolbar">
+          <div class="segmented-control" role="tablist" aria-label="Source des indices">
+            <button type="button" class="segment-btn active" id="tab-hints-ai" role="tab" aria-selected="true" aria-controls="panel-hints-ai">
+              <span class="btn-icon">🤖</span> Indices IA (Gemini)
+            </button>
+            <button type="button" class="segment-btn" id="tab-hints-rag" role="tab" aria-selected="false" aria-controls="panel-hints-rag">
+              <span class="btn-icon">🌡️</span> Mots du solveur RAG
+            </button>
+          </div>
+
+          <!-- Commutateur 2 : Format d'indice IA (affiché si IA actif) -->
+          <div class="segmented-control format-control" id="hints-ai-format" role="radiogroup" aria-label="Format des indices IA">
+            <button type="button" class="segment-btn active" id="btn-format-phrase" role="radio" aria-checked="true">
+              <span class="btn-icon">📝</span> Énigmes (Phrases)
+            </button>
+            <button type="button" class="segment-btn" id="btn-format-word" role="radio" aria-checked="false">
+              <span class="btn-icon">🎯</span> Mots repères
+            </button>
+          </div>
+        </div>
+
+        <!-- Panneau 1 : Indices IA (par défaut) -->
+        <div class="hints-panel active" id="panel-hints-ai" role="tabpanel" aria-labelledby="tab-hints-ai">
+          <div class="ai-hints-grid">
+{cards_html}
+          </div>
+        </div>
+
+        <!-- Panneau 2 : Mots calculés du solveur RAG (secondaire) -->
+        <div class="hints-panel" id="panel-hints-rag" role="tabpanel" aria-labelledby="tab-hints-rag" hidden>
+          <h3>🌡️ Les {rag_count} indices du mot du jour</h3>
+          <p>Le thermomètre sémantique officiel : plus le score en pour mille (‰) approche
+          1000, plus le mot est proche du mot secret, qui vaut exactement 1000 ‰.
+          <a href="{escape(rel_methode, quote=True)}">Comment lire ces indices&nbsp;?</a></p>
+          <div class="table-responsive">
+            <table>
+              <caption>Indices du {escape(date_fr)}, mesurés par le solveur RAG</caption>
+              <thead>
+                <tr><th scope="col">#</th><th scope="col">Mot</th><th scope="col">Score</th><th scope="col">Similarité</th></tr>
+              </thead>
+              <tbody>
+{rag_rows}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+"""
+
+    # Repli gracieux : aucun indice IA en base, on affiche directement le tableau RAG
+    if not guesses:
+        return ""
+
+    rag_rows = _clue_rows(guesses, limit=10, secret_word=secret_word)
+    rag_count = min(len(guesses), 10)
+    return f"""      <section class="card">
+        <h2>🌡️ Les {rag_count} indices du mot du jour</h2>
+        <p>Le thermomètre sémantique officiel : plus le score en pour mille (‰) approche
+        1000, plus le mot est proche du mot secret, qui vaut exactement 1000 ‰.
+        <a href="{escape(rel_methode, quote=True)}">Comment lire ces indices&nbsp;?</a></p>
+        <table>
+          <caption>Indices du {escape(date_fr)}, mesurés par le solveur RAG</caption>
+          <thead>
+            <tr><th scope="col">#</th><th scope="col">Mot</th><th scope="col">Score</th><th scope="col">Similarité</th></tr>
+          </thead>
+          <tbody>
+{rag_rows}
+          </tbody>
+        </table>
+      </section>
+"""
 
 
 __all__ = [
@@ -1053,4 +1293,5 @@ __all__ = [
     "_archive_href",
     "_tier_class",
     "_clue_rows",
+    "render_hints_component",
 ]

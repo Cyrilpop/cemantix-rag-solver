@@ -4,6 +4,29 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-06 · Jalon M13 : Affichage des Indices IA Gemini sur la Page Mot du Jour avec Double Commutateur Dynamique
+
+### Ajouté
+- **Composant d'Indices Hybride & Double Commutateur Dynamique (`src/services/seo_templates.py`, `src/services/seo_hubs.py`)** :
+  - Intégration sur la page hub `/mot-du-jour/` d'une section d'indices interactive avec double commutateur accessible (ARIA `role="tablist"`, `role="tab"`, `role="radiogroup"`, `role="radio"`).
+  - **Switch 1 (Source)** : bascule instantanée entre `[ 🤖 Indices IA (Gemini) ]` (actif par défaut) et `[ 🌡️ Mots du solveur RAG ]`.
+  - **Switch 2 (Format IA)** : bascule instantanée entre `[ 📝 Phrases d'énigme ]` (actif par défaut) et `[ 🎯 Mots repères ]`.
+  - **Repli gracieux (Graceful Fallback)** : bascule automatique sans rupture sur le tableau des indices du solveur RAG lorsqu'aucun indice IA n'est présent en base de données.
+- **Politique Anti-Spoiler Stricte & Masquage par Défaut** :
+  - Masquage initial de tous les indices (`filter: blur(8px)`, `user-select: none`, attributs `data-spoiler="true"`).
+  - Démasquage ciblé au clic sur la zone floutée ou sur le bouton « 👁️ Révéler l'indice » sans aucun décalage de mise en page (CLS = 0).
+- **Ordonnancement Sémantique & Paliers Thermiques** :
+  - Ordonnancement strict des indices IA avec Indice #1 = le plus éloigné (Niveau 1, poids 0.33, zone froide ~20%), Indice #2 = intermédiaire (Niveau 2, poids 0.66, zone tiède ~45%), Indice #3 = le déclic / le plus proche (Niveau 3, poids 1.00, zone brûlante).
+  - Badges de niveau et bordures thermiques (`tier-cold`, `tier-warm`, `tier-fire`).
+- **Styles CSS & Compatibilité Thèmes (`volumes/web/css/puzzle.css`, `volumes/web/css/dist/puzzle.css`)** :
+  - Contrôles segmentés (pill-switches), cartes responsives en grille et support complet des thèmes sombre et clair.
+- **Interactions Client Vanilla (`volumes/web/js/hints.js`, `src/services/seo_templates.py`)** :
+  - Contrôleur JavaScript vanilla ultra-léger sans framework tiers ni requête HTTP bloquante.
+- **Suite de Tests Unitaires Dédiée (`tests/test_ui_indices_ia.py`)** :
+  - 7 nouveaux tests validant les commutateurs par défaut, l'ordre des cartes, l'anti-spoiler, le repli RAG et l'accessibilité ARIA (suite globale portée à 420 tests).
+
+---
+
 ## [Non publié] - 2026-11-06 · Jalon M12 : Génération & Persistance d'Indices IA par Google Gemini
 
 ### Ajouté

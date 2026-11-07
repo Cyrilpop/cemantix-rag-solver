@@ -7,6 +7,11 @@ Google Cémantix : « mot du jour » (/mot-du-jour/) et « méthode & indices »
 from html import escape
 from typing import Optional
 
+try:
+    from ..db import get_daily_ai_hints
+except (ImportError, ValueError):
+    from src.db import get_daily_ai_hints
+
 from .seo_templates import (
     METHODE_DIRNAME,
     MOT_DU_JOUR_DIRNAME,
@@ -21,6 +26,7 @@ from .seo_templates import (
     format_date_short_fr,
     format_duration_fr,
     hub_url,
+    render_hints_component,
     render_page,
 )
 
@@ -104,7 +110,7 @@ def _hub_breadcrumb_json_ld(label: str, canonical: str) -> dict:
     }
 
 
-def _render_hub_page(*, titre, description, canonical, json_ld, entry, entries, date_fr, guesses=None) -> str:
+def _render_hub_page(*, titre, description, canonical, json_ld, entry, entries, date_fr, guesses=None, ai_hints=None) -> str:
     """Corps de la page hub « mot du jour » : résumé, indices, solution, FAQ, archives."""
     if entry:
         puzzle = entry.get("puzzle")
@@ -133,22 +139,13 @@ def _render_hub_page(*, titre, description, canonical, json_ld, entry, entries, 
             f"score en degrés Celsius et leur similarité en pour mille, puis la solution, "
             f"gardée derrière un bloc dépliable pour ne spoiler personne."
         )
-        clues_html = f"""      <section class="card">
-        <h2>🌡️ Les {min(len(guesses), 10)} indices du mot du jour</h2>
-        <p>Le thermomètre sémantique officiel : plus le score en pour mille (‰) approche
-        1000, plus le mot est proche du mot secret, qui vaut exactement 1000 ‰.
-        <a href="{escape(_rel_index('methode/'), quote=True)}">Comment lire ces indices&nbsp;?</a></p>
-        <table>
-          <caption>Indices du {escape(date_fr)}, mesurés par le solveur RAG</caption>
-          <thead>
-            <tr><th scope="col">#</th><th scope="col">Mot</th><th scope="col">Score</th><th scope="col">Similarité</th></tr>
-          </thead>
-          <tbody>
-{_clue_rows(guesses, limit=10, secret_word=word)}
-          </tbody>
-        </table>
-      </section>
-""" if guesses else ""
+        clues_html = render_hints_component(
+            guesses=guesses,
+            ai_hints=ai_hints,
+            date_fr=date_fr,
+            secret_word=word,
+            rel_methode=_rel_index("methode/"),
+        )
         solution_html = f"""      <details class="reveal">
         <summary>👁️ Afficher la solution du Cémantix du {escape(date_fr)}</summary>
         <p class="reveal-word">{escape(word.upper())}</p>
@@ -210,11 +207,20 @@ def _render_hub_page(*, titre, description, canonical, json_ld, entry, entries, 
     )
 
 
-def build_mot_du_jour_page(entry: Optional[dict], entries: list) -> str:
+def build_mot_du_jour_page(entry: Optional[dict], entries: list, ai_hints: Optional[list] = None) -> str:
     """Page hub `/mot-du-jour/` : la requête dominante de la tendance Google."""
     canonical = hub_url(MOT_DU_JOUR_DIRNAME)
     date_fr = format_date_fr(entry.get("date")) if entry else ""
     date_court = format_date_short_fr(entry.get("date")) if entry else ""
+    puzzle_date = str(entry.get("date") or "") if entry else ""
+
+    if ai_hints is None and puzzle_date:
+        try:
+            ai_hints = get_daily_ai_hints(puzzle_date)
+        except Exception:
+            ai_hints = []
+    elif ai_hints is None:
+        ai_hints = []
     if entry:
         puzzle = entry.get("puzzle")
         p_clean = str(puzzle).lstrip("#").strip() if puzzle else ""
@@ -284,6 +290,7 @@ def build_mot_du_jour_page(entry: Optional[dict], entries: list) -> str:
         entries=entries,
         date_fr=date_fr,
         guesses=guesses,
+        ai_hints=ai_hints,
     )
 
 
