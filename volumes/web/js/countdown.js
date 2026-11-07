@@ -4,7 +4,7 @@
 
 let countdownInterval = null;
 
-export function initMidnightCountdown() {
+export function initMidnightCountdown(onMidnight) {
   const cdHours = document.getElementById("cd-hours");
   const cdMinutes = document.getElementById("cd-minutes");
   const cdSeconds = document.getElementById("cd-seconds");
@@ -22,11 +22,29 @@ export function initMidnightCountdown() {
     hourCycle: "h23",
   });
 
+  const parisDateFormatter = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  let lastDate = parisDateFormatter.format(new Date());
+
   // Dernière valeur affichée, pour ne toucher le DOM qu'en cas de changement réel.
   let lastRendered = "";
 
   function update() {
     const now = new Date();
+    const currentDate = parisDateFormatter.format(now);
+
+    // Détection du passage à minuit (changement de date à Paris)
+    if (currentDate !== lastDate) {
+      lastDate = currentDate;
+      if (typeof onMidnight === "function") {
+        onMidnight();
+      }
+    }
 
     const parts = parisFormatter.formatToParts(now);
     let h = 0, m = 0, s = 0;

@@ -107,6 +107,7 @@ from .seo_google import (
 )
 from .seo_indexnow import (
     get_indexnow_key,
+    notify_daily_urls_to_indexnow,
     submit_indexnow_urls,
 )
 
@@ -245,7 +246,12 @@ def prerender_dashboard(entry: Optional[dict], web_root: Path = None) -> bool:
 # --------------------------------------------------------------------------- #
 # Publication & Point d'entrée
 # --------------------------------------------------------------------------- #
-def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = None) -> dict:
+def publish_seo_pages(
+    history: list,
+    generated_at: datetime,
+    web_root: Path = None,
+    force_indexation: bool = False,
+) -> dict:
     """Génère les pages d'archives, l'index paginé, le sitemap et les manifestes ARD.
 
     Seuls les puzzles gagnés sont publiés : une page sans solution n'apporte aucune
@@ -313,18 +319,14 @@ def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = No
     # Notification push instantanée (Google Indexing API & IndexNow Bing/Yahoo)
     try:
         from .seo_google import notify_daily_urls_to_google
-        from .seo_indexnow import submit_indexnow_urls
-        hot_urls = [
-            f"{SITE_ORIGIN}/",
-            f"{SITE_ORIGIN}/mot-du-jour/",
-        ]
-        if entries:
-            newest_date = str(entries[0].get("date"))
-            if newest_date:
-                hot_urls.append(f"{SITE_ORIGIN}/puzzles/{newest_date}/")
+        from .seo_indexnow import notify_daily_urls_to_indexnow
 
-        written["google_indexing"] = notify_daily_urls_to_google(entries, site_origin=SITE_ORIGIN)
-        indexnow_res = submit_indexnow_urls(hot_urls, web_root=root)
+        written["google_indexing"] = notify_daily_urls_to_google(
+            entries, site_origin=SITE_ORIGIN, force=force_indexation
+        )
+        indexnow_res = notify_daily_urls_to_indexnow(
+            entries, site_origin=SITE_ORIGIN, web_root=root, force=force_indexation
+        )
         written["indexnow"] = bool(indexnow_res.get("success"))
     except Exception as ind_exc:
         log(f"⚠️  [SEO] Notification d'indexation instantanée ignorée ({ind_exc})")
@@ -344,7 +346,7 @@ def publish_seo_pages(history: list, generated_at: datetime, web_root: Path = No
     return written
 
 
-def ensure_seo_published(web_root: Path = None) -> Optional[dict]:
+def ensure_seo_published(web_root: Path = None, force_indexation: bool = False) -> Optional[dict]:
     """Garantit la présence et la conformité de `sitemap.xml`, `.well-known/` et `/puzzles/` au démarrage.
 
     Invoqué automatiquement au lancement des conteneurs (`cemantix_web` et
@@ -367,6 +369,7 @@ def ensure_seo_published(web_root: Path = None) -> Optional[dict]:
             history=history,
             generated_at=datetime.now(PARIS_TZ),
             web_root=web_root,
+            force_indexation=force_indexation,
         )
     except Exception as exc:
         log(f"⚠️  [SEO] Génération automatique SEO/ARD au démarrage en échec : {exc}")
@@ -462,4 +465,5 @@ __all__ = [
     # IndexNow
     "get_indexnow_key",
     "submit_indexnow_urls",
+    "notify_daily_urls_to_indexnow",
 ]

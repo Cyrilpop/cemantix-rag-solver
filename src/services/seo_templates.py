@@ -45,8 +45,8 @@ _CSS_LIGHT_RE = re.compile(
 )
 
 NAV_LINKS = [
-    ("Tableau de Bord", ""),
-    ("Mot du jour", "mot-du-jour/"),
+    ("Mot du jour", ""),
+    ("Indices du jour", "mot-du-jour/"),
     ("Archives", "puzzles/"),
     ("Méthode & indices", "methode/"),
     ("Jouer Solo", "play/"),

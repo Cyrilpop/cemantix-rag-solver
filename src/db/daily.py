@@ -48,6 +48,7 @@ def _row_to_entry(row: dict) -> dict:
         "trajectory": trajectory,
         "is_revealed": bool(row.get("is_revealed", False)),
         "google_indexed_at": str(row["google_indexed_at"]) if row.get("google_indexed_at") else None,
+        "indexnow_indexed_at": str(row["indexnow_indexed_at"]) if row.get("indexnow_indexed_at") else None,
         "timestamp": str(row["solved_at"]) if row.get("solved_at") else "",
     }
 
@@ -66,14 +67,15 @@ def save_daily_puzzle(entry: dict) -> bool:
     trajectory = entry.get("trajectory") or []
     is_revealed = bool(entry.get("is_revealed", False))
     google_indexed_at = entry.get("google_indexed_at")
+    indexnow_indexed_at = entry.get("indexnow_indexed_at")
     solved_at = entry.get("timestamp") or entry.get("solved_at") or datetime.now(timezone.utc).isoformat()
 
     query = """
     INSERT INTO daily_puzzles (
         date, puzzle_id, secret_word, tries_count, attempts_count,
         source, duration_seconds, win, top_guesses, trajectory,
-        is_revealed, google_indexed_at, solved_at
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        is_revealed, google_indexed_at, indexnow_indexed_at, solved_at
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     ON CONFLICT (date) DO UPDATE SET
         puzzle_id = EXCLUDED.puzzle_id,
         secret_word = EXCLUDED.secret_word,
@@ -86,12 +88,13 @@ def save_daily_puzzle(entry: dict) -> bool:
         trajectory = EXCLUDED.trajectory,
         is_revealed = EXCLUDED.is_revealed,
         google_indexed_at = COALESCE(daily_puzzles.google_indexed_at, EXCLUDED.google_indexed_at),
+        indexnow_indexed_at = COALESCE(daily_puzzles.indexnow_indexed_at, EXCLUDED.indexnow_indexed_at),
         solved_at = EXCLUDED.solved_at;
     """
     params = (
         date_val, puzzle_id, secret_word, tries_count, attempts_count,
         source, duration_seconds, win, top_guesses, trajectory,
-        is_revealed, google_indexed_at, solved_at,
+        is_revealed, google_indexed_at, indexnow_indexed_at, solved_at,
     )
     db.execute(query, params)
     return True
@@ -142,6 +145,57 @@ def is_daily_puzzle_indexed(date_str: str) -> bool:
         from ..services.daemon import load_history
         for entry in load_history():
             if str(entry.get("date")) == str(date_str) and entry.get("google_indexed_at"):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def mark_daily_puzzle_indexnow_indexed(date_str: str, indexed_at: Optional[str] = None) -> bool:
+    """Marque le puzzle d'une date comme notifié auprès d'IndexNow (Bing/Yahoo)."""
+    if not date_str:
+        return False
+    ts = indexed_at or datetime.now(timezone.utc).isoformat()
+    try:
+        query = "UPDATE daily_puzzles SET indexnow_indexed_at = %s WHERE date = %s;"
+        db.execute(query, (ts, str(date_str)))
+    except Exception:
+        pass
+
+    # Repli de synchronisation dans daily_history.json
+    try:
+        from ..services.daemon import load_history, save_history
+        history = load_history()
+        updated = False
+        for entry in history:
+            if str(entry.get("date")) == str(date_str):
+                entry["indexnow_indexed_at"] = ts
+                updated = True
+                break
+        if updated:
+            save_history(history)
+    except Exception:
+        pass
+    return True
+
+
+def is_daily_puzzle_indexnow_indexed(date_str: str) -> bool:
+    """Vérifie si le puzzle d'une date donnée a déjà été notifié à IndexNow."""
+    if not date_str:
+        return False
+    try:
+        query = "SELECT indexnow_indexed_at FROM daily_puzzles WHERE date = %s;"
+        row = db.fetch_one(query, (str(date_str),))
+        if row and row.get("indexnow_indexed_at"):
+            return True
+    except Exception:
+        pass
+
+    # Repli sur l'historique JSON
+    try:
+        from ..services.daemon import load_history
+        for entry in load_history():
+            if str(entry.get("date")) == str(date_str) and entry.get("indexnow_indexed_at"):
                 return True
     except Exception:
         pass

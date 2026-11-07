@@ -241,26 +241,17 @@ export function initDashboard() {
     });
   }
 
-  initMidnightCountdown();
+  initMidnightCountdown(() => {
+    // Le renouvellement du mot du jour intervient à minuit (00h00 heure de Paris).
+    // Une fois le mot résolu par le démon autonome, on actualise automatiquement les données.
+    setTimeout(() => fetchDashboardData(true), 3000);
+    setTimeout(() => fetchDashboardData(true), 12000);
+  });
   initTrajectoryModal();
   fetchDashboardData();
 
-  // Resynchronisation toutes les 30 s, suspendue quand l'onglet est masqué :
-  // les données ne bougent qu'à minuit, et un onglet en arrière-plan n'a rien à
-  // afficher. Au retour, on resynchronise immédiatement pour ne pas montrer un
-  // état périmé pendant les 30 s suivantes.
-  let dashboardTimer = setInterval(() => fetchDashboardData(false), 30000);
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) {
-      clearInterval(dashboardTimer);
-      dashboardTimer = null;
-      return;
-    }
-    fetchDashboardData(false);
-    if (!dashboardTimer) {
-      dashboardTimer = setInterval(() => fetchDashboardData(false), 30000);
-    }
-  });
+  // Aucun auto-refresh périodique : les données sont stables et ne changent
+  // qu'à minuit lors de la parution du mot du jour (géré par initMidnightCountdown).
 }
 
 export function revealSecretWord() {

@@ -1104,6 +1104,10 @@
 }
 
 /* History Table */
+#history-table {
+  scroll-margin-top: 5rem;
+}
+
 .history-header {
   flex-wrap: wrap;
   gap: 1rem;

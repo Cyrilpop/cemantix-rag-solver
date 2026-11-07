@@ -118,3 +118,62 @@ def submit_indexnow_urls(
             "status_code": -1,
             "message": str(exc),
         }
+
+
+def notify_daily_urls_to_indexnow(
+    entries: List[Dict[str, Any]],
+    site_origin: Optional[str] = None,
+    web_root: Optional[Path] = None,
+    force: bool = False,
+    timeout: int = 10,
+) -> Dict[str, Any]:
+    """Notifie les URLs chaudes du jour à IndexNow (Bing / Yahoo / etc.).
+
+    Vérifie au préalable si le puzzle du jour a déjà été notifié à IndexNow
+    afin de prévenir les erreurs HTTP 429 (TooManyRequests) lors des redémarrages
+    successifs du conteneur.
+    Le paramètre `force=True` contourne cette protection.
+    """
+    newest_date = str(entries[0].get("date")) if entries else ""
+
+    # Protection quota / anti-429 : vérifier si déjà notifié
+    if newest_date and not force:
+        try:
+            from ..db import is_daily_puzzle_indexnow_indexed
+            if is_daily_puzzle_indexnow_indexed(newest_date):
+                log(
+                    f"ℹ️  [INDEXNOW] Puzzle du {newest_date} déjà notifié à IndexNow "
+                    "(quota et anti-429 préservés). Utilisez force=True pour forcer."
+                )
+                return {
+                    "success": True,
+                    "skipped": True,
+                    "reason": "already_indexed",
+                    "date": newest_date,
+                }
+        except Exception as check_exc:
+            log(f"⚠️  [INDEXNOW] Impossible de vérifier l'état d'indexation IndexNow ({check_exc})")
+
+    origin = (site_origin or SITE_ORIGIN).rstrip("/")
+    hot_urls = [
+        f"{origin}/",
+        f"{origin}/mot-du-jour/",
+    ]
+    if newest_date:
+        hot_urls.append(f"{origin}/puzzles/{newest_date}/")
+
+    res = submit_indexnow_urls(
+        urls=hot_urls,
+        web_root=web_root,
+        timeout=timeout,
+    )
+
+    # Si succès (200 ou 202), marquer en base
+    if newest_date and res.get("success"):
+        try:
+            from ..db import mark_daily_puzzle_indexnow_indexed
+            mark_daily_puzzle_indexnow_indexed(newest_date)
+        except Exception as mark_exc:
+            log(f"⚠️  [INDEXNOW] Erreur marquage d'indexation IndexNow en base : {mark_exc}")
+
+    return res
