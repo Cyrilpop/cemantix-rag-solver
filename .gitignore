@@ -76,6 +76,9 @@ Thumbs.db
 
 # --- Fichiers et configurations locales / temporaires -----------------------
 .agents/
+AGENTS.md
+project-memory.md
+.gitattributes
 Caddyfile
 docker-compose.local.yml
 volumes/nginx/
