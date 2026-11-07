@@ -4,6 +4,19 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-07 · Conformité Google OAuth : FAQ Règles de Confidentialité et CGU
+
+### Ajouté
+- **Sections FAQ Règles de Confidentialité & Conditions d'Utilisation (`volumes/web/index.html`, `volumes/web/js/app.js`, `volumes/web/css/dashboard.css`)** :
+  - Intégration dans la FAQ interactive de deux questions/réponses complètes répondant aux prérequis de l'écran de consentement Google OAuth et aux exigences RGPD :
+    - **Règles de confidentialité (`#confidentialite`)** : transparence sur la non-collecte de données personnelles nominatives, précision sur l'usage technique exclusif des identifiants Google OAuth (indexation Search Console / Indexing API sans accès aux données utilisateur), absence de cookies traceurs/publicitaires, persistance locale (`localStorage`) et rappel des droits de l'utilisateur.
+    - **Conditions d'utilisation (`#conditions-utilisation`)** : nature gratuite et pédagogique du service, indépendance vis-à-vis du jeu officiel Cémantix (certitudes.org), clause de fourniture « en l'état » et respect de l'infrastructure.
+  - Balisage Schema.org JSON-LD `FAQPage` enrichi avec ces deux nouvelles entrées pour l'éligibilité aux résultats enrichis Google.
+  - Maillage direct dans les pieds de page (`app-footer`) de l'ensemble des pages web applicatives (`/`, `/play/`, `/battle/`, `/multi/`, `/defi/`).
+  - Gestion des ancres dans `js/app.js` (`openDetailsOnHash`) dépliant automatiquement l'accordéon ciblé lors de la navigation directe (`#confidentialite`, `#conditions-utilisation`).
+
+---
+
 ## [Non publié] - 2026-11-07 · Indexation Instantanée Exhaustive des Pages Hubs & Archives
 
 ### Modifié
