@@ -131,7 +131,7 @@ Avant toute modification, deux suites de tests de caractérisation ont été cr�
        Ou utiliser : python tools/agent_find.py --safe-html volumes/web/index.html
     ```
   - Mode lecture masquée `--safe-html` : remplace la ligne minifiée par un repère de 120 caractères.
-- Mise à jour de [`AGENTS.md`](../../AGENTS.md) : plages de lecture recommandées pour chaque page HTML excluant le bloc critique.
+- Mise à jour de `AGENTS.md` : plages de lecture recommandées pour chaque page HTML excluant le bloc critique.
 
 ---
 

@@ -55,7 +55,7 @@ Quatre tâches de développement représentatives des différents sous-systèmes
   - L'agent charge `README.md` et `CHANGELOG.md` au démarrage.
   - L'agent charge les fichiers sources intégraux dès qu'un sous-système est mentionné.
 - **Stratégie B (Context-Aware / Optimisée M0.1) :**
-  - L'agent lit [`AGENTS.md`](../../AGENTS.md) (~780 tokens) et consulte la section utile de [`project-memory.md`](../../project-memory.md).
+  - L'agent lit `AGENTS.md` (~780 tokens) et consulte la section utile de `project-memory.md`.
   - L'agent utilise [`tools/agent_find.py`](../../tools/agent_find.py) ou `rg` pour localiser le symbole exact.
   - L'agent lit **exclusivement la plage de lignes utile** (`read_file(StartLine, EndLine)`).
   - L'agent applique les exclusions strictes (aucun chargement de `CHANGELOG.md`, `lexique_fr.txt`, CSS `dist/`, etc.).
@@ -100,12 +100,12 @@ TASK-D (Solver) :
 ## 5. Mesures d'Optimisation Mises en Œuvre
 
 ### 5.1 Séparation Stricte des Rôles entre `AGENTS.md` et `project-memory.md`
-- **[`AGENTS.md`](../../AGENTS.md)** est désormais le point d'entrée opérationnel exclusif (~780 tokens) :
+- **`AGENTS.md`** est désormais le point d'entrée opérationnel exclusif (~780 tokens) :
   - Définit le flux en 7 étapes.
   - Fixe la liste des exclusions contextuelles.
   - Rappelle l'environnement Docker obligatoire (Python 3.12).
   - Fournit la table de navigation rapide par fichier et par plage de lignes typique.
-- **[`project-memory.md`](../../project-memory.md)** est la base de connaissances architecturale (~2 800 tokens) :
+- **`project-memory.md`** est la base de connaissances architecturale (~2 800 tokens) :
   - Toutes les duplications de commandes et de consignes opérationnelles ont été éliminées.
   - Résume le fonctionnement des 3 conteneurs, les points d'entrée et les invariants absolus (anti-spoiler, repli SQLite).
 
