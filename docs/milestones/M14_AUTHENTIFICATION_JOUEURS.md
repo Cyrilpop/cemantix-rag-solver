@@ -43,7 +43,7 @@ Le présent **Jalon M14** introduit un système d'authentification et d'identit�
 
 ### 2.1 Schéma Relationnel PostgreSQL & Idempotence (`database/init.sql`)
 
-La création de la table doit être **100 % idempotente** :
+La création des tables doit être **100 % idempotente** :
 - Exécutable à l'initialisation du conteneur PostgreSQL via `/docker-entrypoint-initdb.d/init.sql`.
 - Ré-exécutable sans erreur 20 fois d'affilée (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`).
 
@@ -66,13 +66,25 @@ CREATE TABLE IF NOT EXISTS players (
 CREATE INDEX IF NOT EXISTS idx_players_token ON players(auth_token);
 CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
 CREATE INDEX IF NOT EXISTS idx_players_google_sub ON players(google_sub);
+
+-- 10. Dictionnaire dynamique de vocabulaire pour identités & récupération (M14)
+-- Types : 'noun' (Noms), 'adjective' (Adjectifs), 'recovery' (Mots de secours)
+CREATE TABLE IF NOT EXISTS player_dictionary (
+    id SERIAL PRIMARY KEY,
+    word_type VARCHAR(16) NOT NULL,            -- 'noun', 'adjective', 'recovery'
+    word VARCHAR(32) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(word_type, word)
+);
+CREATE INDEX IF NOT EXISTS idx_dict_type ON player_dictionary(word_type, is_active);
 ```
 
 ### 2.2 Repli Local Idempotent SQLite (`src/db/connection.py`)
 
 Afin de garantir le fonctionnement des tests unitaires et du mode autonome sans conteneur PostgreSQL :
 - Intégration du schéma DDL équivalent dans `PG_SCHEMA` et `SQLITE_SCHEMA`.
-- Gestion des migrations douces idempotentes au démarrage applicatif Python : vérification de l'existence de la table `players` et création automatique si absente lors de l'appel à `init_db()` ou à la connexion.
+- Gestion des migrations douces idempotentes au démarrage applicatif Python : vérification de l'existence des tables `players` et `player_dictionary`, création automatique si absentes et amorçage (*seeding*) automatique du dictionnaire par défaut si la table est vide.
 
 ```sql
 -- Schéma SQLite équivalent
@@ -92,19 +104,28 @@ CREATE TABLE IF NOT EXISTS players (
 );
 CREATE INDEX IF NOT EXISTS idx_players_token ON players(auth_token);
 CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
+
+CREATE TABLE IF NOT EXISTS player_dictionary (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    word_type TEXT NOT NULL,
+    word TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(word_type, word)
+);
+CREATE INDEX IF NOT EXISTS idx_dict_type ON player_dictionary(word_type, is_active);
 ```
 
 ### 2.3 Service Métier d'Authentification (`src/services/player_auth.py`)
 
 Ce service centralise :
-1. **Générateur de pseudos loufoques :**
-   - Deux listes de vocabulaire soignées en français :
-     - Adjectifs : *Cosmique, Furtif, Flamboyant, Électrique, Solaire, Malicieux, Philosophe, Gourmand, Lunaire, Véloce, Agile, Héroïque, etc.*
-     - Animaux / Figurants : *Castor, Pangolin, Suricate, Caméléon, Lémurien, Tournesol, Faucon, Hérisson, Renard, Blaireau, Koala, Lynx, etc.*
-   - Combinaison déterministe avec suffixe numérique aléatoire en cas de collision (ex: `CastorCosmique73`).
+1. **Générateur de pseudos loufoques (Syntaxe stricte : `[Nom][Adjectif]`) :**
+   - **Règle grammaticale absolue en français :** Ordre strict `Nom` suivi de l'`Adjectif` (ex: `CastorCosmique`, `PangolinFurtif`, `SuricateFlamboyant`). Aucun mélange inversé `AdjectifNom`.
+   - **Contrainte de longueur et casse :** CamelCase sans espace, longueur totale bornée entre 8 et 24 caractères. En cas de collision en base, ajout d'un suffixe numérique aléatoire (ex: `CastorCosmique42`).
+   - **Chargement dynamique :** Lecture en base de données (`player_dictionary`) avec cache mémoire optimisé pour la performance, et repli de secours sur une liste codée en dur si la table est momentanément inaccessible.
 2. **Générateur de phrases de secours :**
-   - Dictionnaire dédié de 256 ou 512 mots concrets simples de la langue française, sans ambiguïté orthographique ni accents piégeux (ex: *falaise, boussole, navire, volcan, cristal, citron, cascade, comete, horizon, galaxie, nuage, riviere...*).
-   - Sélection aléatoire cryptographiquement sûre de 4 mots (`secrets.choice`).
+   - Sélection aléatoire cryptographiquement sûre (`secrets.choice`) de 4 mots issus de `player_dictionary` (`word_type = 'recovery'`).
+   - Dictionnaire de base : au moins 256 mots concrets simples de la langue française, sans ambiguïté orthographique ni accents piégeux (ex: *falaise, boussole, navire, volcan, cristal, citron, cascade, comete, horizon, galaxie, nuage, riviere...*).
 3. **Sécurité cryptographique des mots de passe & tokens :**
    - Hachage sécurisé : `hashlib.pbkdf2_hmac` avec salt aléatoire de 16 octets et 200 000 itérations (inclus dans la bibliothèque standard Python, évitant toute dépendance C compilée fragile), ou `bcrypt` si disponible.
    - Normalisation stricte de la phrase de secours avant hachage (minuscules, retrait des accents éventuels, suppression des espaces superflus, jointure par tirets).
@@ -121,20 +142,34 @@ Ce service centralise :
 | `POST` | `/api/player/claim` | Protection du compte par mot de passe | `{ "password": "..." }` + Header `Authorization: Bearer <auth_token>` | `{ "success": true, "is_claimed": true, "recovery_phrase": "mot1 mot2 mot3 mot4" }` |
 | `POST` | `/api/player/login` | Connexion depuis un autre appareil | `{ "username": "...", "password": "..." }` | `{ "player_id", "auth_token", "username", "can_change_username", "is_claimed" }` |
 | `POST` | `/api/player/reset-password` | Réinitialisation par phrase secrète | `{ "username": "...", "recovery_phrase": "...", "new_password": "..." }` | `{ "success": true, "message": "Mot de passe réinitialisé avec succès" }` |
+| `GET` | `/api/snap-9x/dictionary` | (Admin) Liste des mots par catégorie | Header Admin Token / Session | `{ "nouns": [...], "adjectives": [...], "recovery": [...] }` |
+| `POST` | `/api/snap-9x/dictionary` | (Admin) Ajout d'un mot dans le dictionnaire | `{ "word_type": "noun|adjective|recovery", "word": "..." }` | `{ "success": true, "id": 123 }` |
+| `DELETE` | `/api/snap-9x/dictionary/<id>` | (Admin) Désactivation ou suppression d'un mot | Header Admin Token / Session | `{ "success": true }` |
 
 #### Précision Routage & Reverse-Proxy (`Caddyfile` hors Git) :
-- **Règle de routage existante :** Dans `Caddyfile`, toutes les requêtes préfixées par `/api/*` sont déjà captées et transmises au conteneur web :
+- **Routage automatique :** Dans `Caddyfile`, toutes les requêtes préfixées par `/api/*` sont déjà captées et transmises au conteneur web :
   ```caddy
   handle /api/* {
       header X-Robots-Tag "noindex, nofollow"
       reverse_proxy cemantix_web:8000
   }
   ```
-- **Conséquence directe :** En positionnant l'intégralité des endpoints d'authentification sous `/api/player/*`, **aucune modification de route n'est nécessaire dans `Caddyfile`**. Tout arrive directement sur `cemantix_web:8000`.
+- **Conséquence directe :** En positionnant l'intégralité des endpoints sous `/api/player/*` et `/api/snap-9x/dictionary`, **aucune modification de route n'est nécessaire dans `Caddyfile`**. Tout arrive directement sur `cemantix_web:8000`.
 - **Cache-Control & Sécurité :** Le backend Python doit impérativement émettre les en-têtes `Cache-Control: no-store, private` sur tous les endpoints `/api/player/*` afin d'éviter toute mise en cache de jetons de session ou de phrases de secours par les mandataires ou navigateurs.
 - **Rappel opérationnel (`Caddyfile` hors Git) :** Le fichier `Caddyfile` étant ignoré par Git (`.gitignore`), si une directive spécifique venait à être ajoutée (ex: limitation de débit *rate-limiting* ou en-têtes spécifiques), elle devra être appliquée manuellement sur le fichier local et sur le VPS `/docker/cemantix-rag-solver/Caddyfile` puis rechargée via `docker compose exec caddy caddy reload`.
 
-### 2.5 Composants Frontend & Expérience Utilisateur
+### 2.5 Console d'Exploitation Administrateur (`volumes/web/panier-9x`)
+
+Ajout d'un panneau d'administration dans la console sécurisée `/panier-9x` (section "Gestion des vocabulaires" dans Actions ou onglet dédié) :
+- **Maintenance des Listes de Vocabulaire Joueurs :**
+  - Affichage paginé ou groupé par type :
+    - 🐻 **Noms (Animaux / Personnages)** (1er élément du pseudo).
+    - ✨ **Adjectifs (Qualificatifs français)** (2nd élément du pseudo).
+    - 🔑 **Mots de Récupération** (phrase secrète de 4 mots).
+  - Formulaire d'ajout immédiat avec validation (pas d'espaces, pas de caractères spéciaux, respect de la casse).
+  - Suppression ou bascule actif/inactif sans redémarrage de conteneur.
+
+### 2.6 Composants Frontend & Expérience Utilisateur
 
 1. **Badge Header (`src/services/layout_sync.py`) :**
    - Insertion dans le composant réutilisable d'en-tête (à côté du switch dark/light theme) d'un conteneur discret :

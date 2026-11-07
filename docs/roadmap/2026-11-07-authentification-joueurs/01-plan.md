@@ -26,40 +26,32 @@ L'objectif de cette évolution est de déployer un système d'authentification i
 
 ## 2. Spécification Détaillée des Actions (Findings AUTH-01 à AUTH-06)
 
-### AUTH-01 — Schéma Relationnel Idempotent PostgreSQL & SQLite
+### AUTH-01 — Schéma Relationnel Idempotent PostgreSQL & SQLite (`players` & `player_dictionary`)
 - **Cible :** `database/init.sql`, `src/db/connection.py`.
 - **Besoin :**
   - Définition de la table `players` dans `database/init.sql` pour l'initialisation PostgreSQL sous Docker.
+  - Définition de la table `player_dictionary` (`id`, `word_type`, `word`, `is_active`, `created_at`) pour stocker dynamiquement les vocabulaires (types: `noun`, `adjective`, `recovery`).
   - Définition miroir dans `PG_SCHEMA` et `SQLITE_SCHEMA` dans `src/db/connection.py`.
-  - Intégration d'une fonction de migration ou vérification au démarrage Python pour créer automatiquement la table si elle n'existe pas encore.
+  - Intégration d'une fonction de migration/amorçage au démarrage Python : création automatique des tables si absentes et seeding initial du dictionnaire si vide.
 - **Règles d'idempotence :**
-  - Utilisation de `CREATE TABLE IF NOT EXISTS` et `CREATE INDEX IF NOT EXISTS`.
-  - Si le conteneur Docker ou l'application Python est relancé 20 fois, aucune exception ni duplication ne doit survenir.
-- **Colonnes obligatoires :**
-  - `id` (UUID clé primaire), `auth_token` (token aléatoire 64 car unique), `username` (unique), `can_change_username` (booléen défaut true), `is_claimed` (booléen défaut false), `password_hash` (texte nullable), `recovery_key_hash` (texte nullable), `auth_provider` (défaut 'local'), `google_sub` (unique nullable), `created_at`, `last_seen_at`, `renamed_at`.
+  - Utilisation systématique de `CREATE TABLE IF NOT EXISTS` et `CREATE INDEX IF NOT EXISTS`.
+  - Ré-exécution garantie 20 fois sans erreur ni duplication.
 
 ### AUTH-02 — Module de Données & Couche d'Accès DAO
 - **Cible :** Nouveau module `src/db/players.py` (exposé dans `src/db/__init__.py`).
 - **Besoin :** Fonctions d'accès aux données thread-safe avec gestion transparente PostgreSQL / SQLite :
-  - `create_guest_player(player_id, auth_token, username) -> dict`
-  - `get_player_by_token(auth_token) -> Optional[dict]`
-  - `get_player_by_username(username) -> Optional[dict]`
-  - `get_player_by_id(player_id) -> Optional[dict]`
-  - `update_player_username(player_id, new_username) -> bool`
-  - `claim_player_account(player_id, password_hash, recovery_key_hash) -> bool`
-  - `update_player_password(player_id, new_password_hash) -> bool`
-  - `touch_player_activity(player_id) -> None`
+  - CRUD profils : `create_guest_player`, `get_player_by_token`, `get_player_by_username`, `get_player_by_id`, `update_player_username`, `claim_player_account`, `update_player_password`, `touch_player_activity`.
+  - CRUD dictionnaires : `get_active_dictionary(word_type) -> list[str]`, `add_dictionary_word(word_type, word) -> int`, `toggle_dictionary_word(id, is_active) -> bool`.
 
 ### AUTH-03 — Service Métier d'Authentification & Dictionnaires
 - **Cible :** Nouveau service `src/services/player_auth.py`.
 - **Besoin :**
-  1. **Générateur de pseudos loufoques :**
-     - Liste d'au moins 30 adjectifs français évocateurs (*Cosmique, Furtif, Solaire, Flamboyant, etc.*).
-     - Liste d'au moins 30 noms d'animaux/personnages (*Pangolin, Castor, Suricate, Caméléon, etc.*).
-     - Génération d'un pseudo par défaut, avec suffixe numérique si déjà existant en base.
+  1. **Générateur de pseudos loufoques (Grammaire stricte `[Nom][Adjectif]`) :**
+     - Respect absolu de la syntaxe française : `Nom` (animal/figurant) suivi de l'`Adjectif` (ex: `CastorCosmique`, `PangolinFurtif`). Aucun nom inversé.
+     - Longueur totale maîtrisée (entre 8 et 24 caractères, CamelCase sans espace).
+     - Alimenté dynamiquement par la base `player_dictionary` avec cache mémoire et repli statique d'urgence.
   2. **Générateur de phrases de secours de 4 mots :**
-     - Dictionnaire embarqué d'au moins 256 mots concrets français simples, sans ambiguïté typographique ni accents complexes (*boussole, navire, falaise, volcan, citron, etc.*).
-     - Sélection aléatoire cryptographique via `secrets.choice`.
+     - Sélection aléatoire cryptographique via `secrets.choice` parmi les mots `recovery` du dictionnaire.
   3. **Hachage & Sécurité :**
      - Hachage sécurisé du mot de passe via `hashlib.pbkdf2_hmac` avec salt aléatoire (standard Python sans dépendance externe fragile).
      - Normalisation stricte de la phrase de secours (minuscules, tirets) et hachage.
@@ -74,11 +66,11 @@ L'objectif de cette évolution est de déployer un système d'authentification i
   - `POST /api/player/claim` : sécurisation par mot de passe et émission de la phrase de 4 mots.
   - `POST /api/player/login` : reconnexion multi-appareils par pseudo + mot de passe.
   - `POST /api/player/reset-password` : réinitialisation du mot de passe via phrase de 4 mots.
+  - `GET/POST/DELETE /api/snap-9x/dictionary` : endpoints d'administration protégés pour la gestion des mots.
 - **Règles & Routage Caddy (`Caddyfile`) :**
-  - **Routage automatique :** La directive globale `handle /api/* { reverse_proxy cemantix_web:8000 }` dans `Caddyfile` relaie déjà nativement tous les chemins sous `/api/player/*` vers le conteneur backend. Aucune modification de route n'est donc requise dans `Caddyfile`.
+  - **Routage automatique :** La directive globale `handle /api/* { reverse_proxy cemantix_web:8000 }` dans `Caddyfile` relaie déjà nativement tous les chemins sous `/api/player/*` et `/api/snap-9x/*` vers le conteneur backend. Aucune modification de route n'est donc requise dans `Caddyfile`.
   - **En-têtes obligatoires :** Émettre systématiquement `Cache-Control: no-store, private` sur toutes les réponses `/api/player/*`.
   - **Codes HTTP propres :** Codes HTTP propres (200, 400 Bad Request, 401 Unauthorized, 409 Conflict si pseudo déjà pris). Réponses JSON standards.
-  - **Rappel Caddyfile hors Git :** Le fichier `Caddyfile` étant ignoré dans `.gitignore`, si une règle de filtrage ou de rate-limiting Caddy venait à être ajoutée, elle devra être reportée manuellement sur l'hôte et le VPS (`/docker/cemantix-rag-solver/Caddyfile`) avec `caddy reload`.
 
 ### AUTH-05 — Interface Utilisateur & Intégration Layout
 - **Cible :** `src/services/layout_sync.py`, `volumes/web/js/auth.js`, `volumes/web/css/auth.css` (intégré dans les bundles via `tools/build_css_bundles.py`).
@@ -87,6 +79,10 @@ L'objectif de cette évolution est de déployer un système d'authentification i
      - Ajout dans le Header standardisé (synchronisé par `layout_sync.py`) d'une pilule affichant l'icône utilisateur et le pseudo courant : `[ 👤 CastorCosmique ▾ ]`.
   2. **Modale de gestion de profil :**
      - Affichage des 3 états (invité avec option renommage unique, formulaire de protection avec affichage de la phrase de secours et bouton copier, formulaire de connexion / mot de passe oublié).
+  3. **Console d'administration (`volumes/web/panier-9x`) :**
+     - Ajout d'une section de gestion des listes de mots (`nouns`, `adjectives`, `recovery`) dans l'interface sécurisée avec ajout direct et bascule d'activation.
+  4. **Gestion du `localStorage` :**
+     - Stockage propre sous `cemantix_player_session`. Initialisation transparente sans impact CLS.
   3. **Gestion du `localStorage` :**
      - Stockage propre sous `cemantix_player_session`.
      - Initialisation transparente au premier chargement sans bloquer le rendu de la page (CLS = 0).
