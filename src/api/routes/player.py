@@ -44,7 +44,8 @@ def handle_player_post(path: str, data: dict, headers=None) -> Tuple[dict, int]:
     if subpath == "/api/player/guest":
         player_id = data.get("player_id")
         token = data.get("auth_token") or auth_token
-        res = init_or_get_guest(player_id=player_id, auth_token=token)
+        username = data.get("username")
+        res = init_or_get_guest(player_id=player_id, auth_token=token, username=username)
         return res, 200
 
     elif subpath == "/api/player/rename":

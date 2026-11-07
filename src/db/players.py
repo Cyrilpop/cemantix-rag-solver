@@ -12,24 +12,59 @@ from .connection import db
 
 # Listes par défaut pour l'amorçage (seeding) initial
 DEFAULT_NOUNS = [
+    # Animaux décalés & emblématiques
     "Castor", "Pangolin", "Suricate", "Renard", "Blaireau", "Koala", "Lynx",
     "Faucon", "Hibou", "Panda", "Dauphin", "Loutre", "Guepard", "Jaguar",
     "Cameleon", "Albatros", "Flamant", "Ecureuil", "Raton", "Morse", "Phoque",
     "Tapir", "Elan", "Cerf", "Sanglier", "Loup", "Ours", "Herisson", "Aigle",
-    "Condor", "Bison", "Pelican", "Toucan", "Corbeau", "Milan", "Puma",
-    "Tigre", "Lion", "Heron", "Vautour", "Buse", "Colibri", "Kiwi", "Saumon",
-    "Carpe", "Triton", "Salamandre", "Glouton", "Ocelot", "Caracal"
+    "Condor", "Bison", "Pelican", "Toucan", "Corbeau", "Puma", "Tigre", "Lion",
+    "Heron", "Vautour", "Buse", "Colibri", "Kiwi", "Saumon", "Carpe", "Triton",
+    "Salamandre", "Glouton", "Ocelot", "Ornithorynque", "Ragondin", "Lama",
+    "Dindon", "Pigeon", "Otarie", "Cachalot", "Poulpe", "Escargot", "Hamster",
+    "Pterodactyle", "Bigorneau", "Crevette", "Chameau", "Marmotte", "Chihuahua",
+    "Babouin", "Morue", "Homard", "Perroquet", "Tortue", "Crapaud",
+    # Objets du quotidien & ustensiles incongrus
+    "GrillePain", "Chaussette", "Babouche", "Pantoufle", "Tournevis", "Trombone",
+    "Spatule", "Enclume", "Cafetiere", "Trotinette", "Salopette", "Charentaise",
+    "Bouillotte", "Ventilateur", "Passoire", "Entonnoir", "Aspirateur", "Parapluie",
+    "Brouette", "Marteau", "Clarinette", "Monocle", "MicroOnde", "Baignoire",
+    "Savonnette", "Plumeau", "Thermos", "Shampoing", "Dentifrice", "TireBouchon",
+    "Casserole", "Marmite", "Parachute", "Poubelle", "Reveil", "Microphone",
+    # Gastronomie, victuailles & légumes improbables
+    "Cornichon", "Courgette", "Artichaut", "Pamplemousse", "Camembert", "Poireau",
+    "Navet", "Saucisson", "Brioche", "Baguette", "Croissant", "Gaufre", "Merguez",
+    "ChouFleur", "Reblochon", "Frite", "Potiron", "Radis", "Epinard", "Macaron",
+    "Quiche", "Tartiflette", "Knacki", "Tagliatelle", "Chouquette", "Ravioli",
+    "Fondue", "Raclette", "Corniche", "Chantilly",
+    # Personnages & professions hauts en couleur
+    "Viking", "Troubadour", "Ninja", "Astronaute", "Yodleur", "Fakir", "Gnome",
+    "Cyborg", "Centaure", "Alchimiste", "Gladiateur", "Sommelier", "Jongleur",
+    "Comptable", "Dentiste", "Apiculteur", "Brocanteur", "Plombier", "Pompier",
+    "Sorcier", "Lutteur", "Philosophe", "Druide", "Pirate", "Detective",
+    "Barbier", "Marionnette", "Fantome", "Acrobate", "Astronome"
 ]
 
 DEFAULT_ADJECTIVES = [
+    # Absurdes, futuristes & cosmiques
     "Cosmique", "Furtif", "Flamboyant", "Stellaire", "Malicieux", "Audacieux",
     "Intrepide", "Lunaire", "Solaire", "Magique", "Veloce", "Agile", "Ruse",
     "Jovial", "Mystique", "Lumineux", "Temeraire", "Galactique", "Silencieux",
     "Radieux", "Majestueux", "Fantasque", "Serein", "Heroique", "Enigmatique",
     "Epique", "Brave", "Atomique", "Magnetique", "Tonique", "Farfelu",
     "Poetique", "Celeste", "Gracieux", "Robuste", "Rapide", "Brillant",
-    "Vaillant", "Ethere", "Joyeux", "Mysterieux", "Ardente", "Invincible",
-    "Intrepide", "Astral", "Dynamique", "Spectaculaire", "Vigoureux"
+    "Vaillant", "Ethere", "Joyeux", "Mysterieux", "Invincible", "Astral",
+    "Dynamique", "Spectaculaire", "Vigoureux", "Radioactif", "Fluorescent",
+    "Phosphorescent", "Quantique", "Hypnotique", "Psychique", "Intergalactique",
+    # Électriques, dynamiques & déjantés
+    "Enrhume", "Bouillonnant", "Elastique", "Rutilant", "Barbu", "Moustachu",
+    "Electrique", "Confus", "Disjoncte", "Croustillant", "Paillete", "Torsade",
+    "Clignotant", "Somnambule", "Ensorcele", "Gazeux", "Vibrant", "Defroisse",
+    "Panique", "Survolte", "Explosif", "Hysterique", "Gonflable", "Inodore",
+    "Collant", "Visqueux", "Ebouriffe", "Rembourre", "Sideral", "Polymorphe",
+    "Chancelant", "Bredouille", "Enflamme", "Microscopique", "Gigantesque",
+    "Givre", "Caramelise", "Petillant", "Dejante", "Retroactif", "Telepathique",
+    "Biodegradable", "Inoxydable", "Aerodynamique", "Hilarant", "Sucre",
+    "Turbulent", "Insubmersible", "Volcanique", "Extraterrestre", "Incroyable"
 ]
 
 DEFAULT_RECOVERY_WORDS = [
@@ -95,38 +130,67 @@ def _row_to_player(row: dict) -> dict:
 
 
 def seed_default_dictionary_if_empty():
-    """Alimente les listes de mots par défaut si la table player_dictionary est vide."""
+    """Alimente les listes de mots par défaut si la table player_dictionary est incomplète ou vide."""
     try:
-        count_row = db.fetch_one("SELECT COUNT(*) AS cnt FROM player_dictionary")
-        if count_row and int(count_row.get("cnt", 0)) > 0:
-            return
+        engine = db.get_engine_type()
+        is_active_sql = "TRUE" if engine == "postgres" else "1"
+        placeholder = "%s" if engine == "postgres" else "?"
+
+        # Compte par type de mot
+        type_counts = {}
+        for r in db.fetch_all("SELECT word_type, COUNT(*) AS cnt FROM player_dictionary GROUP BY word_type") or []:
+            type_counts[str(r["word_type"])] = int(r["cnt"])
 
         with db.transaction() as conn:
             cur = conn.cursor()
-            engine = db.get_engine_type()
-            placeholder = "%s" if engine == "postgres" else "?"
 
-            # Insertion des noms
-            for noun in set(DEFAULT_NOUNS):
-                cur.execute(
-                    f"INSERT INTO player_dictionary (word_type, word, is_active) VALUES ({placeholder}, {placeholder}, 1)",
-                    ("noun", noun),
-                )
-            # Insertion des adjectifs
-            for adj in set(DEFAULT_ADJECTIVES):
-                cur.execute(
-                    f"INSERT INTO player_dictionary (word_type, word, is_active) VALUES ({placeholder}, {placeholder}, 1)",
-                    ("adjective", adj),
-                )
-            # Insertion des mots de récupération
-            for rec in set(DEFAULT_RECOVERY_WORDS):
-                cur.execute(
-                    f"INSERT INTO player_dictionary (word_type, word, is_active) VALUES ({placeholder}, {placeholder}, 1)",
-                    ("recovery", rec),
-                )
-    except Exception:
-        # En cas d'erreur ou concurrence, ne pas bloquer l'initialisation
-        pass
+            # Insertion des noms si absents
+            if type_counts.get("noun", 0) < len(DEFAULT_NOUNS):
+                for noun in sorted(set(DEFAULT_NOUNS)):
+                    if engine == "postgres":
+                        cur.execute(
+                            f"INSERT INTO player_dictionary (word_type, word, is_active) VALUES ({placeholder}, {placeholder}, {is_active_sql}) ON CONFLICT DO NOTHING",
+                            ("noun", noun),
+                        )
+                    else:
+                        cur.execute(
+                            f"INSERT OR IGNORE INTO player_dictionary (word_type, word, is_active) VALUES ({placeholder}, {placeholder}, {is_active_sql})",
+                            ("noun", noun),
+                        )
+
+            # Insertion des adjectifs si absents
+            if type_counts.get("adjective", 0) < len(DEFAULT_ADJECTIVES):
+                for adj in sorted(set(DEFAULT_ADJECTIVES)):
+                    if engine == "postgres":
+                        cur.execute(
+                            f"INSERT INTO player_dictionary (word_type, word, is_active) VALUES ({placeholder}, {placeholder}, {is_active_sql}) ON CONFLICT DO NOTHING",
+                            ("adjective", adj),
+                        )
+                    else:
+                        cur.execute(
+                            f"INSERT OR IGNORE INTO player_dictionary (word_type, word, is_active) VALUES ({placeholder}, {placeholder}, {is_active_sql})",
+                            ("adjective", adj),
+                        )
+
+            # Insertion des mots de récupération si absents
+            if type_counts.get("recovery", 0) < len(DEFAULT_RECOVERY_WORDS):
+                for rec in sorted(set(DEFAULT_RECOVERY_WORDS)):
+                    if engine == "postgres":
+                        cur.execute(
+                            f"INSERT INTO player_dictionary (word_type, word, is_active) VALUES ({placeholder}, {placeholder}, {is_active_sql}) ON CONFLICT DO NOTHING",
+                            ("recovery", rec),
+                        )
+                    else:
+                        cur.execute(
+                            f"INSERT OR IGNORE INTO player_dictionary (word_type, word, is_active) VALUES ({placeholder}, {placeholder}, {is_active_sql})",
+                            ("recovery", rec),
+                        )
+    except Exception as e:
+        from ..config import log
+        log(f"⚠️  [AUTH] Erreur amorçage dictionnaire joueurs : {e}")
+    except Exception as e:
+        from ..config import log
+        log(f"⚠️  [AUTH] Erreur amorçage dictionnaire joueurs : {e}")
 
 
 def create_guest_player(player_id: str, auth_token: str, username: str) -> dict:

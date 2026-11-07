@@ -247,7 +247,11 @@ def validate_username(username: str) -> Tuple[bool, str]:
 
 # --- Services Métier Joueur --------------------------------------------------
 
-def init_or_get_guest(player_id: Optional[str] = None, auth_token: Optional[str] = None) -> dict:
+def init_or_get_guest(
+    player_id: Optional[str] = None,
+    auth_token: Optional[str] = None,
+    username: Optional[str] = None,
+) -> dict:
     """Initialise un profil invité transparent ou retourne la session existante validée."""
     if auth_token:
         existing = get_player_by_token(auth_token)
@@ -261,12 +265,22 @@ def init_or_get_guest(player_id: Optional[str] = None, auth_token: Optional[str]
                 "is_claimed": existing["is_claimed"],
             }
 
-    # Création d'un nouvel invité
+    # Création d'un nouvel invité (première visite ou profil non rattaché en base)
     new_id = player_id if (player_id and len(player_id) == 36) else str(uuid.uuid4())
     new_token = generate_auth_token()
-    username = generate_random_username()
 
-    player = create_guest_player(new_id, new_token, username)
+    # Si le client avait un pseudo en local valide et disponible, on le préserve
+    chosen_username = None
+    if username:
+        cleaned_user = username.strip()
+        is_valid, _ = validate_username(cleaned_user)
+        if is_valid:
+            chosen_username = cleaned_user
+
+    if not chosen_username:
+        chosen_username = generate_random_username()
+
+    player = create_guest_player(new_id, new_token, chosen_username)
     return {
         "player_id": player["id"],
         "auth_token": player["auth_token"],
