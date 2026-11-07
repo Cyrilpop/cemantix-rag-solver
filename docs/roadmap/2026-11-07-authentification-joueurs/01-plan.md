@@ -95,9 +95,13 @@ L'objectif de cette évolution est de déployer un système d'authentification i
      - Stockage propre sous `cemantix_player_session`.
      - Initialisation transparente au premier chargement sans bloquer le rendu de la page (CLS = 0).
 
-### AUTH-06 — Tests Unitaires, Non-Régression & Documentation
-- **Cible :** `tests/test_player_auth.py`, `README.md`, `CHANGELOG.md`, `docs/milestones/M14_AUTHENTIFICATION_JOUEURS.md`.
-- **Besoin :**
+### AUTH-06 — FAQ, CGU, Confidentialité, Tests Unitaires & Documentation
+- **Cible :** `volumes/web/index.html` (FAQ & JSON-LD `FAQPage`), `tests/test_player_auth.py`, `README.md`, `CHANGELOG.md`.
+- **Besoin Juridique & FAQ :**
+  1. **Confidentialité (`#confidentialite`) :** Préciser l'usage fonctionnel du `localStorage` pour l'authentification (exempt de consentement préalable CNIL), le stockage haché des mots de passe/clés de secours, et le respect strict du principe de minimisation des données (zéro email collecté).
+  2. **Conditions Générales d'Utilisation (`#conditions-utilisation`) :** Règles de bienséance sur les pseudos, rappel de la limite à un renommage unique, avertissement sur la responsabilité du joueur quant à la conservation de sa phrase de secours de 4 mots (aucun reset par email possible).
+  3. **Balisage structuré :** Mise à jour du JSON-LD `FAQPage` dans `index.html`.
+- **Besoin Tests & Validation :**
   - Couverture complète des cas de test sous Docker Python 3.12 :
     - Génération de pseudo et phrase de secours.
     - Idempotence de la création de table (créer 2 fois d'affilée sans erreur).

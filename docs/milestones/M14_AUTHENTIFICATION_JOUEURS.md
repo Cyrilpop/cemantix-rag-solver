@@ -211,6 +211,24 @@ L'architecture UX concilie une découverte immédiate et ludique pour le joueur 
    - Clé `cemantix_welcome_dismissed` : `true`.
    - Initialisation silencieuse : si aucune session n'est détectée, un appel transparent en tâche de fond est émis vers `POST /api/player/guest` pour enregistrer l'UUID et le pseudo loufoque sans bloquer l'interactivité de la page.
 
+### 2.7 Conformité Juridique, FAQ, Confidentialité & CGU
+
+L'ajout d'une mécanique de compte (même sans email) doit être documenté de manière transparente dans les mentions légales existantes, conformément aux standards RGPD / CNIL :
+
+1. **Règles de Confidentialité (`#confidentialite` dans la FAQ & JSON-LD) :**
+   - **Exemption de consentement cookies/traceurs :** Préciser que le `localStorage` est utilisé exclusivement pour maintenir la session joueur, le pseudo et les préférences de jeu, ce qui constitue un usage strictement technique et fonctionnel exempté de consentement préalable selon les lignes directrices de la CNIL.
+   - **Minimisation absolue des données :** Déclarer formellement l'absence de collecte d'adresse email ou de données d'identité civile (nom, prénom, téléphone).
+   - **Sécurité des mots de passe :** Mentionner que les mots de passe et phrases de récupération sont stockés sous forme de condensats cryptographiques irréversibles (hachage à sel aléatoire) et ne transitent jamais en clair.
+   - **Droit à l'effacement (RGPD) :** Prévoir un bouton dans la modale de profil permettant à l'utilisateur de réinitialiser/supprimer son profil invité et de purger son `localStorage`.
+
+2. **Conditions Générales d'Utilisation (`#conditions-utilisation`) :**
+   - **Pseudos autorisés et modération :** Rappeler que les pseudos personnalisés doivent respecter les règles de bienséance (interdiction des propos injurieux, haineux, diffamatoires ou usurpant l'identité d'un tiers). L'administrateur se réserve le droit de réinitialiser tout pseudo non conforme vers un pseudo aléatoire.
+   - **Règle du changement unique :** Préciser contractuellement que la personnalisation du pseudo est limitée à une seule modification par compte.
+   - **Perte d'accès sans email :** Avertir expressément le joueur que le service ne collectant aucun email, la phrase de secours de 4 mots constitue son **unique moyen** de réinitialiser son mot de passe. En cas de perte simultanée du mot de passe et de la phrase secrète, aucun accès ne pourra être restauré.
+
+3. **Synchronisation du Balisage Structuré Schema.org :**
+   - Mise à jour du graphe JSON-LD `@type: "FAQPage"` dans `volumes/web/index.html` pour refléter les réponses mises à jour sur la conservation des profils joueurs et l'absence d'email.
+
 ---
 
 ## 3. Plan d'Exécution & Découpage des Commits

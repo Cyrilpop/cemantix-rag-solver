@@ -39,7 +39,7 @@ Répartition par criticité : 🔴 `AUTH-01` (Schéma Relationnel Idempotent Pos
 | **AUTH-03** | 🔴 | Service Métier d'Authentification & Dictionnaires (`src/services/player_auth.py`) | `⬜ À faire` | Générateur de pseudos loufoques en français, générateur de phrase de secours de 4 mots, hachage sécurisé PBKDF2/argon2 et validation des pseudos. |
 | **AUTH-04** | 🟠 | Endpoints API REST HTTP (`src/services/server.py` ou routeur dédié) | `⬜ À faire` | Routes `/api/player/guest`, `/api/player/rename`, `/api/player/claim`, `/api/player/login` et `/api/player/reset-password` avec codes HTTP et payloads JSON normalisés. |
 | **AUTH-05** | 🟠 | Interface Utilisateur & Intégration Layout (`src/services/layout_sync.py`, `volumes/web/js/auth.js`) | `⬜ À faire` | Intégration du badge joueur dans le header commun, modale de profil (renommage unique, mot de passe, phrase de 4 mots, reconnexion) et persistance `localStorage`. |
-| **AUTH-06** | 🟡 | Tests Unitaires, Non-Régression & Documentation (`tests/test_player_auth.py`, docs) | `⬜ À faire` | Suite complète de tests unitaires sous Docker couvrant tout le cycle de vie joueur, tests d'idempotence, documentation `README.md` et `CHANGELOG.md`. |
+| **AUTH-06** | 🟡 | FAQ, CGU, Confidentialité & Tests Unitaires (`volumes/web/index.html`, `tests/test_player_auth.py`, docs) | `⬜ À faire` | Mise à jour des sections FAQ (#confidentialite et #conditions-utilisation) et JSON-LD, suite complète de tests unitaires sous Docker couvrant le cycle joueur, tests d'idempotence, documentation `README.md` et `CHANGELOG.md`. |
 
 ---
 
