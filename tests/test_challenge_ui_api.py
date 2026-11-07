@@ -12,6 +12,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import _context  # noqa: F401
+
 from src.api.routes import challenge as route
 from src.db import challenges as dao
 from src.db.connection import db

@@ -7,6 +7,8 @@ import time
 import unittest
 from pathlib import Path
 
+import _context  # noqa: F401
+
 from src.db.connection import DatabaseManager
 from src.db.daily import (
     get_all_daily_puzzles,

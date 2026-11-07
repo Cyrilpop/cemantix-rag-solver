@@ -220,11 +220,14 @@ class _MemoryLogHandler(logging.Handler):
 _MEMORY_LOG_CAPACITY = int(os.getenv("ADMIN_LOG_BUFFER", "800"))
 
 _logger = logging.getLogger("cemantix")
-if not _logger.handlers:
-    _handler = logging.StreamHandler()
-    _handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+_logger.setLevel(logging.INFO)
+if not any(isinstance(h, (logging.StreamHandler, logging.NullHandler)) for h in _logger.handlers):
+    if os.getenv("TEST_SILENT_LOGS") == "1" and os.getenv("TEST_VERBOSE_LOGS") != "1":
+        _handler = logging.NullHandler()
+    else:
+        _handler = logging.StreamHandler()
+        _handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
     _logger.addHandler(_handler)
-    _logger.setLevel(logging.INFO)
 _MEMORY_HANDLER = _MemoryLogHandler(_MEMORY_LOG_CAPACITY)
 _MEMORY_HANDLER.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
 if _MEMORY_HANDLER not in _logger.handlers:

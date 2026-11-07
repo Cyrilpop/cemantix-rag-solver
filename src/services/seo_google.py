@@ -253,6 +253,15 @@ def submit_sitemap_to_google(
             "auth_url": auth_url,
         }
 
+    # Garde-fou anti-quota en test : neutralise tout appel réseau réel
+    if os.getenv("SKIP_SEO_PUSH") == "1" and not hasattr(requests.put, "assert_called"):
+        return {
+            "success": True,
+            "status_code": 204,
+            "skipped": True,
+            "message": "Soumission Search Console neutralisée (mode test anti-quota).",
+        }
+
     token = get_access_token(creds, timeout=timeout)
     if not token:
         return {
@@ -321,6 +330,17 @@ def notify_google_indexing(
             "success": False,
             "status_code": 0,
             "message": "Identifiants Google ou GOOGLE_REFRESH_TOKEN manquants.",
+        }
+
+    # Garde-fou anti-quota en test : neutralise tout appel réseau réel
+    if os.getenv("SKIP_SEO_PUSH") == "1" and not hasattr(requests.post, "assert_called"):
+        return {
+            "success": True,
+            "status_code": 200,
+            "skipped": True,
+            "url": url,
+            "type": notification_type,
+            "message": "Notification Google Indexing neutralisée (mode test anti-quota).",
         }
 
     token = get_access_token(creds, timeout=timeout)

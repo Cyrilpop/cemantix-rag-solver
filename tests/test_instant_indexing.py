@@ -94,7 +94,7 @@ class TestGoogleIndexingApi(unittest.TestCase):
     def test_mark_and_check_daily_puzzle_indexed_integration(self):
         from src.db import is_daily_puzzle_indexed, mark_daily_puzzle_indexed, save_daily_puzzle
         # Initialiser avec un puzzle test
-        test_date = "2026-11-99"
+        test_date = "2026-01-01"
         save_daily_puzzle({
             "date": test_date,
             "puzzle_id": 9999,
@@ -178,7 +178,7 @@ class TestIndexNow(unittest.TestCase):
             mark_daily_puzzle_indexnow_indexed,
             save_daily_puzzle,
         )
-        test_date = "2026-11-88"
+        test_date = "2026-01-02"
         save_daily_puzzle({
             "date": test_date,
             "puzzle_id": 8888,
