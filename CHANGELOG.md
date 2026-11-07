@@ -4,6 +4,19 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-07 · Conformité Google OAuth : FAQ Règles de Confidentialité et CGU
+
+### Ajouté
+- **Sections FAQ Règles de Confidentialité & Conditions d'Utilisation (`volumes/web/index.html`, `volumes/web/js/app.js`, `volumes/web/css/dashboard.css`)** :
+  - Intégration dans la FAQ interactive de deux questions/réponses complètes répondant aux prérequis de l'écran de consentement Google OAuth et aux exigences RGPD :
+    - **Règles de confidentialité (`#confidentialite`)** : transparence sur la non-collecte de données personnelles nominatives, précision sur l'usage technique exclusif des identifiants Google OAuth (indexation Search Console / Indexing API sans accès aux données utilisateur), absence de cookies traceurs/publicitaires, persistance locale (`localStorage`) et rappel des droits de l'utilisateur.
+    - **Conditions d'utilisation (`#conditions-utilisation`)** : nature gratuite et pédagogique du service, indépendance vis-à-vis du jeu officiel Cémantix (certitudes.org), clause de fourniture « en l'état » et respect de l'infrastructure.
+  - Balisage Schema.org JSON-LD `FAQPage` enrichi avec ces deux nouvelles entrées pour l'éligibilité aux résultats enrichis Google.
+  - Maillage direct dans les pieds de page (`app-footer`) de l'ensemble des pages web applicatives (`/`, `/play/`, `/battle/`, `/multi/`, `/defi/`).
+  - Gestion des ancres dans `js/app.js` (`openDetailsOnHash`) dépliant automatiquement l'accordéon ciblé lors de la navigation directe (`#confidentialite`, `#conditions-utilisation`).
+
+---
+
 ## [Non publié] - 2026-11-07 · Indexation Instantanée Exhaustive des Pages Hubs & Archives
 
 ### Modifié
@@ -112,7 +125,7 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 - **Client API Google Search Console (`src/services/seo_google.py`)** :
   - Soumission programmatique du fichier `sitemap.xml` via l'API Webmasters / Search Console (`PUT https://www.googleapis.com/webmasters/v3/sites/{siteUrl}/sitemaps/{feedpath}`).
   - Authentification headless OAuth 2.0 avec renouvellement automatique du jeton d'accès via `GOOGLE_REFRESH_TOKEN` et mise en cache mémoire avec expiration.
-  - Parsing tolérant des variables d'environnement (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, tolérance de coquille sur `GOOCLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URIS`).
+  - Parsing tolérant des variables d'environnement (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, tolérance de coquille sur `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URIS`).
 - **Déclenchement automatique dans le cycle SEO (`src/services/seo.py`)** :
   - Intégration de la notification à Google Search Console dans `publish_seo_pages()`, avec isolation par `try/except` garantissant zéro blocage en cas de défaillance réseau.
 - **Commandes d'administration CLI (`cemantix_rag.py`)** :
