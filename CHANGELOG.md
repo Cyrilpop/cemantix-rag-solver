@@ -4,6 +4,35 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-07 · Jalon M14 : Authentification Joueurs sans Email, Profils Invités, Pseudos [Nom][Adjectif] & Phrase de Secours
+
+### Ajouté
+- **Schémas SQL Idempotents PostgreSQL & SQLite (`database/init.sql`, `src/db/connection.py`)** :
+  - Création des tables `players` (UUID, auth_token, username, can_change_username, is_claimed, password_hash, recovery_key_hash, auth_provider, google_sub, created_at, last_seen_at, renamed_at) et `player_dictionary` (id, word_type, word, is_active, created_at).
+  - DDL miroir dans `PG_SCHEMA` et `SQLITE_SCHEMA` et amorçage automatique (seeding) de plus de 40 noms, 40 adjectifs et 256 mots de récupération lors de l'initialisation.
+- **Couche d'Accès aux Données DAO (`src/db/players.py`, `src/db/__init__.py`)** :
+  - Fonctions thread-safe de persistance des profils et gestion des listes de vocabulaire (`create_guest_player`, `get_player_by_token`, `get_player_by_username`, `update_player_username`, `claim_player_account`, `update_player_password`, `delete_player_account`, `get_active_dictionary`, `add_dictionary_word`, `delete_dictionary_word`).
+- **Service Métier d'Authentification (`src/services/player_auth.py`, `src/services/__init__.py`)** :
+  - Générateur de pseudos loufoques en français respectant strictement l'ordre grammatical `[Nom][Adjectif]` (CamelCase, 8 à 24 caractères, ex: `CastorCosmique`, `PangolinFurtif`) avec cache mémoire dynamique et repli statique.
+  - Générateur de phrases secrètes de secours composées de 4 mots français concrets sans ambiguïté (`secrets.choice`).
+  - Hachage cryptographique sécurisé PBKDF2-HMAC-SHA256 (200 000 itérations avec sel aléatoire de 16 octets) pour mot de passe et phrase de secours normalisée.
+  - Validation stricte de pseudo (longueur 8-24 car., caractères autorisés, filtrage des termes réservés et abusifs).
+- **Contrôleur API REST Dédié & Sécurité HTTP (`src/api/routes/player.py`, `src/api/server.py`, `src/api/routes/admin.py`)** :
+  - Nouveaux endpoints `/api/player/guest`, `/api/player/rename` (renommage unique), `/api/player/claim` (protection par mot de passe + émission de la phrase de 4 mots), `/api/player/login`, `/api/player/reset-password` et `/api/player/delete-account` (droit à l'effacement RGPD).
+  - En-tête de sécurité HTTP obligatoire `Cache-Control: no-store, private` sur l'ensemble des routes joueurs.
+  - Endpoints d'administration sécurisés `GET/POST/DELETE /api/snap-9x/dictionary` pour la maintenance en direct des vocabulaires.
+- **Interface Utilisateur & Expérience Joueur (`src/services/layout_sync.py`, `volumes/web/js/auth.js`, `volumes/web/css/auth.css`, `volumes/web/panier-9x/`)** :
+  - Badge permanent interactif `[ 👤 CastorCosmique ▾ ]` dans l'en-tête commun synchronisé sur toutes les vues applicatives.
+  - Toast / bannière d'accueil non intrusive à la première visite (CLS = 0, préservation des Core Web Vitals) avec fermeture mémorisée.
+  - Modale native `<dialog>` gérant 3 vues : consultation/renommage unique, protection par mot de passe avec copie de la phrase de 4 mots, et reconnexion/réinitialisation multi-appareils.
+  - Section de maintenance des dictionnaires dans la console d'exploitation `/panier-9x`.
+  - Intégration dans `tools/build_css_bundles.py` et recompilation des bundles de production.
+- **Conformité Juridique, FAQ & Tests Automatisés (`volumes/web/index.html`, `tests/test_player_auth.py`)** :
+  - Mise à jour de la FAQ (#confidentialite et #conditions-utilisation) et du graphe Schema.org JSON-LD `FAQPage` : exemption CNIL du localStorage fonctionnel, hachage sécurisé, zéro email collecté, responsabilité de la phrase de 4 mots.
+  - Suite de 8 tests complets couvrant 100 % du cycle de vie joueur, l'idempotence et les endpoints d'administration, portant la suite globale à 435 tests automatisés sous Docker.
+
+---
+
 ## [Non publié] - 2026-11-07 · Conformité Google OAuth : FAQ Règles de Confidentialité et CGU
 
 ### Ajouté
