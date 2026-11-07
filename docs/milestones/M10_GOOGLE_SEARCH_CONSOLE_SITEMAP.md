@@ -25,7 +25,7 @@ Afin d'accélérer l'indexation de ces nouveaux contenus par le moteur de recher
 
 Le module lit en priorité `os.environ` et analyse gracieusement `.env` à la racine si nécessaire :
 - `GOOGLE_CLIENT_ID` : Identifiant client OAuth 2.0 Google.
-- `GOOGLE_CLIENT_SECRET` : Clé secrète client Google (avec repli sur `GOOCLE_CLIEBNT_SECRET` pour tolérer la faute de frappe initiale).
+- `GOOGLE_CLIENT_SECRET` : Clé secrète client Google (avec repli sur `GOOCLE_CLIENT_SECRET` pour tolérer la faute de frappe initiale).
 - `GOOGLE_REFRESH_TOKEN` : Jeton de rafraîchissement longue durée pour renouveler les jetons d'accès.
 - `GOOGLE_TOKEN_URI` : URL du endpoint de token (`https://oauth2.googleapis.com/token` par défaut).
 - `GOOGLE_AUTH_URI` : URL d'autorisation interactive (`https://accounts.google.com/o/oauth2/auth` par défaut).
