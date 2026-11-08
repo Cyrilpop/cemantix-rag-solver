@@ -205,10 +205,14 @@ a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hov
 .game-actions{display:flex;align-items:center;gap:0.5rem;}
 .game-status-bar{border-top:1px solid var(--border-color);padding-top:0.75rem;margin-top:0.85rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;}
 .game-status-left{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;}
+#game-puzzle-badge{text-transform:none;}
 .game-status-note{font-size:0.8rem;color:var(--text-muted);}
 .tries-counter{font-size:0.85rem;color:var(--text-main);}
 .tries-counter strong{font-family:var(--font-mono);color:var(--accent);font-size:1rem;}
 .game-win-banner{background:linear-gradient(135deg,rgba(63,185,80,0.15) 0%,rgba(26,127,55,0.25) 100%);border:2px solid var(--success);padding:1.5rem;border-radius:var(--radius-lg);box-shadow:0 0 30px var(--success-glow);animation:popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);}
+.game-win-banner.is-defeat{background:linear-gradient(135deg,rgba(239,68,68,0.12) 0%,rgba(185,28,28,0.22) 100%);border:2px solid var(--danger,#ef4444);box-shadow:0 0 30px rgba(239,68,68,0.25);}
+.game-win-banner.is-defeat .win-trophy{filter:drop-shadow(0 0 12px rgba(239,68,68,0.5));}
+.game-win-banner.is-defeat .win-text h3{color:var(--danger,#ef4444);}
 @keyframes popIn{0%{opacity:0;transform:scale(0.95) translateY(-10px);}
 100%{opacity:1;transform:scale(1) translateY(0);}
 }
@@ -264,11 +268,14 @@ a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hov
 .guess-left{display:flex;align-items:center;gap:0.75rem;}
 .guess-order{font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);min-width:28px;}
 .guess-word{font-family:var(--font-mono);font-weight:700;text-transform:uppercase;}
+.guess-player-name{font-family:var(--font-sans);font-weight:600;text-transform:none;}
 .guess-right{display:flex;align-items:center;gap:0.75rem;}
 .guess-weather{font-size:0.9rem;}
 .guess-temp{font-family:var(--font-mono);font-weight:700;}
 .guess-permille{font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);min-width:45px;text-align:right;}
 .badge-hint{display:inline-flex;align-items:center;gap:3px;font-size:0.68rem;font-weight:600;padding:1px 7px;border-radius:999px;background:rgba(210,153,34,0.18);color:#e3b341;border:1px solid rgba(210,153,34,0.45);margin-left:6px;letter-spacing:0.02em;vertical-align:middle;}
+.badge-hint-counter{font-size:0.72rem;padding:0.1rem 0.45rem;margin-left:0.35rem;border-radius:999px;font-weight:700;display:inline-flex;align-items:center;transition:all 0.2s ease;}
+.btn-hint:disabled .badge-hint-counter,.badge-hint-counter.is-exhausted{background:rgba(140,149,159,0.2);color:var(--text-muted);border:1px solid rgba(140,149,159,0.3);}
 @keyframes fadeIn{0%{opacity:0;transform:translateY(-4px);}
 100%{opacity:1;transform:scale(1);}
 }
