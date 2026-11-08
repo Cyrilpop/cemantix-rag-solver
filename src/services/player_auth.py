@@ -314,7 +314,7 @@ def init_or_get_guest(
                 break
 
     if not chosen_username:
-        chosen_username = f"Joueur{random.randint(1000, 9999)}"
+        chosen_username = f"Joueur{secrets.randbelow(9000) + 1000}"
 
     player = create_guest_player(new_id, new_token, chosen_username)
     return {
