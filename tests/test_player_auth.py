@@ -12,7 +12,10 @@ import _context  # noqa: F401
 from src.db.connection import db
 from src.db.players import (
     add_dictionary_word,
+    admin_create_player,
+    admin_update_player,
     claim_player_account,
+    count_players,
     create_guest_player,
     delete_dictionary_word,
     delete_player_account,
@@ -21,6 +24,8 @@ from src.db.players import (
     get_player_by_id,
     get_player_by_token,
     get_player_by_username,
+    get_players_stats,
+    list_players,
     seed_default_dictionary_if_empty,
     toggle_dictionary_word,
     update_player_password,
@@ -340,6 +345,82 @@ class TestPlayerAuth(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertTrue(del_res["success"])
+
+    # --- 9. Gestion Admin des Utilisateurs en BDD (/api/snap-9x/users) --------
+    def test_api_admin_users_management(self):
+        """Vérifie le cycle complet d'administration des joueurs en BDD."""
+        os.environ["ADMIN_PASSWORD"] = "secret_admin_test_123"
+        auth_res, _ = handle_admin_post(None, f"{ADMIN_BASE_PATH}/auth", {"password": "secret_admin_test_123"}, {}, "127.0.0.1")
+        headers = {"X-Admin-Token": auth_res["token"]}
+
+        # 1. Création de joueurs de test via DAO et via admin API
+        p1 = admin_create_player("TestUserAlpha", is_claimed=True)
+        p2 = create_guest_player("11111111-2222-3333-4444-555555555555", "token123", "CastorCosmique")
+
+        # Création via POST /users
+        create_res, status = handle_admin_post(
+            None,
+            f"{ADMIN_BASE_PATH}/users",
+            {"username": "AdminCreatedUser", "is_claimed": True, "password": "Password123!"},
+            headers,
+            "127.0.0.1",
+        )
+        self.assertEqual(status, 201)
+        self.assertTrue(create_res["success"])
+        p3_id = create_res["user"]["id"]
+        self.assertEqual(create_res["user"]["username"], "AdminCreatedUser")
+
+        # 2. GET /users (liste complète & stats)
+        captured = {}
+        def mock_send_users(data, status=200):
+            captured.update(data=data, status=status)
+
+        handle_admin_get(None, f"{ADMIN_BASE_PATH}/users", "limit=10&offset=0", headers, send_json=mock_send_users, send_sse=None, client_ip="127.0.0.1")
+        self.assertEqual(captured["status"], 200)
+        users = captured["data"]["users"]
+        self.assertGreaterEqual(len(users), 3)
+        self.assertGreaterEqual(captured["data"]["total"], 3)
+        stats = captured["data"]["stats"]
+        self.assertGreaterEqual(stats["total"], 3)
+        self.assertGreaterEqual(stats["claimed"], 2)
+        self.assertGreaterEqual(stats["guests"], 1)
+
+        # 3. GET /users avec filtre recherche
+        captured.clear()
+        handle_admin_get(None, f"{ADMIN_BASE_PATH}/users", "search=Alpha", headers, send_json=mock_send_users, send_sse=None, client_ip="127.0.0.1")
+        self.assertEqual(len(captured["data"]["users"]), 1)
+        self.assertEqual(captured["data"]["users"][0]["username"], "TestUserAlpha")
+
+        # 4. GET /users/<id>
+        captured.clear()
+        handle_admin_get(None, f"{ADMIN_BASE_PATH}/users/{p1['id']}", "", headers, send_json=mock_send_users, send_sse=None, client_ip="127.0.0.1")
+        self.assertEqual(captured["status"], 200)
+        self.assertEqual(captured["data"]["user"]["username"], "TestUserAlpha")
+        self.assertNotIn("password_hash", captured["data"]["user"])
+
+        # 5. POST /users/<id> (Mise à jour : modification pseudo et réinitialisation du renommage)
+        up_res, status = handle_admin_post(
+            None,
+            f"{ADMIN_BASE_PATH}/users/{p2['id']}",
+            {"username": "CastorRenomme", "can_change_username": True},
+            headers,
+            "127.0.0.1",
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(up_res["success"])
+        self.assertEqual(up_res["user"]["username"], "CastorRenomme")
+        self.assertTrue(up_res["user"]["can_change_username"])
+
+        # 6. DELETE /users/<id>
+        del_res, status = handle_admin_delete(
+            None,
+            f"{ADMIN_BASE_PATH}/users/{p3_id}",
+            headers,
+            "127.0.0.1",
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(del_res["success"])
+        self.assertIsNone(get_player_by_id(p3_id))
 
 
 if __name__ == "__main__":
