@@ -323,15 +323,17 @@
 
     <!-- Vue : Mot du Jour & Supervision -->
     <div id="view-dashboard" class="view-content active">
-      <h1 class="page-heading">Cémantix du jour : indices, mot du jour et solution</h1>
-      <p class="page-intro">Le mot secret reste masqué jusqu'à votre clic. Les dix indices
-      mesurés par le solveur et la solution dépliable sont sur la page
-      <a href="mot-du-jour/">mot du jour Cémantix</a> ; la
-      <a href="methode/">méthode des indices</a> explique le thermomètre et les synonymes à tester.</p>
+      <h1 class="page-heading">Cémantix du <span id="heading-date"></span> : aide, indices, et solution</h1>
+      <p class="page-intro">Le mot du jour reste masqué jusqu'à votre clic. Vous avez trois indices pour le trouver
+        vous même, garanti sans divulgâcher (merci les québécois pour ce néologisme) !
+        Chaque jour retrouvez trois indices sous forme au choix de mot ou de petite énigme.
+      <a href="mot-du-jour/">Cémantix</a> ; la <a href="methode/">méthode des indices</a> explique le thermomètre et les
+        synonymes à tester.</p>
       <noscript>
         <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent, #6366f1); padding: 1rem;">
           <h2 style="font-size: 1.1rem; margin-top: 0;">ℹ️ Navigation sans JavaScript</h2>
-          <p>Le suivi dynamique du mot du jour et les fonctionnalités interactives nécessitent JavaScript. Vous pouvez néanmoins consulter nos <a href="puzzles/">archives complètes des puzzles</a> avec indices et résolutions indexables au format HTML statique, ou découvrir les règles et stratégies ci-dessous.</p>
+          <p>Le suivi dynamique du mot du jour et les fonctionnalités interactives nécessitent JavaScript.
+            Vous pouvez néanmoins consulter nos <a href="puzzles/">archives complètes des puzzles</a> avec indices et résolutions indexables au format HTML statique, ou découvrir les règles et stratégies ci-dessous.</p>
         </div>
       </noscript>
 
@@ -351,7 +353,7 @@
             <div class="secret-container">
               <div id="secret-word-card" class="secret-word-card is-spoiled" tabindex="0" role="button" aria-expanded="false" aria-label="Révéler le mot secret du jour">
                 <div class="secret-word-revealed">
-                  <span class="secret-label">MOT SECRET DU JOUR</span>
+                  <span class="secret-label">Cémantix du jour</span>
                   <h2 id="secret-word" class="secret-word-text">MOTDUJOUR</h2>
                   <div class="secret-actions">
                     <button id="copy-word-btn" class="btn btn-secondary btn-sm" title="Copier le mot dans le presse-papier">
@@ -368,7 +370,7 @@
             <!-- Badges métriques de la session du jour -->
             <div class="metrics-grid">
               <div class="metric-card">
-                <span class="metric-icon">🎯</span>
+                <span class="metric-icon">🔎</span>
                 <div class="metric-info">
                   <span class="metric-label">Coups Joués</span>
                   <span id="metric-tries" class="metric-value">-- essais</span>
@@ -376,7 +378,7 @@
               </div>
 
               <div class="metric-card">
-                <span class="metric-icon">⚡</span>
+                <span class="metric-icon">🧮</span>
                 <div class="metric-info">
                   <span class="metric-label">Temps Calcul</span>
                   <span id="metric-time" class="metric-value">-- s</span>
@@ -410,7 +412,7 @@
                   <span class="btn-icon">📝</span> Phrases
                 </button>
                 <button type="button" class="segment-btn" id="btn-dashboard-word" role="radio" aria-checked="false" title="Afficher sous forme de mots repères">
-                  <span class="btn-icon">🎯</span> Mots
+                  <span class="btn-icon">🔎</span> Mots
                 </button>
               </div>
             </div>
@@ -475,17 +477,17 @@
             <div class="stat-label">Puzzles Résolus</div>
           </div>
           <div class="stat-card card">
-            <span class="stat-icon">🎯</span>
+            <span class="stat-icon">🔎</span>
             <div class="stat-value" id="stat-avg-tries">0</div>
-            <div class="stat-label">Moyenne de Coups</div>
+            <div class="stat-label">Coups en moyenne</div>
           </div>
           <div class="stat-card card">
-            <span class="stat-icon">⚡</span>
+            <span class="stat-icon">⏱️</span>
             <div class="stat-value" id="stat-avg-time">0.0s</div>
             <div class="stat-label">Temps Moyen</div>
           </div>
           <div class="stat-card card">
-            <span class="stat-icon">💯</span>
+            <span class="stat-icon">🥳</span>
             <div class="stat-value" id="stat-win-rate">100%</div>
             <div class="stat-label">Taux de Succès</div>
           </div>
