@@ -62,6 +62,8 @@ def main():
                     help="exécute le rattrapage idempotent des indices de tous les puzzles quotidiens (M6)")
     ap.add_argument("--generate-ai-hints", action="store_true",
                     help="génère les indices sémantiques IA Google Gemini pour un puzzle quotidien (M12)")
+    ap.add_argument("--simulate-solo-bots", action="store_true",
+                    help="simule les faux joueurs habitués du mode Solo (Jalon M15)")
     ap.add_argument("--date", type=str, default="",
                     help="date cible au format AAAA-MM-JJ pour les opérations datées (ex: --generate-ai-hints)")
     ap.add_argument("--force-solve", action="store_true",
@@ -208,6 +210,15 @@ def main():
         generate_ai_hints_cli(target_date=target_date, force=force_flag)
         return
 
+    if getattr(args, "simulate_solo_bots", False):
+        from src.engine import VocabStore
+        from src.services.solo_daily import simulate_solo_daily_bots
+        store = VocabStore(with_chroma=False)
+        force_flag = getattr(args, "force", False)
+        res = simulate_solo_daily_bots(store, force=force_flag)
+        log(f"🏁  [CLI] Résultat simulation : {res}")
+        return
+
     if getattr(args, "force_solve", False):
         from src.services import run_daily_solver
         args.rag_only = True
@@ -218,11 +229,16 @@ def main():
         from src.engine import VocabStore
         from src.api import start_api_server
         from src.services.hints import bootstrap_database
+        from src.services.solo_daily import check_and_run_startup_simulation
         store = VocabStore(with_chroma=False)
         try:
             bootstrap_database(store)
         except Exception as e:
             log(f"⚠️  [API] Initialisation/rattrapage de la base non effectué : {e}")
+        try:
+            check_and_run_startup_simulation(store)
+        except Exception as e:
+            log(f"⚠️  [API] Initialisation du mode solo au démarrage : {e}")
         server = start_api_server(store, host=args.api_host, port=args.api_port)
         try:
             server.serve_forever()

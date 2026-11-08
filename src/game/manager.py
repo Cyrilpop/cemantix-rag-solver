@@ -14,6 +14,7 @@ import secrets
 import threading
 import time
 import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
 import numpy as np
@@ -227,22 +228,71 @@ class GameManager:
         sorted_cands = sorted(cands, key=lambda w: word_ranks.get(w, 999999))
 
         n = len(sorted_cands)
+        extreme_cutoff = max(int(n * 0.99), min(n, 16000)) if n > 100 else n
         # Facile : mots du quotidien (top 4 000)
         self.easy_pool = sorted_cands[:min(4000, n)]
-        # Moyen : vocabulaire courant (4 000 à 16 000)
+        # Normal / Moyen : vocabulaire courant (4 000 à 16 000)
         self.medium_pool = sorted_cands[min(4000, n):min(16000, n)] if n > 4000 else sorted_cands
-        # Expert : vocabulaire plus rare et conceptuel (> 16 000)
-        self.expert_pool = sorted_cands[min(16000, n):] if n > 16000 else sorted_cands
+        # Difficile / Expert : vocabulaire plus rare et conceptuel (> 16 000 jusqu'au top 99%)
+        self.expert_pool = sorted_cands[min(16000, n):extreme_cutoff] if n > 16000 else sorted_cands
+        # Extrême : les 1% des mots les moins fréquents du vocabulaire valide (Jalon M15)
+        self.extreme_pool = sorted_cands[extreme_cutoff:] if extreme_cutoff < n else sorted_cands[-max(1, int(n * 0.01)):]
 
-        log(f"🎮  [API JEU] Pools de mots prêts — Facile: {len(self.easy_pool)} | Moyen: {len(self.medium_pool)} | Expert: {len(self.expert_pool)}")
+        log(f"🎮  [API JEU] Pools de mots prêts — Facile: {len(self.easy_pool)} | Normal: {len(self.medium_pool)} | Difficile: {len(self.expert_pool)} | Extrême: {len(self.extreme_pool)}")
 
-    def get_daily_secret(self) -> tuple[str, str]:
-        """Récupère le mot secret du jour consigné dans l'historique."""
-        # 1. Priorité à la base relationnelle PostgreSQL
+    def draw_solo_daily_word(self) -> tuple[str, str]:
+        """Tire au sort un mot du jour selon la distribution pondérée officielle (Jalon M15).
+
+        Pondération :
+        - 🟢 Facile : 15 %
+        - 🟡 Normal : 75 %
+        - 🔴 Difficile : 9 %
+        - 🟣 Extrême : 1 %
+        """
+        difficulties = ["facile", "normal", "difficile", "extreme"]
+        weights = [0.15, 0.75, 0.09, 0.01]
+        chosen_diff = str(np.random.choice(difficulties, p=weights))
+
+        if chosen_diff == "facile" and getattr(self, "easy_pool", None):
+            pool = self.easy_pool
+        elif chosen_diff == "normal" and getattr(self, "medium_pool", None):
+            pool = self.medium_pool
+        elif chosen_diff == "difficile" and getattr(self, "expert_pool", None):
+            pool = self.expert_pool
+        elif chosen_diff == "extreme" and getattr(self, "extreme_pool", None):
+            pool = self.extreme_pool
+        else:
+            pool = getattr(self, "medium_pool", None) or getattr(self, "easy_pool", None) or self.store.words
+
+        word = str(np.random.choice(pool))
+        return word, chosen_diff
+
+    def get_daily_secret(self) -> tuple[str, str, str]:
+        """Récupère (secret_word, puzzle_id, puzzle_date) pour le mot du jour Solo."""
+        from ..services.solo_daily import get_current_paris_date
+        today_str = get_current_paris_date()
+
+        # 0. Priorité absolue : mot du jour Solo autonome tiré en base (Jalon M15)
+        try:
+            from ..db.solo import get_solo_daily_puzzle
+            daily_solo = get_solo_daily_puzzle(today_str)
+            if not daily_solo:
+                from ..services.solo_daily import ensure_solo_daily_puzzle
+                daily_solo = ensure_solo_daily_puzzle(self.store, self, puzzle_date=today_str)
+            if daily_solo and daily_solo.get("secret_word"):
+                p_id = str(daily_solo.get("id") or 1)
+                p_date = str(daily_solo.get("puzzle_date") or today_str)
+                return daily_solo["secret_word"], p_id, p_date
+        except Exception as e:
+            log(f"⚠️  Lecture du puzzle solo du jour impossible : {e}")
+
+        # 1. Priorité aux résolutions quotidiennes antérieures
         try:
             latest = get_latest_daily_puzzle(winning_only=True)
             if latest and latest.get("word"):
-                return latest.get("word"), str(latest.get("puzzle", "JOUR"))
+                p_num = str(latest.get("puzzle", "1"))
+                p_dt = str(latest.get("date", today_str))
+                return latest.get("word"), p_num, p_dt
         except Exception as e:
             log(f"⚠️  Impossible de charger le mot du jour depuis la base relationnelle : {e}")
 
@@ -252,30 +302,112 @@ class GameManager:
             winning = [h for h in history if h.get("win") is True and h.get("word")]
             if winning:
                 last = winning[-1]
-                return last.get("word"), str(last.get("puzzle", "JOUR"))
+                p_num = str(last.get("puzzle", "1"))
+                p_dt = str(last.get("date", today_str))
+                return last.get("word"), p_num, p_dt
         except Exception as e:
             log(f"⚠️  Impossible de charger le mot du jour pour l'API : {e}")
 
         # Fallback si le mot du jour n'a pas encore été résolu
         fallback = str(np.random.choice(self.easy_pool))
-        return fallback, "JOUR-1"
+        return fallback, "1", today_str
 
-    def new_game(self, mode: str = "daily", difficulty: str = "moyen", force: bool = False) -> GameSession:
+    def new_game(
+        self,
+        mode: str = "daily",
+        difficulty: str = "moyen",
+        force: bool = False,
+        player_id: Optional[str] = None,
+    ) -> GameSession:
         """Crée ou récupère une session de jeu."""
         mode = mode.lower() if mode in ("daily", "unlimited") else "unlimited"
-        difficulty = difficulty.lower() if difficulty in ("facile", "moyen", "expert") else "moyen"
+        difficulty = difficulty.lower() if difficulty in ("facile", "normal", "moyen", "difficile", "expert", "extreme") else "normal"
+        puzzle_date = None
 
         if mode == "daily":
-            secret, puzzle_id = self.get_daily_secret()
-            game_id = f"daily-{puzzle_id}"
+            secret, puzzle_id, puzzle_date = self.get_daily_secret()
+            # Si le puzzle du jour a une difficulté spécifique consignée
+            try:
+                from ..db.solo import get_solo_daily_puzzle
+                daily_p = get_solo_daily_puzzle(puzzle_date)
+                if daily_p and daily_p.get("difficulty"):
+                    difficulty = daily_p["difficulty"]
+            except Exception:
+                pass
+
+            game_id = f"daily-{puzzle_date}-{player_id}" if player_id else f"daily-{puzzle_date}"
             with self.lock:
-                if not force and game_id in self.sessions:
+                # En mode daily, la partie est unique par jour et par joueur :
+                # elle ne peut JAMAIS être réinitialisée (garantit l'intégrité du classement).
+                if game_id in self.sessions:
                     return self.sessions[game_id]
+
+            # Si non trouvée en mémoire vive, tenter de restaurer depuis la base de données
+            try:
+                from ..db.solo import load_game_session, get_solo_player_game
+                loaded = load_game_session(game_id, self.store)
+                if loaded:
+                    if player_id:
+                        db_g = get_solo_player_game(puzzle_date, player_id)
+                        if db_g and db_g.get("hints_revealed") and not loaded.hints_revealed:
+                            loaded.hints_revealed = db_g["hints_revealed"]
+                            loaded.hints = [
+                                h["content"] for h in loaded.hints_revealed if h.get("type") == "word"
+                            ]
+                    with self.lock:
+                        self.sessions[game_id] = loaded
+                    return loaded
+                if player_id:
+                    db_game = get_solo_player_game(puzzle_date, player_id)
+                    if db_game:
+                        session = GameSession(
+                            game_id=game_id,
+                            mode=mode,
+                            difficulty=difficulty,
+                            puzzle_id=puzzle_id,
+                            puzzle_date=puzzle_date,
+                            secret=secret,
+                            store=self.store,
+                        )
+                        session.player_id = player_id
+                        session.is_won = (db_game.get("status") == "won")
+                        session.is_given_up = (db_game.get("status") == "given_up")
+                        session.hints_revealed = db_game.get("hints_revealed", [])
+                        session.hints = [
+                            h["content"] for h in session.hints_revealed if h.get("type") == "word"
+                        ]
+
+                        # Restauration de la trajectoire complète depuis solo_player_guesses
+                        try:
+                            from ..db.connection import db
+                            rows_g = db.fetch_all(
+                                "SELECT word, score, permille, weather, guess_order, is_hint FROM solo_player_guesses WHERE game_id = %s ORDER BY guess_order ASC",
+                                (db_game["id"],),
+                            )
+                            for rg in (rows_g or []):
+                                session.guesses[rg["word"]] = {
+                                    "order": rg["guess_order"],
+                                    "word": rg["word"],
+                                    "score": float(rg["score"]),
+                                    "permille": rg["permille"],
+                                    "weather": rg["weather"],
+                                    "is_hint": bool(rg.get("is_hint", False)),
+                                }
+                        except Exception as eg:
+                            log(f"⚠️  [SOLO] Erreur chargement trajectoire SQL : {eg}")
+
+                        with self.lock:
+                            self.sessions[game_id] = session
+                        return session
+            except Exception as e:
+                log(f"⚠️  [SOLO] Erreur restauration session daily : {e}")
         else:
             if difficulty == "facile":
                 secret = str(np.random.choice(self.easy_pool))
-            elif difficulty == "expert":
+            elif difficulty in ("difficile", "expert"):
                 secret = str(np.random.choice(self.expert_pool))
+            elif difficulty == "extreme":
+                secret = str(np.random.choice(self.extreme_pool))
             else:
                 secret = str(np.random.choice(self.medium_pool))
             puzzle_id = f"LIBRE-{uuid.uuid4().hex[:6].upper()}"
@@ -286,9 +418,12 @@ class GameManager:
             mode=mode,
             difficulty=difficulty,
             puzzle_id=puzzle_id,
+            puzzle_date=puzzle_date if mode == "daily" else None,
             secret=secret,
             store=self.store,
         )
+        if player_id:
+            session.player_id = player_id
 
         with self.lock:
             self._cleanup_stale()
@@ -318,20 +453,64 @@ class GameManager:
 
             # Si c'est le défi du jour et que la session n'était pas en mémoire sous cet ID
             if game_id.startswith("daily-") or game_id == "daily":
-                secret, puzzle_id = self.get_daily_secret()
-                canonical_id = f"daily-{puzzle_id}"
+                secret, puzzle_id, puzzle_date = self.get_daily_secret()
+                canonical_id = game_id if game_id.startswith(f"daily-{puzzle_date}") else f"daily-{puzzle_date}"
                 if canonical_id in self.sessions:
                     self.sessions[game_id] = self.sessions[canonical_id]
                     return self.sessions[canonical_id]
 
+                # Tenter de restaurer depuis load_game_session(canonical_id)
+                db_s = load_game_session(canonical_id, self.store)
+                if db_s:
+                    self.sessions[canonical_id] = db_s
+                    if game_id != canonical_id:
+                        self.sessions[game_id] = db_s
+                    return db_s
+
+                # Extraction de player_id si présent dans game_id (ex: daily-2026-11-08-uuid)
+                p_id = None
+                prefix = f"daily-{puzzle_date}-"
+                if game_id.startswith(prefix):
+                    p_id = game_id[len(prefix):].strip()
+
                 session = GameSession(
                     game_id=canonical_id,
                     mode="daily",
-                    difficulty="moyen",
+                    difficulty="normal",
                     puzzle_id=puzzle_id,
+                    puzzle_date=puzzle_date,
                     secret=secret,
                     store=self.store,
                 )
+                if p_id:
+                    session.player_id = p_id
+                    try:
+                        from ..db.solo import get_solo_player_game
+                        db_game = get_solo_player_game(puzzle_date, p_id)
+                        if db_game:
+                            session.is_won = (db_game.get("status") == "won")
+                            session.is_given_up = (db_game.get("status") == "given_up")
+                            session.hints_revealed = db_game.get("hints_revealed", [])
+                            session.hints = [
+                                h["content"] for h in session.hints_revealed if h.get("type") == "word"
+                            ]
+                            from ..db.connection import db
+                            rows_g = db.fetch_all(
+                                "SELECT word, score, permille, weather, guess_order, is_hint FROM solo_player_guesses WHERE game_id = %s ORDER BY guess_order ASC",
+                                (db_game["id"],),
+                            )
+                            for rg in (rows_g or []):
+                                session.guesses[rg["word"]] = {
+                                    "order": rg["guess_order"],
+                                    "word": rg["word"],
+                                    "score": float(rg["score"]),
+                                    "permille": rg["permille"],
+                                    "weather": rg["weather"],
+                                    "is_hint": bool(rg.get("is_hint", False)),
+                                }
+                    except Exception as eg:
+                        log(f"⚠️  [SOLO] Erreur reconstruction session get_session : {eg}")
+
                 self.sessions[canonical_id] = session
                 if game_id != canonical_id:
                     self.sessions[game_id] = session
@@ -508,7 +687,10 @@ class GameManager:
         multi_limit = multi_max_age if multi_max_age is not None else 7 * 86400.0
         removed = 0
 
-        to_del = [gid for gid, s in self.sessions.items() if (now - s.last_activity) > max_age]
+        to_del = [
+            gid for gid, s in self.sessions.items()
+            if getattr(s, "mode", "unlimited") != "daily" and (now - s.last_activity) > max_age
+        ]
         for gid in to_del:
             del self.sessions[gid]
         to_del_battle = [bid for bid, b in self.battle_sessions.items() if (now - b.last_activity) > max_age]

@@ -425,6 +425,14 @@ def run_daemon_loop(args) -> None:
     if CHALLENGE_ENABLED and getattr(args, "store", None) is None:
         warm_store(args)
 
+    # M15 : Initialisation du mot du jour Solo et simulation si > 6h30 et table vide
+    try:
+        from .solo_daily import check_and_run_startup_simulation
+        store_ref = getattr(args, "store", None)
+        check_and_run_startup_simulation(store_ref, now=now)
+    except Exception as e:
+        log(f"⚠️  [DÉMON] Erreur initialisation solo quotidien au démarrage : {e}")
+
     # Rattrapage au démarrage : vérifier si le mot d'aujourd'hui est déjà résolu
     skip_on_start = getattr(args, "no_run_on_start", False)
     if not skip_on_start:
@@ -472,10 +480,28 @@ def run_daemon_loop(args) -> None:
                 log("\n⚡  [DÉMON WORKER] Ordre de résolution immédiate reçu depuis l'API web !")
                 forced_action = "solve"
                 break
+            elif cmd == "simulate_solo_bots":
+                log("\n⚡  [DÉMON WORKER] Ordre de simulation forcée des habitués Solo reçu !")
+                try:
+                    from .solo_daily import simulate_solo_daily_bots
+                    simulate_solo_daily_bots(getattr(args, "store", None), force=True)
+                except Exception as e:
+                    log(f"⚠️  [DÉMON] Erreur simulation habitués commandée : {e}")
             time.sleep(1)
             tick += 1
             if tick % 15 == 0:
                 update_heartbeat("sleeping", {"next_run": target_str})
+            if tick % 60 == 0:
+                # Vérification après 6h30 pour simulation des faux joueurs habitués
+                cur_t = datetime.now(PARIS_TZ)
+                if (cur_t.hour > 6) or (cur_t.hour == 6 and cur_t.minute >= 30):
+                    try:
+                        from .solo_daily import simulate_solo_daily_bots, is_solo_bots_simulated, get_current_paris_date
+                        today_paris = get_current_paris_date()
+                        if not is_solo_bots_simulated(today_paris):
+                            simulate_solo_daily_bots(getattr(args, "store", None), force=False)
+                    except Exception as e:
+                        log(f"⚠️  [DÉMON] Erreur simulation habitués 6h30 : {e}")
             # DEFI-09 : défis au bot — pick-up dans la même boucle de veille,
             # sans nouveau processus. Un seul défi à la fois ; la résolution
             # nocturne de minuit reste prioritaire (DEFI-13) : elle démarre au
@@ -500,6 +526,13 @@ def run_daemon_loop(args) -> None:
 
         log("\n⏰  Réveil du démon Cémantix — Minuit passé, lancement de la résolution !")
         challenge_maintenance()  # SEC-27 : purge des défis périmés à chaque réveil
+
+        # M15 : Renouvellement à minuit du mot du jour Solo aléatoire et de ses indices IA
+        try:
+            from .solo_daily import ensure_solo_daily_puzzle
+            ensure_solo_daily_puzzle(getattr(args, "store", None))
+        except Exception as e:
+            log(f"⚠️  [DÉMON] Erreur tirage mot du jour solo à minuit : {e}")
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
             try:
