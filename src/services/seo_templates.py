@@ -267,6 +267,17 @@ def _load_style_tokens() -> str:
     return "\n".join(blocks)
 
 
+def _load_auth_css() -> str:
+    """Charge et compacte `auth.css` pour l'injecter en `<style>` afin d'assurer l'iso-style du header et du profil."""
+    auth_css_file = WEB_ROOT / "css" / "auth.css"
+    try:
+        raw = auth_css_file.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    cleaned = re.sub(r"/\*.*?\*/", "", raw, flags=re.DOTALL)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
 def _load_puzzle_css() -> str:
     """Charge et compacte `puzzle.css` pour l'injecter en `<style>` sans requête bloquante."""
     puzzle_css_file = WEB_ROOT / "css" / "puzzle.css"
@@ -923,7 +934,7 @@ def render_page(
   <link rel="icon" type="image/png" href="{home}icons/favicon.png">
   <link rel="shortcut icon" href="{home}favicon.ico">
   <link rel="apple-touch-icon" href="{home}icons/apple-touch-icon.png">
-  <style>{_load_style_tokens()}{PAGE_CSS}{_load_puzzle_css()}</style>
+  <style>{_load_style_tokens()}{PAGE_CSS}{_load_auth_css()}{_load_puzzle_css()}</style>
 {json_ld}
   <script>
     document.addEventListener("DOMContentLoaded", function() {{
@@ -1029,6 +1040,7 @@ def render_page(
       }});
     }});
   </script>
+  <script type="module" src="{home}js/auth.js"></script>
   {GTM_SNIPPET}
 </head>
 <body>
@@ -1287,6 +1299,7 @@ __all__ = [
     "_rel",
     "_rel_index",
     "_load_style_tokens",
+    "_load_auth_css",
     "_load_puzzle_css",
     "render_page",
     "_json_ld_block",

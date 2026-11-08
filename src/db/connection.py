@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS multi_rooms (
     player1_key VARCHAR(128) NOT NULL,
     player2_key VARCHAR(128) NOT NULL,
     current_turn VARCHAR(4) NOT NULL DEFAULT 'p1',
-    winner VARCHAR(4),
+    winner VARCHAR(32),
     p1_data JSONB NOT NULL,
     p2_data JSONB NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -651,6 +651,7 @@ class DatabaseManager:
                         cur.execute("ALTER TABLE bot_challenges ADD COLUMN IF NOT EXISTS player_name VARCHAR(64);")
                         cur.execute("ALTER TABLE multi_rooms ALTER COLUMN player1_key TYPE VARCHAR(128);")
                         cur.execute("ALTER TABLE multi_rooms ALTER COLUMN player2_key TYPE VARCHAR(128);")
+                        cur.execute("ALTER TABLE multi_rooms ALTER COLUMN winner TYPE VARCHAR(32);")
                     conn.commit()
 
                 else:
