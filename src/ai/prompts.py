@@ -24,31 +24,32 @@ RÈGLES D'OR DE SÉCURITÉ ET DE RÉDACTION :
    - "word" : UN SEUL mot français en minuscules (nom ou adjectif), sans espace ni ponctuation.
    - "phrase" : Une phrase d'énigme rédigée (15 à 25 mots).
 
-GRADUATION STRICTE DES 3 NIVEAUX :
+GRADUATION STRICTE DES 3 NIVEAUX (MILLIÈMES CROISSANTS OBLIGATOIRES) :
+Les 3 indices doivent impérativement avoir une proximité croissante dans l'espace sémantique :
+millième(Niveau 1) ~700‰ < millième(Niveau 2) ~825‰ < millième(Niveau 3) ~950‰.
 
-• NIVEAU 1 (weight = 0.33) — ZONE FROIDE (~15-25% sémantique) :
-  - Rôle : Ambiance lointaine, toile de fond historique, dimension philosophique ou domaine abstrait.
-  - INTERDICTION STRICTE : Ne cite JAMAIS la catégorie physique concrète (ni bâtiment, ni construction, ni outil, ni machine, ni animal, etc.).
-  - "word" : Un concept abstrait ou thématique vaste (ex. pour 'château' : féodalité, royauté, noblesse ; pour 'boussole' : orientation, azimut, périple).
+• NIVEAU 1 (weight = 0.33) — ZONE TIÈDE (Cible ~700‰) :
+  - Rôle : Ambiance générale, toile de fond thématique ou domaine abstrait.
+  - "word" : Un concept ou terme général ciblant environ 700‰.
   - "phrase" : Une énigme d'atmosphère lointaine.
 
-• NIVEAU 2 (weight = 0.66) — ZONE TIÈDE / CHAUDE (~40-50% sémantique) :
+• NIVEAU 2 (weight = 0.66) — ZONE CHAUDE (Cible ~825‰) :
   - Rôle : Vocation pratique, rôle sociétal, usage ou contexte d'action.
-  - "word" : Une fonction, un verbe d'action lié, un rôle ou un attribut marquant (ex. pour 'château' : défense, refuge, garnison ; pour 'boussole' : repérage, navigation, cap).
+  - "word" : Une fonction, un rôle ou un attribut marquant ciblant environ 825‰ (strictement plus chaud que le niveau 1).
   - "phrase" : Décrit une situation d'usage sans décrire l'objet littéralement.
 
-• NIVEAU 3 (weight = 1.00) — ZONE BRÛLANTE (Top 1000) :
+• NIVEAU 3 (weight = 1.00) — ZONE BRÛLANTE (Cible ~950‰) :
   - Rôle : L'étincelle finale. Composant emblématique, analogie saisissante ou propriété distinctive majeure.
-  - "word" : Un terme très proche dans l'espace sémantique (ex. pour 'château' : donjon, pont-levis ; pour 'boussole' : aiguille, cadran).
+  - "word" : Un terme très proche dans l'espace sémantique ciblant environ 950‰ (très chaud sans être synonyme direct ni solution immédiate).
   - "phrase" : Une énigme resserrée et précise qui permet de déclencher l'illumination sans donner une simple définition.
 
 Format JSON STRICT attendu :
 {
   "secret_word": "<mot>",
   "hints": [
-    {"level": 1, "weight": 0.33, "word": "<mot_concept_abstrait>", "phrase": "<phrase_enigme_lointaine>"},
-    {"level": 2, "weight": 0.66, "word": "<mot_fonction_usage>", "phrase": "<phrase_enigme_usage>"},
-    {"level": 3, "weight": 1.00, "word": "<mot_proche_declic>", "phrase": "<phrase_enigme_declic>"}
+    {"level": 1, "weight": 0.33, "word": "<mot_concept_environ_700>", "phrase": "<phrase_enigme_lointaine>"},
+    {"level": 2, "weight": 0.66, "word": "<mot_usage_environ_825>", "phrase": "<phrase_enigme_usage>"},
+    {"level": 3, "weight": 1.00, "word": "<mot_proche_environ_950>", "phrase": "<phrase_enigme_declic>"}
   ]
 }"""
 
