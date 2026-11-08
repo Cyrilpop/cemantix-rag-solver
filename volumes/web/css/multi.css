@@ -313,10 +313,23 @@
   color: #f0f6fc;
 }
 
+.btn-share-pc {
+  display: inline-flex;
+}
+
 .share-mobile-actions {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 0.4rem;
+}
+
+@media (max-width: 768px) {
+  .btn-share-pc {
+    display: none !important;
+  }
+  .share-mobile-actions {
+    display: flex !important;
+  }
 }
 
 .share-mobile-actions .btn-share-main {

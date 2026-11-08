@@ -25,6 +25,8 @@ import { getStoredSession, getPlayerUsername } from "./auth.js";
 import { SHARE_MESSAGES } from "./share_templates.js";
 
 // Clé de stockage local des duels
+const STORAGE_KEY = "cemantix_multi_sessions";
+
 async function triggerShareOrCopy({ mode, difficulty, url, forceCopyOnly = false }) {
   if (!url) return;
   const username = getPlayerUsername() || getStoredSession()?.username || "Un ami";
@@ -50,12 +52,21 @@ async function triggerShareOrCopy({ mode, difficulty, url, forceCopyOnly = false
       await navigator.share({
         title: template.title,
         text: fullText,
-        url: url,
       });
       return;
     } catch (err) {
       if (err.name === "AbortError") {
         return; // Partage annulé par l'utilisateur
+      }
+      try {
+        await navigator.share({
+          title: template.title,
+          text: fullText,
+          url: url,
+        });
+        return;
+      } catch (err2) {
+        if (err2.name === "AbortError") return;
       }
     }
   }
@@ -75,16 +86,20 @@ async function triggerShareOrCopy({ mode, difficulty, url, forceCopyOnly = false
 }
 
 function initWaitingShareButtons() {
-  const isMobileShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const isMobile =
+    window.matchMedia("(max-width: 768px)").matches ||
+    (typeof navigator !== "undefined" && typeof navigator.share === "function");
   const btnCopyPc = document.getElementById("btn-copy-share-url");
   const mobileShareGroup = document.getElementById("waiting-mobile-share-group");
 
-  if (isMobileShare) {
-    if (btnCopyPc) btnCopyPc.style.display = "none";
-    if (mobileShareGroup) mobileShareGroup.style.display = "flex";
-  } else {
-    if (btnCopyPc) btnCopyPc.style.display = "inline-flex";
-    if (mobileShareGroup) mobileShareGroup.style.display = "none";
+  if (btnCopyPc && mobileShareGroup) {
+    if (isMobile) {
+      btnCopyPc.style.display = "none";
+      mobileShareGroup.style.display = "flex";
+    } else {
+      btnCopyPc.style.display = "inline-flex";
+      mobileShareGroup.style.display = "none";
+    }
   }
 }
 
@@ -127,6 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLobbyEvents();
   initArenaEvents();
   initRoomActions();
+  initWaitingShareButtons();
   renderRecentGames();
   syncPlayerNameInputs();
   window.addEventListener("cemantix:auth-changed", () => {
@@ -209,24 +225,32 @@ function getStoredGames() {
 }
 
 function saveGameToStorage(room_id, player_key, role, meta = {}) {
-  const games = getStoredGames();
-  games[room_id] = {
-    room_id,
-    player_key,
-    role,
-    mode: meta.mode || "same_word",
-    opponent_name: meta.opponent_name || "Adversaire",
-    difficulty: meta.difficulty || "moyen",
-    updated_at: Date.now(),
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+  try {
+    const games = getStoredGames();
+    games[room_id] = {
+      room_id,
+      player_key,
+      role,
+      mode: meta.mode || "same_word",
+      opponent_name: meta.opponent_name || "Adversaire",
+      difficulty: meta.difficulty || "moyen",
+      updated_at: Date.now(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+  } catch (e) {
+    console.warn("Impossible d'enregistrer la partie dans l'historique local :", e);
+  }
   renderRecentGames();
 }
 
 function removeGameFromStorage(room_id) {
-  const games = getStoredGames();
-  delete games[room_id];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+  try {
+    const games = getStoredGames();
+    delete games[room_id];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+  } catch (e) {
+    console.warn("Impossible de retirer la partie de l'historique local :", e);
+  }
   renderRecentGames();
 }
 
@@ -471,6 +495,7 @@ async function handleCreateGame() {
   const playerName = (inputVal && inputVal !== "Joueur 1") ? inputVal : (storedUser || "Joueur 1");
   const customTarget = (state.selectedMode === "custom_words" && customWordInput) ? customWordInput.value.trim() : null;
 
+  let data;
   try {
     const res = await fetch("/api/multi/create", {
       method: "POST",
@@ -482,12 +507,18 @@ async function handleCreateGame() {
         custom_target: customTarget,
       }),
     });
-    const data = await res.json();
+    data = await res.json();
     if (!res.ok || !data.valid) {
       showToast(data.error || "Erreur lors de la création du salon.");
       return;
     }
+  } catch (err) {
+    console.error("Erreur réseau /api/multi/create :", err);
+    showToast("Impossible de contacter le serveur.");
+    return;
+  }
 
+  try {
     state.currentRoomId = data.room_id;
     state.currentPlayerKey = data.player_key;
     state.currentRole = data.role;
@@ -505,7 +536,8 @@ async function handleCreateGame() {
 
     openWaitingRoom(data);
   } catch (err) {
-    showToast("Impossible de contacter le serveur.");
+    console.error("Erreur affichage salon :", err);
+    showToast("Erreur lors de l'ouverture du salon.");
   }
 }
 
@@ -693,8 +725,10 @@ function initArenaEvents() {
       const origin = window.location.origin;
       const guestKey = state.sessionData?.guest_key || "";
       const url = `${origin}/multi/?r=${state.currentRoomId}${guestKey ? `&k=${guestKey}` : ""}`;
-      const isMobileShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
-      triggerShareOrCopy({ url, forceCopyOnly: !isMobileShare });
+      const isMobile =
+        window.matchMedia("(max-width: 768px)").matches ||
+        (typeof navigator !== "undefined" && typeof navigator.share === "function");
+      triggerShareOrCopy({ url, forceCopyOnly: !isMobile });
     });
   }
 

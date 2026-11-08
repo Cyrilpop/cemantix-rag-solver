@@ -11,6 +11,7 @@ export const DIFFICULTY_LABELS = {
   facile: "🟢 Facile (mot du quotidien)",
   moyen: "🟡 Moyen (mot standard)",
   difficile: "🌶️ Difficile (mot subtil ou technique)",
+  expert: "🔴 Expert (mot complexe ou rare)",
 };
 
 export const SHARE_MESSAGES = {
