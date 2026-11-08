@@ -31,9 +31,20 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - Extension massive des listes de génération : 166 noms décalés/absurdes, 104 adjectifs loufoques et 275 mots concrets de secours.
   - Fiabilisation de l'amorçage SQL sous PostgreSQL et SQLite avec contrôle granulaire par catégorie de mots.
   - Nettoyage automatique des guillemets résiduels sur les clés d'environnement (`GEMINI_API_KEY`).
+- **Propagation Transverse du Pseudo & Synchronisation Temps Réel (`volumes/web/js/defi.js`, `volumes/web/js/multi.js`)** :
+  - Synchronisation automatique du pseudo joueur dans les formulaires de création de duel 1v1, de saisie de code salon et de défi contre le bot lors de l'événement `cemantix:auth-changed`.
+- **Réactivité & Ergonomie du Palmarès des Défis (`volumes/web/js/defi.js`, `volumes/web/css/defi.css`, `src/services/kpis.py`)** :
+  - Apparition immédiate du mot vainqueur après victoire (insertion optimiste dans le tableau, bypass de cache `?fresh=1`, réduction du TTL de cache des KPIs de 10s à 2s).
+  - Suppression du défilement horizontal sur mobile/desktop (`table-layout: fixed; width: 100%`) et masquage visuel propre des ascenseurs de défilement (`scrollbar-width: none`).
+  - Légende explicative et icônes compactes de statut de résolution.
+- **Stabilisation Multijoueur, Partage Adaptatif & Templates Centralisés (`volumes/web/js/multi.js`, `volumes/web/js/share_templates.js`, `volumes/web/css/multi.css`, `src/db/connection.py`)** :
+  - Maintien strict de la salle d'attente 1v1 (vérification conjointe `p2_joined` et `state === "in_progress"`).
+  - Centralisation des textes d'invitation dans `share_templates.js` avec personnalisation dynamique : affichage de la difficulté (`🟢 Facile`, `🟡 Moyen`, `🌶️ Difficile`, `🔴 Expert`) en mode Même Mot, et message engageant/provocateur en mode Mots Choisis.
+  - Partage responsive adaptatif par CSS natif : bouton PC `🔗 Copier le lien` sur écran large et groupe mobile `📲 Inviter un ami` (Web Share API natif WhatsApp/SMS avec repli presse-papier) + `📋` sur écran tactile/mobile.
+  - Migration SQL idempotente de `player1_key` et `player2_key` vers `VARCHAR(128)` pour accueillir les condensats sécurisés HMAC-SHA256 sous PostgreSQL.
 - **Conformité Juridique, FAQ & Tests Automatisés (`volumes/web/index.html`, `tests/test_player_auth.py`)** :
   - Mise à jour de la FAQ (#confidentialite et #conditions-utilisation) et du graphe Schema.org JSON-LD `FAQPage` : exemption CNIL du localStorage fonctionnel, hachage sécurisé, zéro email collecté, responsabilité de la phrase de 4 mots.
-  - Suite de 8 tests complets couvrant 100 % du cycle de vie joueur, l'idempotence et les endpoints d'administration, portant la suite globale à 435 tests automatisés sous Docker.
+  - Suite de 8 tests complets couvrant 100 % du cycle de vie joueur, l'idempotence et les endpoints d'administration, portant la suite globale à 436 tests automatisés sous Docker.
 
 ---
 

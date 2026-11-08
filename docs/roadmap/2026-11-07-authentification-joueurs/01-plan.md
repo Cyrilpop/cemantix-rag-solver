@@ -108,6 +108,21 @@ L'objectif de cette évolution est de déployer un système d'authentification i
     - Scénario complet : visite invité $\rightarrow$ renommage réussi $\rightarrow$ tentative de 2nd renommage rejetée $\rightarrow$ claim avec mot de passe $\rightarrow$ login sur nouvel appareil avec succès $\rightarrow$ échec mauvais mot de passe $\rightarrow$ réinitialisation avec phrase secrète valide $\rightarrow$ échec avec phrase invalide.
   - Documentation utilisateur et technique dans `README.md` et `CHANGELOG.md`.
 
+### AUTH-07 — Propagation Transverse du Pseudo Joueur & Réactivité du Palmarès
+- **Cible :** `volumes/web/js/defi.js`, `volumes/web/js/multi.js`, `volumes/web/css/defi.css`, `src/services/kpis.py`.
+- **Besoin :**
+  - Propagation automatique et réactive du pseudo authentifié vers les formulaires de défi (`/defi/`) et de multijoueur (`/multi/`).
+  - Suppression de la latence d'affichage du vainqueur dans le palmarès : réduction du TTL de cache des KPIs de 10s à 2s, bypass de cache `?fresh=1` lors d'une victoire, et insertion locale optimiste immédiate.
+  - Suppression du défilement horizontal sur mobile/desktop (`table-layout: fixed; width: 100%`) et masquage visuel des barres de scroll (`scrollbar-width: none`).
+
+### AUTH-08 — Stabilisation Multijoueur, Partage Adaptatif Mobile & Templates Centralisés
+- **Cible :** `volumes/web/js/multi.js`, `volumes/web/js/share_templates.js`, `volumes/web/multi/index.html`, `volumes/web/css/multi.css`, `src/db/connection.py`.
+- **Besoin :**
+  - Maintien fiable de la salle d'attente (vérification stricte de `p2_joined` et `state === "in_progress"`).
+  - Module centralisé `share_templates.js` pour modifier les messages d'invitation sans chercher dans le code (nuance Même Mot avec niveau de difficulté vs Mots Choisis avec provocation).
+  - Boutons de partage adaptatifs par CSS responsive : bouton PC épuré `🔗 Copier le lien` sur grand écran et groupe mobile `📲 Inviter un ami` (Web Share API) + `📋` sur écran tactile/mobile.
+  - Migration SQL idempotente de `player1_key` et `player2_key` vers `VARCHAR(128)` pour supporter les condensats HMAC-SHA256 sous PostgreSQL.
+
 ---
 
 ## 3. Plan d'Exécution par Étapes
@@ -118,5 +133,6 @@ flowchart TD
     Step2 --> Step3["Étape 3 : Endpoints API REST (AUTH-04)"]
     Step3 --> Step4["Étape 4 : Interface Web & Layout (AUTH-05)"]
     Step4 --> Step5["Étape 5 : Tests Unitaires Docker & Clôture (AUTH-06)"]
+    Step5 --> Step6["Étape 6 : Extensions & Stabilisations Transverses (AUTH-07, AUTH-08)"]
 ```
 

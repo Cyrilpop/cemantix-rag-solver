@@ -2,7 +2,7 @@
 
 **Dépôt :** `Cyrilpop/cemantix-rag-solver`  
 **Branche visée :** `feature/m14-authentification-joueurs` (base `main`)  
-**Statut :** ✅ Réalisé & Validé (435/435 tests passants sous Docker)  
+**Statut :** ✅ Réalisé & Validé (436/436 tests passants sous Docker)  
 **Périmètre exclusif :** `database/init.sql`, `src/db/connection.py`, `src/db/players.py` (ou `src/db/` associé), `src/services/player_auth.py`, routes API backend HTTP (`src/api/` ou serveur dédié), dictionnaire de mots loufoques et phrase de secours, injection layout header (`src/services/layout_sync.py`), composants UI frontend (`volumes/web/js/auth.js`, `volumes/web/css/auth.css`), suite de tests unitaires sous Docker (`tests/test_player_auth.py`), et documentation associée (`docs/roadmap/2026-11-07-authentification-joueurs/`, `docs/roadmap/README.md`, `README.md`, `CHANGELOG.md`).  
 **Périmètre exclu pour ce jalon :** Pas d'intégration directe de Google Sign-In / OAuth (le schéma et l'architecture prévoient la colonne et l'extensibilité, mais le flux Google OAuth sera activé ultérieurement). Aucune dépendance externe payante ni outil hors conteneur.  
 **Suite de validation requise :** Tests unitaires automatisés sous Docker Python 3.12 (`docker compose run --rm -v ./tests:/app/tests --entrypoint python cemantix -m unittest discover -s tests`), `tools/check_docs.py`, `tools/check_seo.py`, `tools/build_css_bundles.py --check`.  
@@ -261,4 +261,35 @@ Conformément aux directives de développement :
 - [x] La phrase de secours permet de restaurer l'accès au compte en cas d'oubli du mot de passe.
 - [x] La suite de tests unitaires Docker s'exécute avec 100 % de succès.
 - [x] `tools/check_docs.py` et `tools/check_seo.py` sortent verts.
+
+---
+
+## 5. Extensions & Stabilisations Transverses (Hors-Scope Qualité & UX)
+
+Au cours du déploiement et des tests en situation réelle sur le jalon M14, plusieurs consolidations transverses ont été intégrées pour garantir une cohérence parfaite de l'identité joueur et de l'expérience utilisateur sur tous les modes de jeu :
+
+1. **Propagation Transverse du Pseudo Authentifié :**
+   - **Mode Multijoueur 1v1 (`/multi/`) :** Remplacement automatique des libellés par défaut (« Joueur 1 », « Joueur 2 ») par le pseudo authentifié dans les formulaires de création, de connexion et dans les cartes de duels récents. Écoute dynamique de l'événement global `cemantix:auth-changed`.
+   - **Mode Défier le Bot (`/defi/`) :** Pré-remplissage automatique du champ pseudo lors du lancement d'un défi (`input#defi-player-name`), synchronisé avec l'authentification et propagé dans le payload API `/api/challenge/start`.
+
+2. **Réactivité & Ergonomie du Palmarès des Défis (`/defi/`) :**
+   - **Apparition immédiate du mot vainqueur :** Réduction du TTL de cache des KPIs de 10 s à 2 s, ajout d'un paramètre de contournement `?fresh=1` lors d'une victoire, et insertion locale optimiste immédiate dans le tableau pour zéro délai de perception.
+   - **Suppression du défilement horizontal parasite :** Refonte de la structure du tableau (`table-layout: fixed; width: 100%; overflow-x: hidden`) et formatage compact des colonnes (badges et dates `JJ/MM`).
+   - **Masquage visuel des barres de défilement :** Application des directives `scrollbar-width: none` et `::-webkit-scrollbar { display: none; }` sur la liste des coups et le palmarès pour une interface épurée sans altérer la capacité de scroll tactile.
+   - **Légende et icônes compactes :** Intégration d'un îlot d'information sous le palmarès expliquant clairement les symboles de victoire et de défaite.
+
+3. **Stabilisation des Salons Multijoueurs & Salle d'Attente (`/multi/`) :**
+   - **Maintien de la salle d'attente :** Correction du bug de fermeture intempestive après quelques secondes en conditionnant l'accès à l'arène à la présence conjointe de `p2_joined` et de `state === "in_progress"`.
+   - **Persistance des clés HMAC-SHA256 sous PostgreSQL :** Migration SQL de `multi_rooms.player1_key` et `player2_key` vers `VARCHAR(128)` pour supporter les condensats sécurisés de 69 caractères sans rejet en base.
+   - **Résilience du stockage local :** Sécurisation systématique de `saveGameToStorage` et `removeGameFromStorage` par blocs `try/catch` pour immuniser la création de salon contre toute restriction locale de `localStorage`.
+
+4. **Centralisation des Messages d'Invitation & Partage Adaptatif Mobile / PC :**
+   - **Module dédié `volumes/web/js/share_templates.js` :** Centralisation isolée des modèles textuels d'invitation pour permettre une modification rapide sans chercher dans le code applicatif.
+   - **Messages nuancés selon la variante :**
+     - *Même Mot* : Mention explicite du niveau de difficulté (`🟢 Facile`, `🟡 Moyen`, `🌶️ Difficile`, `🔴 Expert`).
+     - *Mots Choisis* : Message engageant et provocateur axé sur le duel sur mesure (*« Tu penses pouvoir me coller ? Je t'ai préparé un piège sémantique... »*).
+   - **Expérience de partage adaptative purement responsive (CSS natif) :**
+     - *Desktop (> 768px)* : Bouton `🔗 Copier le lien` copiant uniquement l'URL directe.
+     - *Mobile (<= 768px)* : Groupe d'actions dédié avec bouton principal `📲 Inviter un ami` (déclenche le partage natif WhatsApp/SMS via Web Share API avec message complet ou copie enrichie dans le presse-papier) et bouton `📋` pour copier l'URL brute.
+
 

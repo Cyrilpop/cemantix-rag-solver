@@ -682,6 +682,14 @@ Le système d'identité joueur offre une expérience sans friction, ludique et s
    - En-tête HTTP obligatoire `Cache-Control: no-store, private` sur tous les endpoints `/api/player/*`.
 6. **Administration des vocabulaires :**
    - Panneau de maintenance dédié dans la console d'exploitation `/panier-9x` permettant d'enrichir ou désactiver en direct les listes de noms, d'adjectifs et de mots de secours.
+7. **Propagation transverse du pseudo & synchronisation temps réel :**
+   - Le pseudo authentifié est automatiquement propagé dans les formulaires de défi (`/defi/`) et de duel multijoueur (`/multi/`), réagissant en temps réel à l'événement global `cemantix:auth-changed` sans rechargement de page.
+8. **Modèles d'invitation centralisés (`volumes/web/js/share_templates.js`) :**
+   - Centralisation isolée de tous les textes d'invitation (WhatsApp, SMS, presse-papier) pour une modification immédiate sans toucher au code applicatif.
+   - Personnalisation dynamique selon le mode : mention du niveau (`🟢 Facile`, `🟡 Moyen`, `🌶️ Difficile`, `🔴 Expert`) en mode *Même Mot*, et message provocateur/engageant en mode *Mots Choisis*.
+9. **Partage adaptatif Mobile / Desktop & Ergonomie du Palmarès :**
+   - Affichage responsive CSS natif : bouton PC `🔗 Copier le lien` sur grand écran (> 768px), et groupe mobile `📲 Inviter un ami` (Web Share API natif avec repli presse-papier) + `📋` sur mobile/tactile (<= 768px).
+   - Optimisation du palmarès des défis : affichage instantané du mot vainqueur (bypass cache `?fresh=1`, TTL KPIs 2s, insertion optimiste), suppression du scroll horizontal et masquage visuel des barres de défilement.
 
 ### Cache HTTP : cohérence avec la politique « no-cache »
 Le projet applique `Cache-Control: "no-cache, must-revalidate"` sur le code applicatif
