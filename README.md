@@ -362,8 +362,18 @@ volumes/web/
 │   ├── trajectory.js # Visualisation et filtres de la trajectoire IA
 │   ├── game.js       # Moteur complet du jeu interactif (API locale)
 │   ├── battle.js     # Moteur du duel contre le bot IA RAG
-│   └── multi.js      # Moteur du mode multijoueur 1v1 temps réel
+│   ├── multi.js      # Moteur du mode multijoueur 1v1 temps réel
+│   ├── auth.js       # Authentification universelle des joueurs et synchronisation de session
+│   └── share_templates.js # Modèles et personnalisation des invitations 1v1 (WhatsApp, SMS, Web Share API)
 ```
+
+#### Personnalisation des invitations Multijoueur 1v1 (WhatsApp & Mobile) :
+Tous les textes, accroches, emojis et variantes de messages partagés lors d'une invitation à un duel 1v1 sont centralisés dans un fichier unique facile à éditer :
+- **Emplacement du fichier :** `volumes/web/js/share_templates.js`
+- **Comportement contextuel :**
+  - **Sur PC :** le bouton copie directement l'URL brute du salon dans le presse-papier.
+  - **Sur Mobile :** le bouton « 📲 Inviter un ami » déclenche l'API native de partage du téléphone (`navigator.share`) vers WhatsApp, SMS, Telegram, etc., avec un texte adapté au mode de jeu (mention du niveau de difficulté en mode *Même Mot*, ou message provocateur taquin en mode *Mots Choisis*). Un bouton rapide « 📋 » permet de ne copier que le lien.
+  - **Aperçu riche WhatsApp (Open Graph) :** l'illustration officielle est servie automatiquement via `volumes/web/og-image.jpg`.
 
 #### Fonctionnalités clés de la page web :
 - **Carte Héros du Mot du Jour** : Affiche la date, le numéro du puzzle officiel, le mot secret, le nombre d'essais et la durée de calcul.
@@ -1044,7 +1054,7 @@ cemantix-rag-solver/
 │       ├── multi/           # Mode Multijoueur 1v1 entre amis (URL : /multi/)
 │       │   └── index.html   # Page Multijoueur (Même Mot, Mots Choisis, lien direct)
 │       ├── css/             # Styles atomiques et bundles optimisés par page (dist/)
-│       ├── js/              # Modules JavaScript atomiques (app, utils, render, game, battle, multi...)
+│       ├── js/              # Modules JavaScript atomiques (app, multi, auth, share_templates...)
 │       ├── .well-known/     # Manifestes ARD et A2A auto-régénérés (ard.json, ai-catalog.json, agent-card.json)
 │       ├── robots.txt       # Directives d'exploration pour les moteurs de recherche
 │       └── sitemap.xml      # Plan de site XML généré automatiquement au démarrage des conteneurs (hors Git)

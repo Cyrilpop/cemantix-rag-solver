@@ -509,6 +509,9 @@ to{opacity:1;transform:translateY(0);}
 .share-link-box{width:100%;max-width:550px;display:flex;align-items:center;gap:0.5rem;background:rgba(13,17,23,0.8);border:1px solid var(--border-color,#30363d);padding:0.5rem;border-radius:var(--radius-md,8px);}
 .share-link-input{flex:1;background:transparent;border:none;color:#8b949e;font-size:0.88rem;font-family:var(--font-mono,monospace);padding:0.4rem 0.6rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .share-link-input:focus{outline:none;color:#f0f6fc;}
+.share-mobile-actions{display:flex;align-items:center;gap:0.4rem;}
+.share-mobile-actions .btn-share-main{flex:1;}
+.share-mobile-actions .btn-copy-icon{width:38px;min-width:38px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;}
 .turn-banner{display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1.25rem;border-radius:var(--radius-lg,12px);margin-bottom:1rem;font-weight:700;transition:all 0.3s ease;}
 .turn-banner-my-turn{background:linear-gradient(135deg,rgba(46,160,67,0.25),rgba(35,134,54,0.15));border:1px solid rgba(46,160,67,0.6);color:#3fb950;box-shadow:0 4px 20px rgba(46,160,67,0.15);}
 .turn-banner-opp-turn{background:linear-gradient(135deg,rgba(210,153,34,0.2),rgba(187,128,9,0.1));border:1px solid rgba(210,153,34,0.5);color:#e3b341;}
@@ -616,4 +619,7 @@ html.is-keyboard-open .multi-list-card .game-guesses-list{max-height:175px;max-h
 .share-link-box{flex-direction:column;align-items:stretch;gap:0.45rem;padding:0.5rem;}
 .share-link-input{width:100%;text-align:center;font-size:0.82rem;}
 #btn-copy-share-url{width:100%;min-height:42px;justify-content:center;}
+.share-mobile-actions{width:100%;display:flex;gap:0.5rem;}
+.share-mobile-actions .btn-share-main{min-height:42px;font-size:0.9rem;font-weight:600;}
+.share-mobile-actions .btn-copy-icon{min-height:42px;width:44px;min-width:44px;}
 }

@@ -22,9 +22,71 @@ import {
 import { initTheme } from "./theme.js";
 import { renderGuessesContainer } from "./render.js";
 import { getStoredSession, getPlayerUsername } from "./auth.js";
+import { SHARE_MESSAGES } from "./share_templates.js";
 
 // Clé de stockage local des duels
-const STORAGE_KEY = "cemantix_multi_sessions";
+async function triggerShareOrCopy({ mode, difficulty, url, forceCopyOnly = false }) {
+  if (!url) return;
+  const username = getPlayerUsername() || getStoredSession()?.username || "Un ami";
+  const selectedMode = mode || state.selectedMode || state.sessionData?.mode || "same_word";
+  const selectedDiff = difficulty || state.selectedDiff || state.sessionData?.difficulty || "moyen";
+  const template = SHARE_MESSAGES[selectedMode] || SHARE_MESSAGES.same_word;
+  const fullText = template.buildText({ username, url, difficulty: selectedDiff });
+
+  // Mode copie brute demandée explicitement (bouton 📋 ou desktop)
+  if (forceCopyOnly) {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("🔗 Lien direct copié !");
+    } catch {
+      showToast("Impossible de copier le lien.");
+    }
+    return;
+  }
+
+  // Partage mobile natif via Web Share API
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    try {
+      await navigator.share({
+        title: template.title,
+        text: fullText,
+        url: url,
+      });
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") {
+        return; // Partage annulé par l'utilisateur
+      }
+    }
+  }
+
+  // Repli sur le presse-papier avec message enrichi
+  try {
+    await navigator.clipboard.writeText(fullText);
+    showToast("📋 Message d'invitation copié !");
+  } catch {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("🔗 Lien direct copié !");
+    } catch {
+      showToast("Impossible de copier le lien.");
+    }
+  }
+}
+
+function initWaitingShareButtons() {
+  const isMobileShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const btnCopyPc = document.getElementById("btn-copy-share-url");
+  const mobileShareGroup = document.getElementById("waiting-mobile-share-group");
+
+  if (isMobileShare) {
+    if (btnCopyPc) btnCopyPc.style.display = "none";
+    if (mobileShareGroup) mobileShareGroup.style.display = "flex";
+  } else {
+    if (btnCopyPc) btnCopyPc.style.display = "inline-flex";
+    if (mobileShareGroup) mobileShareGroup.style.display = "none";
+  }
+}
 
 // État actif du client
 const state = {
@@ -349,8 +411,27 @@ function initLobbyEvents() {
     btnCopyUrl.addEventListener("click", () => {
       const urlInput = document.getElementById("waiting-share-url-input");
       if (urlInput?.value) {
-        navigator.clipboard.writeText(urlInput.value);
-        showToast("🔗 Lien d'invitation direct copié !");
+        triggerShareOrCopy({ url: urlInput.value, forceCopyOnly: true });
+      }
+    });
+  }
+
+  const btnMobileShare = document.getElementById("btn-mobile-share-invite");
+  if (btnMobileShare) {
+    btnMobileShare.addEventListener("click", () => {
+      const urlInput = document.getElementById("waiting-share-url-input");
+      if (urlInput?.value) {
+        triggerShareOrCopy({ url: urlInput.value, forceCopyOnly: false });
+      }
+    });
+  }
+
+  const btnMobileCopy = document.getElementById("btn-mobile-copy-url");
+  if (btnMobileCopy) {
+    btnMobileCopy.addEventListener("click", () => {
+      const urlInput = document.getElementById("waiting-share-url-input");
+      if (urlInput?.value) {
+        triggerShareOrCopy({ url: urlInput.value, forceCopyOnly: true });
       }
     });
   }
@@ -537,6 +618,7 @@ function openWaitingRoom(data) {
   }
 
   switchView("waiting");
+  initWaitingShareButtons();
   startWaitingPoll();
 }
 
@@ -611,8 +693,8 @@ function initArenaEvents() {
       const origin = window.location.origin;
       const guestKey = state.sessionData?.guest_key || "";
       const url = `${origin}/multi/?r=${state.currentRoomId}${guestKey ? `&k=${guestKey}` : ""}`;
-      navigator.clipboard.writeText(url);
-      showToast("🔗 Lien d'invitation copié !");
+      const isMobileShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+      triggerShareOrCopy({ url, forceCopyOnly: !isMobileShare });
     });
   }
 
