@@ -185,9 +185,29 @@ function showResult(done) {
   const submit = el("defi-submit");
   if (submit) submit.disabled = false;
   setStatus("Défi terminé — lancez-en un autre (dans la limite de 10 par heure).");
-  // WOF-05/06 : le défi vient d'être archivé par le worker — rafraîchit palmarès et bandeau.
-  setTimeout(loadKpis, 1500);
-  loadKpis();
+
+  // Insertion immédiate dans le palmarès local pour affichage instantané
+  if (done.word && (done.status === "solved" || done.status === "lost")) {
+    const storedUser = getPlayerUsername() || getStoredSession()?.username;
+    const challengeId = currentId || done.challenge_id || ("temp-" + Date.now());
+    const alreadyPresent = challengesList.some((it) => it.challenge_id === challengeId || (it.secret_word === done.word && Math.abs(new Date(it.date).getTime() - Date.now()) < 10000));
+    if (!alreadyPresent) {
+      challengesList.unshift({
+        challenge_id: challengeId,
+        secret_word: done.word,
+        player: storedUser || "Vous",
+        outcome: done.status === "solved" ? "won" : "lost",
+        tries_count: done.tries_count || (displayedSteps.length || 0),
+        duration_seconds: parseFloat(displayDuration),
+        date: new Date().toISOString(),
+      });
+      renderChallengesList();
+    }
+  }
+
+  // WOF-05/06 : le défi vient d'être archivé par le worker — rafraîchit palmarès et bandeau (purge du cache serveur).
+  loadKpis(true);
+  setTimeout(() => loadKpis(true), 1200);
 }
 
 function openFullTrajectory() {
@@ -487,7 +507,11 @@ function renderChallengesList() {
 
   box.innerHTML = items.map((it) => {
     const isBotWon = it.outcome === "won" || it.outcome === "solved";
-    const date = it.date ? new Date(it.date).toLocaleDateString("fr-FR") : "";
+    const d = it.date ? new Date(it.date) : null;
+    const dateShort = d
+      ? `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`
+      : "";
+    const dateFull = d ? d.toLocaleString("fr-FR") : "";
     const durText = it.duration_seconds != null ? `${Number(it.duration_seconds).toFixed(1)} s` : "—";
     const badgeHtml = isBotWon
       ? `<span class="badge badge-won badge-icon" title="Trouvé par le bot" aria-label="Trouvé">🤖</span>`
@@ -503,13 +527,13 @@ function renderChallengesList() {
     const isMe = Boolean(storedUser && playerDisp === storedUser);
 
     return `<tr>
-      <td><strong style="font-family:var(--font-mono);font-size:0.88rem;">${escapeHtml(it.secret_word)}</strong></td>
-      <td class="col-center">${badgeHtml}</td>
-      <td class="col-center" style="font-family:var(--font-mono);">${escapeHtml(String(it.tries_count))}</td>
-      <td class="col-center" style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.78rem;">${escapeHtml(durText)}</td>
-      <td class="defi-player-cell ${isMe ? "is-me" : ""}" title="${escapeHtml(playerDisp)}">${escapeHtml(playerDisp)}</td>
-      <td class="col-center" style="color:var(--text-muted);font-size:0.75rem;">${escapeHtml(date)}</td>
-      <td class="col-center">
+      <td class="col-mot" title="${escapeHtml(it.secret_word)}"><strong>${escapeHtml(it.secret_word)}</strong></td>
+      <td class="col-center col-statut">${badgeHtml}</td>
+      <td class="col-center col-coups">${escapeHtml(String(it.tries_count))}</td>
+      <td class="col-center col-temps">${escapeHtml(durText)}</td>
+      <td class="col-joueur defi-player-cell ${isMe ? "is-me" : ""}" title="${escapeHtml(playerDisp)}">${escapeHtml(playerDisp)}</td>
+      <td class="col-center col-date" title="${escapeHtml(dateFull)}">${escapeHtml(dateShort)}</td>
+      <td class="col-center col-replay">
         <button type="button" class="btn btn-secondary btn-sm btn-icon-replay" data-challenge-id="${escapeHtml(it.challenge_id)}" title="Revoir le cheminement complet (${escapeHtml(it.secret_word)})" aria-label="Revoir le défi ${escapeHtml(it.secret_word)}">👁️</button>
       </td>
     </tr>`;
@@ -517,10 +541,13 @@ function renderChallengesList() {
 }
 
 /** Charge (ou recharge) KPIs, liste des défis et bandeau. Silencieux en cas d'échec. */
-async function loadKpis() {
+async function loadKpis(fresh = false) {
   try {
     const storedUser = getPlayerUsername() || getStoredSession()?.username;
-    const queryStr = storedUser ? `?player_name=${encodeURIComponent(storedUser)}` : "";
+    const params = new URLSearchParams();
+    if (storedUser) params.set("player_name", storedUser);
+    if (fresh) params.set("fresh", "1");
+    const queryStr = params.toString() ? `?${params.toString()}` : "";
     const res = await fetch(`${API}/kpis${queryStr}`, FETCH_JSON);
     if (!res.ok) return;
     const data = await res.json();

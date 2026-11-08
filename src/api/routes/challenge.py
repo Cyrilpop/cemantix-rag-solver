@@ -208,7 +208,7 @@ def _parse_challenge_id(path: str) -> tuple[Optional[str], bool]:
 # --------------------------------------------------------------------------- #
 # GET /api/challenge/kpis & /api/challenge/<id>/guesses (M9, WOF-01/02)
 # --------------------------------------------------------------------------- #
-KPIS_CACHE_TTL_SECONDS = 15.0
+KPIS_CACHE_TTL_SECONDS = 2.0
 WALL_OF_FAME_LIMIT = 12
 STATS_ID_RE = CHALLENGE_ID_RE
 
@@ -343,6 +343,8 @@ def handle_challenge_get(manager, path: str, query: str = "",
             from urllib.parse import parse_qs
             qs = parse_qs(query)
             p_name = qs.get("player_name", [None])[0]
+            if qs.get("fresh", ["0"])[0] in ("1", "true") or qs.get("refresh", ["0"])[0] in ("1", "true"):
+                reset_kpis_cache()
         return handle_kpis_get(client_ip, anonymized_ip, player_name=p_name)
     if len(sub_parts) == 2 and sub_parts[1] == "guesses":
         return handle_guesses_get(sub_parts[0])

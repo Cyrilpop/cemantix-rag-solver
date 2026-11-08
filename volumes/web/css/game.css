@@ -801,7 +801,7 @@
 /* Tableau condensé du palmarès des défis (M9) */
 .defi-table-wrapper {
   width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: auto;
   flex: 1 1 0;
   min-height: 280px;
@@ -826,18 +826,19 @@
 
 .defi-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }
 
 .defi-table th {
-  padding: 0.45rem 0.4rem;
+  padding: 0.45rem 0.25rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   font-weight: 600;
   position: sticky;
   top: 0;
@@ -846,7 +847,7 @@
 }
 
 .defi-table td {
-  padding: 0.45rem 0.4rem;
+  padding: 0.42rem 0.25rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-main);
   white-space: nowrap;
@@ -855,6 +856,56 @@
 
 .defi-table tr:hover td {
   background: var(--bg-card-hover);
+}
+
+.defi-table .col-mot {
+  width: 26%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.defi-table .col-mot strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.defi-table .col-statut {
+  width: 36px;
+}
+
+.defi-table .col-coups {
+  width: 38px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.defi-table .col-temps {
+  width: 44px;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.defi-table .col-joueur {
+  width: 28%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.defi-table .col-date {
+  width: 44px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.defi-table .col-replay {
+  width: 36px;
 }
 
 .defi-table .btn-sm {
@@ -876,11 +927,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border-radius: 999px;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   line-height: 1;
 }
 
@@ -888,11 +939,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border-radius: var(--radius-sm, 6px);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   line-height: 1;
   cursor: pointer;
   border: 1px solid var(--border-color);
@@ -906,7 +957,6 @@
 }
 
 .defi-player-cell {
-  max-width: 150px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -918,6 +968,12 @@
 .defi-player-cell.is-me {
   color: var(--accent-light, #58a6ff);
   font-weight: 600;
+}
+
+@media (max-width: 520px) {
+  .defi-table .col-date {
+    display: none;
+  }
 }
 
 /* Îlot Légende du palmarès (M9) */
