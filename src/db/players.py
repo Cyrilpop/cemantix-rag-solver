@@ -5,10 +5,26 @@ Gère l'accès relationnel aux tables `players` et `player_dictionary` :
 - Profils invités, personnalisation unique du pseudo et sécurisation.
 - Dictionnaires dynamiques pour génération de pseudos et phrases de secours.
 """
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
 from .connection import db
+
+# Pool fixe des 20 profils fictifs réguliers (« les habitués » de 6h30, Jalon M15)
+FIXED_BOT_HABITUES = [
+    "CastorCosmique", "PangolinFurtif", "SuricateAudacieux", "RenardMalicieux",
+    "LynxSolaire", "HibouFlamboyant", "KoalaLunaire", "BlaireauIntrepide",
+    "FauconVeloce", "LoutreJoyeuse", "DauphinAgile", "PandaZen",
+    "HeronMajestueux", "AigleSerein", "LoupNocturne", "OursGourmand",
+    "EcureuilVif", "ToucanColore", "ChameauPlaisantin", "MarmotteDormeuse"
+]
+BOT_UUID_NAMESPACE = uuid.UUID("c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f")
+
+
+def get_bot_uuid(username: str) -> str:
+    """Génère un UUID déterministe pour un joueur fictif."""
+    return str(uuid.uuid5(BOT_UUID_NAMESPACE, username.strip().lower()))
 
 # Listes par défaut pour l'amorçage (seeding) initial
 DEFAULT_NOUNS = [
@@ -188,13 +204,50 @@ def seed_default_dictionary_if_empty():
     except Exception as e:
         from ..config import log
         log(f"⚠️  [AUTH] Erreur amorçage dictionnaire joueurs : {e}")
+
+
+def seed_bot_players_if_empty():
+    """Alimente les 20 profils fictifs réguliers (« les habitués » de 6h30) si absents."""
+    try:
+        engine = db.get_engine_type()
+        is_claimed_val = True if engine == "postgres" else 1
+        can_change_val = False if engine == "postgres" else 0
+
+        for username in FIXED_BOT_HABITUES:
+            bot_id = get_bot_uuid(username)
+            auth_token = f"bot_token_{username.lower()}"
+            existing = get_player_by_username(username)
+            if not existing:
+                if engine == "postgres":
+                    query = """
+                    INSERT INTO players (
+                        id, auth_token, username, can_change_username, is_claimed, auth_provider, created_at, last_seen_at
+                    ) VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    ON CONFLICT (username) DO NOTHING
+                    """
+                else:
+                    query = """
+                    INSERT OR IGNORE INTO players (
+                        id, auth_token, username, can_change_username, is_claimed, auth_provider, created_at, last_seen_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    """
+                db.execute(query, (bot_id, auth_token, username, can_change_val, is_claimed_val, "bot"))
     except Exception as e:
         from ..config import log
-        log(f"⚠️  [AUTH] Erreur amorçage dictionnaire joueurs : {e}")
+        log(f"⚠️  [AUTH] Erreur amorçage joueurs habitués bots : {e}")
 
 
-def create_guest_player(player_id: str, auth_token: str, username: str) -> dict:
+def create_guest_player(
+    player_id: Optional[str] = None,
+    auth_token: Optional[str] = None,
+    username: Optional[str] = None,
+) -> dict:
     """Crée un joueur invité avec pseudo généré et token de session."""
+    import secrets
+    pid = str(player_id or uuid.uuid4())
+    tok = str(auth_token or f"guest_token_{secrets.token_hex(16)}")
+    uname = str(username or f"Joueur{secrets.randbelow(9000) + 1000}")
+
     query = """
     INSERT INTO players (
         id, auth_token, username, can_change_username, is_claimed, auth_provider, created_at, last_seen_at
@@ -206,12 +259,12 @@ def create_guest_player(player_id: str, auth_token: str, username: str) -> dict:
     # Support bool pour SQLite (1/0) ou Postgres (True/False)
     can_change = True if engine == "postgres" else 1
     is_claimed = False if engine == "postgres" else 0
-    params = (player_id, auth_token, username, can_change, is_claimed, "local")
+    params = (pid, tok, uname, can_change, is_claimed, "local")
 
     db.execute(query, params)
-    player = get_player_by_id(player_id)
+    player = get_player_by_id(pid)
     if not player:
-        raise RuntimeError(f"Échec de création du joueur {player_id}")
+        raise RuntimeError(f"Échec de création du joueur {pid}")
     return player
 
 
