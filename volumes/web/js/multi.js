@@ -67,7 +67,12 @@ document.addEventListener("DOMContentLoaded", () => {
   initRoomActions();
   renderRecentGames();
   syncPlayerNameInputs();
-  window.addEventListener("cemantix:auth-changed", syncPlayerNameInputs);
+  window.addEventListener("cemantix:auth-changed", () => {
+    syncPlayerNameInputs();
+    if (state.sessionData) {
+      updateArenaUI(state.sessionData);
+    }
+  });
 
   // Détection des paramètres d'URL (?r=DUEL-XXXXXXXX&k=J2-XXXXXXXX)
   const params = new URLSearchParams(window.location.search);
@@ -990,11 +995,7 @@ function updateArenaUI(data) {
   const myMetric = document.getElementById("hud-my-metric");
 
   const storedUser = getPlayerUsername() || getStoredSession()?.username;
-  let effectiveMyName = data.me?.name || "Vous";
-  if ((!data.me?.name || data.me.name === "Joueur 1" || data.me.name === "Joueur 2") && storedUser) {
-    effectiveMyName = storedUser;
-  }
-
+  let effectiveMyName = storedUser || data.me?.name || "Vous";
   if (myName) myName.textContent = effectiveMyName;
   if (myTarget) myTarget.textContent = data.me?.target ? data.me.target.toUpperCase() : "🔒 Secret";
   if (myGauge) myGauge.style.width = `${data.me?.progress_pct || 0}%`;

@@ -253,6 +253,7 @@ def init_or_get_guest(
     username: Optional[str] = None,
 ) -> dict:
     """Initialise un profil invité transparent ou retourne la session existante validée."""
+    # 1. Recherche par jeton de session (priorité absolue)
     if auth_token:
         existing = get_player_by_token(auth_token)
         if existing:
@@ -265,8 +266,36 @@ def init_or_get_guest(
                 "is_claimed": existing["is_claimed"],
             }
 
-    # Création d'un nouvel invité (première visite ou profil non rattaché en base)
-    new_id = player_id if (player_id and len(player_id) == 36) else str(uuid.uuid4())
+    # 2. Si le token n'a pas matché mais qu'un ID valide est fourni, recherche par ID
+    if player_id and len(player_id) == 36:
+        existing_by_id = get_player_by_id(player_id)
+        if existing_by_id:
+            touch_player_activity(existing_by_id["id"])
+            return {
+                "player_id": existing_by_id["id"],
+                "auth_token": existing_by_id["auth_token"],
+                "username": existing_by_id["username"],
+                "can_change_username": existing_by_id["can_change_username"],
+                "is_claimed": existing_by_id["is_claimed"],
+            }
+
+    # 3. Si le client avait un pseudo en local, on regarde s'il existe déjà en base
+    if username:
+        cleaned_user = username.strip()
+        existing_by_user = get_player_by_username(cleaned_user)
+        if existing_by_user and not existing_by_user.get("is_claimed"):
+            # Compte invité non réclamé correspondant au pseudo : on le réassocie
+            touch_player_activity(existing_by_user["id"])
+            return {
+                "player_id": existing_by_user["id"],
+                "auth_token": existing_by_user["auth_token"],
+                "username": existing_by_user["username"],
+                "can_change_username": existing_by_user["can_change_username"],
+                "is_claimed": existing_by_user["is_claimed"],
+            }
+
+    # 4. Création d'un nouvel invité (première visite ou profil non rattaché en base)
+    new_id = str(uuid.uuid4())
     new_token = generate_auth_token()
 
     # Si le client avait un pseudo en local valide et disponible, on le préserve
@@ -274,11 +303,18 @@ def init_or_get_guest(
     if username:
         cleaned_user = username.strip()
         is_valid, _ = validate_username(cleaned_user)
-        if is_valid:
+        if is_valid and not get_player_by_username(cleaned_user):
             chosen_username = cleaned_user
 
     if not chosen_username:
-        chosen_username = generate_random_username()
+        for _ in range(20):
+            candidate = generate_random_username()
+            if not get_player_by_username(candidate):
+                chosen_username = candidate
+                break
+
+    if not chosen_username:
+        chosen_username = f"Joueur{random.randint(1000, 9999)}"
 
     player = create_guest_player(new_id, new_token, chosen_username)
     return {
@@ -307,6 +343,10 @@ def rename_player(auth_token: str, new_username: str) -> Tuple[bool, str, Option
         return False, error_msg, None
 
     cleaned_username = new_username.strip()
+    existing_user = get_player_by_username(cleaned_username)
+    if existing_user and existing_user["id"] != player["id"]:
+        return False, "Ce pseudo est déjà utilisé par un autre joueur.", None
+
     success = update_player_username(player["id"], cleaned_username)
     if not success:
         return False, "Erreur lors de la mise à jour du pseudo.", None

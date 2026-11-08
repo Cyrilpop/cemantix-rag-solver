@@ -699,6 +699,10 @@ function escapeHtml(str) {
  * Initialisation automatique au chargement de la page.
  */
 export async function initAuth() {
+  if (initAuthPromise) {
+    return initAuthPromise;
+  }
+
   // Attache le clic sur les badges Header une seule fois
   const badgeBtn = document.getElementById("player-badge");
   if (badgeBtn && !badgeBtn.dataset.authBound) {
@@ -748,13 +752,14 @@ export async function initAuth() {
         if (isFirstVisit) {
           showWelcomeToast(data.username);
         }
-      } else if (session) {
-        // En cas de token expiré ou corrompu, recrée un profil propre
-        clearStoredSession();
+      } else if (res.status === 401 || res.status === 404) {
+        // En cas de token explicitement expiré ou supprimé côté serveur,
+        // on tente de préserver le pseudo existant plutôt que de créer un étranger
+        const retryPayload = session && session.username ? { username: session.username } : {};
         const retryRes = await fetch(`${API_BASE}/guest`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}),
+          body: JSON.stringify(retryPayload),
         });
         if (retryRes.ok) {
           const retryData = await retryRes.json();
@@ -765,10 +770,13 @@ export async function initAuth() {
             showWelcomeToast(retryData.username);
           }
         }
+      } else {
+        // Erreur temporaire serveur (500, 502, 503) : on ne purge JAMAIS la session locale.
+        console.warn("Synchronisation du profil différée (statut HTTP " + res.status + ").");
       }
     } catch (e) {
-      // Mode déconnecté ou erreur réseau : s'il n'y a pas de session, génère un profil local
-      if (!currentSession) {
+      // Mode déconnecté ou erreur réseau : préserve la session existante
+      if (!currentSession && !session) {
         const localFallback = {
           player_id: "local-" + Math.random().toString(36).substring(2, 10),
           auth_token: "offline",

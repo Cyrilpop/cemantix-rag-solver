@@ -245,10 +245,11 @@ def update_player_username(player_id: str, new_username: str) -> bool:
 
     engine = db.get_engine_type()
     can_change_val = False if engine == "postgres" else 0
-    query = """
+    can_change_cond = "can_change_username = TRUE" if engine == "postgres" else "can_change_username = 1"
+    query = f"""
     UPDATE players
     SET username = %s, can_change_username = %s, renamed_at = CURRENT_TIMESTAMP, last_seen_at = CURRENT_TIMESTAMP
-    WHERE id = %s AND (can_change_username = TRUE OR can_change_username = 1)
+    WHERE id = %s AND {can_change_cond}
     """
     affected = db.execute(query, (new_username, can_change_val, player_id))
     return affected > 0
@@ -302,7 +303,9 @@ def delete_player_account(player_id: str) -> bool:
 
 def get_active_dictionary(word_type: str) -> list[str]:
     """Retourne la liste des mots actifs pour un type donné (noun, adjective, recovery)."""
-    query = "SELECT word FROM player_dictionary WHERE word_type = %s AND (is_active = TRUE OR is_active = 1) ORDER BY word ASC"
+    engine = db.get_engine_type()
+    is_active_cond = "is_active = TRUE" if engine == "postgres" else "is_active = 1"
+    query = f"SELECT word FROM player_dictionary WHERE word_type = %s AND {is_active_cond} ORDER BY word ASC"
     rows = db.fetch_all(query, (word_type,))
     return [r["word"] for r in rows] if rows else []
 

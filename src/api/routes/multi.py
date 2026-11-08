@@ -167,10 +167,10 @@ def handle_multi_post(manager: GameManager, path: str, data: dict) -> tuple[dict
         if raw_name:
             player_name, err = sanitize_player_name(raw_name, default="")
             if not err and player_name:
-                if role == "p1" and session.p1_name in ("Joueur 1", ""):
+                if role == "p1" and (session.p1_name in ("Joueur 1", "") or session.p1_name != player_name):
                     session.p1_name = player_name
                     manager.save_multi_session(session)
-                elif role == "p2" and session.p2_name in ("Joueur 2", ""):
+                elif role == "p2" and (session.p2_name in ("Joueur 2", "") or session.p2_name != player_name):
                     session.p2_name = player_name
                     manager.save_multi_session(session)
 
