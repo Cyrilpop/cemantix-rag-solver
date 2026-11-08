@@ -500,6 +500,12 @@ async function connectToRoom(roomId, playerKey = "", playerName = "") {
       return;
     }
 
+    // Si on est l'hôte (p1) et que l'adversaire n'a pas encore rejoint, on ouvre la salle d'attente
+    if (data.role === "p1" && !data.session.p2_joined) {
+      openWaitingRoom(data);
+      return;
+    }
+
     // Sinon, on entre directement dans l'arène de jeu
     switchView("arena");
     updateArenaUI(data.session);
@@ -517,7 +523,8 @@ function openWaitingRoom(data) {
   if (roomCodeEl) roomCodeEl.textContent = data.room_id;
   if (shareInputEl) {
     const origin = window.location.origin;
-    shareInputEl.value = `${origin}/multi/?r=${data.room_id}&k=${data.guest_key || ""}`;
+    const guestKey = data.guest_key || data.session?.guest_key || "";
+    shareInputEl.value = `${origin}/multi/?r=${data.room_id}&k=${guestKey}`;
   }
 
   // Si le joueur doit définir un mot secret
@@ -909,7 +916,7 @@ function startWaitingPoll() {
       else delay = Math.min(delay * 1.6, WAITING_POLL_MAX_MS);
 
       // Si l'adversaire a rejoint et que la partie est prête
-      if (data.state === "in_progress") {
+      if (data.p2_joined && data.state === "in_progress") {
         showToast("🎮 Votre adversaire a rejoint le duel !");
         stopPolling();
         switchView("arena");
