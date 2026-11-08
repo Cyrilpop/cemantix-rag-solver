@@ -377,3 +377,191 @@ def delete_dictionary_word(word_id: int) -> bool:
     affected = db.execute("DELETE FROM player_dictionary WHERE id = %s", (word_id,))
     return affected > 0
 
+
+# ============================================================================
+# Fonctions d'administration des utilisateurs (Console /panier-9x)
+# ============================================================================
+
+def list_players(
+    limit: int = 50,
+    offset: int = 0,
+    search: Optional[str] = None,
+    filter_type: Optional[str] = None,
+) -> list[dict]:
+    """Liste paginée des joueurs avec recherche et filtrage optionnel."""
+    engine = db.get_engine_type()
+    conditions = []
+    params: list = []
+
+    if search:
+        search_pattern = f"%{search.strip()}%"
+        if engine == "postgres":
+            conditions.append("(username ILIKE %s OR CAST(id AS TEXT) ILIKE %s)")
+        else:
+            conditions.append("(username LIKE %s OR id LIKE %s)")
+        params.extend([search_pattern, search_pattern])
+
+    if filter_type == "claimed":
+        val = True if engine == "postgres" else 1
+        conditions.append("is_claimed = %s")
+        params.append(val)
+    elif filter_type == "guest":
+        val = False if engine == "postgres" else 0
+        conditions.append("is_claimed = %s")
+        params.append(val)
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    order_clause = "ORDER BY created_at DESC"
+    limit_clause = f"LIMIT {max(1, min(int(limit), 200))} OFFSET {max(0, int(offset))}"
+
+    query = f"SELECT * FROM players {where_clause} {order_clause} {limit_clause}"
+    rows = db.fetch_all(query, tuple(params) if params else None)
+    return [_row_to_player(r) for r in rows] if rows else []
+
+
+def count_players(search: Optional[str] = None, filter_type: Optional[str] = None) -> int:
+    """Nombre total de joueurs correspondant aux critères."""
+    engine = db.get_engine_type()
+    conditions = []
+    params: list = []
+
+    if search:
+        search_pattern = f"%{search.strip()}%"
+        if engine == "postgres":
+            conditions.append("(username ILIKE %s OR CAST(id AS TEXT) ILIKE %s)")
+        else:
+            conditions.append("(username LIKE %s OR id LIKE %s)")
+        params.extend([search_pattern, search_pattern])
+
+    if filter_type == "claimed":
+        val = True if engine == "postgres" else 1
+        conditions.append("is_claimed = %s")
+        params.append(val)
+    elif filter_type == "guest":
+        val = False if engine == "postgres" else 0
+        conditions.append("is_claimed = %s")
+        params.append(val)
+
+    where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    query = f"SELECT COUNT(*) AS cnt FROM players {where_clause}"
+    row = db.fetch_one(query, tuple(params) if params else None)
+    return int(row["cnt"]) if row and "cnt" in row else 0
+
+
+def get_players_stats() -> dict:
+    """Statistiques globales des joueurs (comptes, statuts, activité)."""
+    engine = db.get_engine_type()
+    claimed_val = "TRUE" if engine == "postgres" else "1"
+    guest_val = "FALSE" if engine == "postgres" else "0"
+
+    if engine == "postgres":
+        query = f"""
+        SELECT
+            COUNT(*) AS total,
+            COUNT(*) FILTER (WHERE is_claimed = {claimed_val}) AS claimed,
+            COUNT(*) FILTER (WHERE is_claimed = {guest_val}) AS guests,
+            COUNT(*) FILTER (WHERE last_seen_at >= CURRENT_TIMESTAMP - INTERVAL '7 days') AS active_7d
+        FROM players
+        """
+    else:
+        query = f"""
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN is_claimed = {claimed_val} THEN 1 ELSE 0 END) AS claimed,
+            SUM(CASE WHEN is_claimed = {guest_val} THEN 1 ELSE 0 END) AS guests,
+            SUM(CASE WHEN last_seen_at >= datetime('now', '-7 days') THEN 1 ELSE 0 END) AS active_7d
+        FROM players
+        """
+    try:
+        row = db.fetch_one(query)
+        if not row:
+            return {"total": 0, "claimed": 0, "guests": 0, "active_7d": 0}
+        return {
+            "total": int(row.get("total") or 0),
+            "claimed": int(row.get("claimed") or 0),
+            "guests": int(row.get("guests") or 0),
+            "active_7d": int(row.get("active_7d") or 0),
+        }
+    except Exception:
+        total = count_players()
+        claimed = count_players(filter_type="claimed")
+        return {"total": total, "claimed": claimed, "guests": total - claimed, "active_7d": 0}
+
+
+def admin_update_player(
+    player_id: str,
+    username: Optional[str] = None,
+    can_change_username: Optional[bool] = None,
+    is_claimed: Optional[bool] = None,
+) -> bool:
+    """Mise à jour administrative d'un joueur (pseudo, droit de renommage, statut)."""
+    player = get_player_by_id(player_id)
+    if not player:
+        return False
+
+    engine = db.get_engine_type()
+    updates = []
+    params: list = []
+
+    if username is not None:
+        clean_user = username.strip()
+        if not clean_user:
+            return False
+        existing = get_player_by_username(clean_user)
+        if existing and existing["id"] != str(player_id):
+            raise ValueError(f"Le pseudo '{clean_user}' est déjà utilisé par un autre joueur.")
+        updates.append("username = %s")
+        params.append(clean_user)
+        updates.append("renamed_at = CURRENT_TIMESTAMP")
+
+    if can_change_username is not None:
+        val = bool(can_change_username) if engine == "postgres" else (1 if can_change_username else 0)
+        updates.append("can_change_username = %s")
+        params.append(val)
+
+    if is_claimed is not None:
+        val = bool(is_claimed) if engine == "postgres" else (1 if is_claimed else 0)
+        updates.append("is_claimed = %s")
+        params.append(val)
+
+    if not updates:
+        return True
+
+    updates.append("last_seen_at = CURRENT_TIMESTAMP")
+    query = f"UPDATE players SET {', '.join(updates)} WHERE id = %s"
+    params.append(player_id)
+    affected = db.execute(query, tuple(params))
+    return affected > 0
+
+
+def admin_create_player(username: str, is_claimed: bool = False, password_hash: Optional[str] = None) -> dict:
+    """Création manuelle d'un compte joueur par l'administrateur."""
+    import secrets
+    import uuid
+
+    clean_user = username.strip()
+    if not clean_user:
+        raise ValueError("Le pseudo ne peut pas être vide.")
+    existing = get_player_by_username(clean_user)
+    if existing:
+        raise ValueError(f"Le pseudo '{clean_user}' existe déjà.")
+
+    player_id = str(uuid.uuid4())
+    auth_token = secrets.token_hex(32)
+    engine = db.get_engine_type()
+    can_change = False if engine == "postgres" else 0
+    claimed_val = bool(is_claimed) if engine == "postgres" else (1 if is_claimed else 0)
+
+    query = """
+    INSERT INTO players (
+        id, auth_token, username, can_change_username, is_claimed, password_hash, auth_provider, created_at, last_seen_at
+    ) VALUES (
+        %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    )
+    """
+    db.execute(query, (player_id, auth_token, clean_user, can_change, claimed_val, password_hash, "local"))
+    player = get_player_by_id(player_id)
+    if not player:
+        raise RuntimeError(f"Échec de création du joueur {player_id}")
+    return player
+

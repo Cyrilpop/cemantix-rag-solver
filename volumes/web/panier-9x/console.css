@@ -36,3 +36,11 @@ pre#log { background:#0a0c11; border:1px solid var(--line); border-radius:8px; p
 .modal-box p { margin: 0 0 20px; font-size: 13px; line-height: 1.5; color: var(--mut); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 .dict-list { height: 62vh; min-height: 350px; overflow-y: auto; border: 1px solid var(--line); background: #0d1017; padding: 8px; border-radius: 6px; font-size: 13px; }
+.badge { display:inline-block; border-radius:4px; font-size:11px; padding:2px 7px; font-weight:500; }
+.badge-claimed { background:rgba(62,207,142,0.15); color:#3ecf8e; border:1px solid rgba(62,207,142,0.3); }
+.badge-guest { background:rgba(139,147,167,0.15); color:#8b93a7; border:1px solid rgba(139,147,167,0.3); }
+.badge-active { background:rgba(79,140,255,0.15); color:#4f8cff; border:1px solid rgba(79,140,255,0.3); }
+.badge-locked { background:rgba(255,107,107,0.15); color:#ff6b6b; border:1px solid rgba(255,107,107,0.3); }
+.users-table th, .users-table td { padding:9px 8px; vertical-align:middle; }
+.users-table tbody tr { border-bottom:1px solid var(--line); }
+.users-table tbody tr:hover { background:rgba(255,255,255,0.02); }

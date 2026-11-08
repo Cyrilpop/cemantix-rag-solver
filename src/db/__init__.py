@@ -73,7 +73,10 @@ from .solo import (
 )
 from .players import (
     add_dictionary_word,
+    admin_create_player,
+    admin_update_player,
     claim_player_account,
+    count_players,
     create_guest_player,
     delete_dictionary_word,
     delete_player_account,
@@ -82,6 +85,8 @@ from .players import (
     get_player_by_id,
     get_player_by_token,
     get_player_by_username,
+    get_players_stats,
+    list_players,
     seed_default_dictionary_if_empty,
     toggle_dictionary_word,
     touch_player_activity,
@@ -164,4 +169,10 @@ __all__ = [
     "requeue_stale_running",
     "reset_legacy_sync",
     "sync_legacy_challenges_to_stats",
+    # Joueurs & Administration M14
+    "list_players",
+    "count_players",
+    "get_players_stats",
+    "admin_update_player",
+    "admin_create_player",
 ]

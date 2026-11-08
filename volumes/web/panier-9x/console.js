@@ -145,6 +145,188 @@
       .catch(function (e) { toast(e.message, 'ko'); });
   }
 
+  // --- Gestion des Utilisateurs en BDD (M14) -------------------------------
+  var userPage = 0;
+  var userLimit = 25;
+  var userSearch = '';
+  var userFilter = '';
+  var userTotal = 0;
+
+  function renderUserStats(stats) {
+    stats = stats || {};
+    if (el('stat-users-total')) el('stat-users-total').textContent = fmt(stats.total);
+    if (el('stat-users-claimed')) el('stat-users-claimed').textContent = fmt(stats.claimed);
+    if (el('stat-users-guests')) el('stat-users-guests').textContent = fmt(stats.guests);
+    if (el('stat-users-active')) el('stat-users-active').textContent = fmt(stats.active_7d);
+  }
+
+  function updateUserPagination() {
+    var info = el('users-pagination-info');
+    var btnPrev = el('btn-users-prev');
+    var btnNext = el('btn-users-next');
+    var totalPages = Math.max(1, Math.ceil(userTotal / userLimit));
+    var curPage = userPage + 1;
+    if (info) {
+      info.textContent = 'Page ' + curPage + ' sur ' + totalPages + ' (' + userTotal + ' utilisateurs)';
+    }
+    if (btnPrev) btnPrev.disabled = (userPage <= 0);
+    if (btnNext) btnNext.disabled = (curPage >= totalPages);
+  }
+
+  function renderUsers(users) {
+    var tbody = el('users-tbody');
+    if (!tbody) return;
+    if (!users || !users.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="muted" style="padding:16px;text-align:center">Aucun utilisateur trouvé.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(function (u) {
+      var statusBadge = u.is_claimed
+        ? '<span class="badge badge-claimed">Sécurisé (' + esc(u.auth_provider || 'local') + ')</span>'
+        : '<span class="badge badge-guest">Invité</span>';
+      var renameBadge = u.can_change_username
+        ? '<span class="badge badge-active">Autorisé</span>'
+        : '<span class="badge badge-locked">Verrouillé</span>';
+      return '<tr data-user-id="' + esc(u.id) + '">'
+        + '<td style="font-weight:600"><div>' + esc(u.username) + '</div><div class="muted" style="font-size:10px;font-family:monospace">' + esc(String(u.id).substring(0, 8)) + '…</div></td>'
+        + '<td>' + statusBadge + '</td>'
+        + '<td>' + renameBadge + '</td>'
+        + '<td class="muted" style="font-size:12px">' + fmtDate(u.created_at) + '</td>'
+        + '<td class="muted" style="font-size:12px">' + fmtDate(u.last_seen_at) + '</td>'
+        + '<td style="text-align:right;white-space:nowrap">'
+        + '  <button class="secondary btn-user-edit" data-id="' + esc(u.id) + '" data-user="' + esc(u.username) + '" data-can-rename="' + (u.can_change_username ? '1' : '0') + '" style="padding:4px 8px;font-size:12px;margin-right:4px">Modifier</button>'
+        + '  <button class="danger btn-user-del" data-id="' + esc(u.id) + '" data-user="' + esc(u.username) + '" style="padding:4px 8px;font-size:12px">Supprimer</button>'
+        + '</td>'
+        + '</tr>';
+    }).join('');
+
+    tbody.querySelectorAll('.btn-user-edit').forEach(function (b) {
+      b.addEventListener('click', function () {
+        openUserEdit(b.getAttribute('data-id'), b.getAttribute('data-user'), b.getAttribute('data-can-rename') === '1');
+      });
+    });
+
+    tbody.querySelectorAll('.btn-user-del').forEach(function (b) {
+      b.addEventListener('click', function () {
+        deleteUser(b.getAttribute('data-id'), b.getAttribute('data-user'));
+      });
+    });
+  }
+
+  function loadUsers() {
+    var q = '/users?limit=' + userLimit + '&offset=' + (userPage * userLimit);
+    if (userSearch) q += '&search=' + encodeURIComponent(userSearch);
+    if (userFilter) q += '&filter=' + encodeURIComponent(userFilter);
+
+    api(q, { headers: authHeaders() })
+      .then(function (r) {
+        renderUsers(r.users || []);
+        renderUserStats(r.stats || {});
+        userTotal = r.total || 0;
+        updateUserPagination();
+      })
+      .catch(function (e) { toast(e.message, 'ko'); });
+  }
+
+  function openUserEdit(id, username, canRename) {
+    var modal = el('user-edit-modal');
+    el('edit-user-id').value = id;
+    el('edit-user-username').value = username;
+    el('edit-user-can-rename').checked = canRename;
+    if (typeof modal.showModal === 'function') {
+      modal.showModal();
+    } else {
+      modal.classList.remove('hide');
+    }
+  }
+
+  function closeUserEdit() {
+    var modal = el('user-edit-modal');
+    if (typeof modal.close === 'function') {
+      modal.close();
+    } else {
+      modal.classList.add('hide');
+    }
+  }
+
+  function saveUserEdit() {
+    var id = el('edit-user-id').value;
+    var username = (el('edit-user-username').value || '').trim();
+    var canRename = el('edit-user-can-rename').checked;
+    if (!username) { toast('Pseudo requis', 'ko'); return; }
+    api('/users/' + encodeURIComponent(id), {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ username: username, can_change_username: canRename })
+    })
+      .then(function (r) {
+        if (r.error) { toast(r.error, 'ko'); return; }
+        toast('Utilisateur mis à jour', 'ok');
+        closeUserEdit();
+        loadUsers();
+      })
+      .catch(function (e) { toast(e.message, 'ko'); });
+  }
+
+  function deleteUser(id, username) {
+    var confirmModal = el('confirm-modal');
+    el('modal-title').textContent = 'Supprimer l\'utilisateur';
+    el('modal-desc').textContent = 'Voulez-vous vraiment supprimer définitivement le joueur « ' + username + ' » ? Cette action est irréversible.';
+
+    function onConfirm() {
+      cleanup();
+      confirmModal.close();
+      api('/users/' + encodeURIComponent(id), { method: 'DELETE', headers: authHeaders() })
+        .then(function () {
+          toast('Utilisateur « ' + username + ' » supprimé', 'ok');
+          loadUsers();
+        })
+        .catch(function (e) { toast(e.message, 'ko'); });
+    }
+    function onCancel() {
+      cleanup();
+      confirmModal.close();
+    }
+    function cleanup() {
+      el('modal-confirm').removeEventListener('click', onConfirm);
+      el('modal-cancel').removeEventListener('click', onCancel);
+      confirmModal.removeEventListener('cancel', onCancel);
+    }
+    el('modal-confirm').addEventListener('click', onConfirm);
+    el('modal-cancel').addEventListener('click', onCancel);
+    confirmModal.addEventListener('cancel', onCancel);
+
+    if (typeof confirmModal.showModal === 'function') {
+      confirmModal.showModal();
+    } else if (window.confirm('Supprimer ' + username + ' ?')) {
+      onConfirm();
+    }
+  }
+
+  function createUser() {
+    var username = (el('new-user-name').value || '').trim();
+    var password = (el('new-user-pass').value || '').trim();
+    var isClaimed = el('new-user-claimed').checked;
+    if (!username || username.length < 3) {
+      toast('Pseudo requis (au moins 3 caractères)', 'ko');
+      return;
+    }
+    api('/users', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ username: username, password: password, is_claimed: isClaimed })
+    })
+      .then(function (r) {
+        if (r.error) { toast(r.error, 'ko'); return; }
+        toast('Utilisateur « ' + username + ' » créé', 'ok');
+        el('new-user-name').value = '';
+        el('new-user-pass').value = '';
+        el('users-create-panel').classList.add('hide');
+        loadUsers();
+      })
+      .catch(function (e) { toast(e.message, 'ko'); });
+  }
+
   function unlock() {
     el('gate').classList.add('hide');
     el('app').classList.remove('hide');
@@ -154,16 +336,32 @@
     loadStats();
     loadWhitelist();
     loadDictionary();
+    loadUsers();
   }
 
   function fmt(n) { return (n === null || n === undefined) ? '—' : n; }
 
+  function fmtDate(d) {
+    if (!d) return '—';
+    try {
+      var dt = new Date(d);
+      if (isNaN(dt.getTime())) return String(d);
+      return dt.toLocaleString('fr-FR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch (e) {
+      return String(d);
+    }
+  }
+
   function loadStats() {
     api('/stats', { headers: authHeaders() }).then(function (s) {
-      var b = s.base || {}, pool = b.pool || {}, solde = b.solde || {}, idx = s.index || {}, d = s.demon || {};
+      var b = s.base || {}, pool = b.pool || {}, solde = b.solde || {}, idx = s.index || {}, d = s.demon || {}, j = b.joueurs || {};
       var cards = [
         ['Moteur base', fmt(b.moteur)],
         ['Connexions pool', (pool.in_use || 0) + ' / ' + fmt(pool.max)],
+        ['Joueurs inscrits', j.total !== undefined ? (fmt(j.total) + ' (' + fmt(j.claimed) + ' sécurisés)') : '—'],
         ['Puzzles résolus', fmt(solde.total_solved)],
         ['Taux de réussite', (solde.win_rate !== undefined ? solde.win_rate + ' %' : '—')],
         ['Coups moyens', fmt(solde.avg_tries)],
@@ -217,7 +415,7 @@
   }
 
   function switchTab(name) {
-    ['stats', 'logs', 'actions', 'dictionary'].forEach(function (t) {
+    ['stats', 'logs', 'actions', 'dictionary', 'users'].forEach(function (t) {
       var elem = el('tab-' + t);
       if (elem) elem.classList.toggle('hide', t !== name);
     });
@@ -226,6 +424,9 @@
     });
     if (name === 'dictionary') {
       loadDictionary();
+    }
+    if (name === 'users') {
+      loadUsers();
     }
   }
 
@@ -335,6 +536,80 @@
   if (wlAdd) wlAdd.addEventListener('click', addWhitelist);
   var dictAdd = el('dict-add');
   if (dictAdd) dictAdd.addEventListener('click', addDictWord);
+
+  // Événements Utilisateurs
+  var btnUsersSearch = el('btn-users-search');
+  if (btnUsersSearch) {
+    btnUsersSearch.addEventListener('click', function () {
+      userSearch = (el('users-search').value || '').trim();
+      userFilter = el('users-filter').value;
+      userPage = 0;
+      loadUsers();
+    });
+  }
+  var usersSearchInput = el('users-search');
+  if (usersSearchInput) {
+    usersSearchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        if (btnUsersSearch) btnUsersSearch.click();
+      }
+    });
+  }
+  var usersFilterSelect = el('users-filter');
+  if (usersFilterSelect) {
+    usersFilterSelect.addEventListener('change', function () {
+      if (btnUsersSearch) btnUsersSearch.click();
+    });
+  }
+  var btnUsersRefresh = el('btn-users-refresh');
+  if (btnUsersRefresh) {
+    btnUsersRefresh.addEventListener('click', function () {
+      loadUsers();
+    });
+  }
+  var btnUsersCreateToggle = el('btn-users-create-toggle');
+  if (btnUsersCreateToggle) {
+    btnUsersCreateToggle.addEventListener('click', function () {
+      el('users-create-panel').classList.toggle('hide');
+    });
+  }
+  var btnUsersCreateCancel = el('btn-users-create-cancel');
+  if (btnUsersCreateCancel) {
+    btnUsersCreateCancel.addEventListener('click', function () {
+      el('users-create-panel').classList.add('hide');
+    });
+  }
+  var btnUsersCreate = el('btn-users-create');
+  if (btnUsersCreate) {
+    btnUsersCreate.addEventListener('click', createUser);
+  }
+  var btnUsersPrev = el('btn-users-prev');
+  if (btnUsersPrev) {
+    btnUsersPrev.addEventListener('click', function () {
+      if (userPage > 0) {
+        userPage--;
+        loadUsers();
+      }
+    });
+  }
+  var btnUsersNext = el('btn-users-next');
+  if (btnUsersNext) {
+    btnUsersNext.addEventListener('click', function () {
+      var totalPages = Math.ceil(userTotal / userLimit);
+      if (userPage + 1 < totalPages) {
+        userPage++;
+        loadUsers();
+      }
+    });
+  }
+  var btnUserEditSave = el('btn-user-edit-save');
+  if (btnUserEditSave) {
+    btnUserEditSave.addEventListener('click', saveUserEdit);
+  }
+  var btnUserEditCancel = el('btn-user-edit-cancel');
+  if (btnUserEditCancel) {
+    btnUserEditCancel.addEventListener('click', closeUserEdit);
+  }
 
   if (token) {
     api('/whoami', { headers: authHeaders() }).then(unlock).catch(function () { logout(); });

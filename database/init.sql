@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS players (
 CREATE INDEX IF NOT EXISTS idx_players_token ON players(auth_token);
 CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
 CREATE INDEX IF NOT EXISTS idx_players_google_sub ON players(google_sub);
+CREATE INDEX IF NOT EXISTS idx_players_created_at ON players(created_at);
 
 -- 10. Dictionnaire dynamique de vocabulaire pour identités & récupération (M14)
 -- Types : 'noun' (Noms), 'adjective' (Adjectifs), 'recovery' (Mots de secours)

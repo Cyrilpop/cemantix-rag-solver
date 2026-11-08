@@ -200,6 +200,7 @@ CREATE TABLE IF NOT EXISTS players (
 CREATE INDEX IF NOT EXISTS idx_players_token ON players(auth_token);
 CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
 CREATE INDEX IF NOT EXISTS idx_players_google_sub ON players(google_sub);
+CREATE INDEX IF NOT EXISTS idx_players_created_at ON players(created_at);
 
 CREATE TABLE IF NOT EXISTS player_dictionary (
     id SERIAL PRIMARY KEY,
@@ -357,6 +358,7 @@ CREATE TABLE IF NOT EXISTS players (
 CREATE INDEX IF NOT EXISTS idx_players_token ON players(auth_token);
 CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
 CREATE INDEX IF NOT EXISTS idx_players_google_sub ON players(google_sub);
+CREATE INDEX IF NOT EXISTS idx_players_created_at ON players(created_at);
 
 CREATE TABLE IF NOT EXISTS player_dictionary (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -652,6 +654,7 @@ class DatabaseManager:
                         cur.execute("ALTER TABLE multi_rooms ALTER COLUMN player1_key TYPE VARCHAR(128);")
                         cur.execute("ALTER TABLE multi_rooms ALTER COLUMN player2_key TYPE VARCHAR(128);")
                         cur.execute("ALTER TABLE multi_rooms ALTER COLUMN winner TYPE VARCHAR(32);")
+                        cur.execute("CREATE INDEX IF NOT EXISTS idx_players_created_at ON players(created_at);")
                     conn.commit()
 
                 else:

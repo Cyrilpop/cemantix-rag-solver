@@ -248,6 +248,13 @@ def collect_stats(manager) -> dict:
     except Exception:
         sessions = 0
 
+    players_stats = None
+    try:
+        from ...db import get_players_stats
+        players_stats = get_players_stats()
+    except Exception:
+        pass
+
     return {
         "generated_at": datetime.now(PARIS_TZ).isoformat(),
         "uptime_seconds": round(time.time() - _STARTED_AT, 1),
@@ -260,6 +267,7 @@ def collect_stats(manager) -> dict:
             "moteur": get_db_type(),
             "pool": db.pool_stats(),
             "solde": get_history_summary(),
+            "joueurs": players_stats,
         },
         "demon": heartbeat,
         "index": {
@@ -439,6 +447,32 @@ def handle_admin_get(
         adjectives = [w for w in all_words if w["word_type"] == "adjective"]
         recovery = [w for w in all_words if w["word_type"] == "recovery"]
         send_json({"nouns": nouns, "adjectives": adjectives, "recovery": recovery}, 200)
+    elif sub == "users":
+        from ...db import count_players, get_players_stats, list_players
+        try:
+            limit = min(max(1, int(params.get("limit", "50"))), 200)
+        except ValueError:
+            limit = 50
+        try:
+            offset = max(0, int(params.get("offset", "0")))
+        except ValueError:
+            offset = 0
+        search = params.get("search", "").strip() or None
+        filter_type = params.get("filter", "").strip() or None
+        users = list_players(limit=limit, offset=offset, search=search, filter_type=filter_type)
+        safe_users = [{k: v for k, v in u.items() if k not in ("password_hash", "recovery_key_hash")} for u in users]
+        total = count_players(search=search, filter_type=filter_type)
+        stats = get_players_stats()
+        send_json({"users": safe_users, "total": total, "limit": limit, "offset": offset, "stats": stats}, 200)
+    elif sub.startswith("users/"):
+        from ...db import get_player_by_id
+        player_id = sub.split("/", 1)[1]
+        player = get_player_by_id(player_id)
+        if not player:
+            send_json({"error": "Joueur introuvable"}, 404)
+            return
+        safe_player = {k: v for k, v in player.items() if k not in ("password_hash", "recovery_key_hash")}
+        send_json({"user": safe_player}, 200)
     elif sub == "whoami":
         send_json({"ok": True, "expires_in": int(ADMIN_TOKEN_TTL)}, 200)
     else:
@@ -505,6 +539,52 @@ def handle_admin_post(manager, path: str, data: dict, headers, client_ip: str) -
         log(f"🛡️  [ADMIN] Dictionnaire joueur mis à jour : {word_type} '{word}' (id {new_id})")
         return {"success": True, "id": new_id}, 200
 
+    if sub == "users":
+        from ...db import admin_create_player
+        from ...services.player_auth import hash_password
+        username = str((data or {}).get("username", "")).strip()
+        is_claimed = bool((data or {}).get("is_claimed", False))
+        password = str((data or {}).get("password", "")).strip()
+        if not username or len(username) < 3 or len(username) > 32:
+            return {"error": "Le pseudo doit comporter entre 3 et 32 caractères."}, 400
+        pwd_hash = hash_password(password) if password else None
+        try:
+            player = admin_create_player(username, is_claimed=is_claimed, password_hash=pwd_hash)
+            safe_player = {k: v for k, v in player.items() if k not in ("password_hash", "recovery_key_hash")}
+            log(f"🛡️  [ADMIN] Joueur créé : {username} (id {player['id']})")
+            return {"success": True, "user": safe_player}, 201
+        except ValueError as ve:
+            return {"error": str(ve)}, 400
+        except Exception as e:
+            return {"error": f"Erreur lors de la création : {e}"}, 500
+
+    if sub.startswith("users/"):
+        from ...db import admin_update_player, get_player_by_id
+        player_id = sub.split("/", 1)[1]
+        player = get_player_by_id(player_id)
+        if not player:
+            return {"error": "Joueur introuvable"}, 404
+        username = data.get("username")
+        can_change = data.get("can_change_username")
+        is_claimed = data.get("is_claimed")
+        try:
+            updated = admin_update_player(
+                player_id,
+                username=str(username).strip() if username is not None else None,
+                can_change_username=bool(can_change) if can_change is not None else None,
+                is_claimed=bool(is_claimed) if is_claimed is not None else None,
+            )
+            if updated:
+                player = get_player_by_id(player_id)
+                safe_player = {k: v for k, v in player.items() if k not in ("password_hash", "recovery_key_hash")}
+                log(f"🛡️  [ADMIN] Joueur mis à jour : {player['username']} (id {player_id})")
+                return {"success": True, "user": safe_player}, 200
+            return {"error": "Aucune modification effectuée"}, 400
+        except ValueError as ve:
+            return {"error": str(ve)}, 400
+        except Exception as e:
+            return {"error": f"Erreur lors de la mise à jour : {e}"}, 500
+
     return {"error": "Route introuvable"}, 404
 
 
@@ -556,6 +636,18 @@ def handle_admin_delete(manager, path: str, headers, client_ip: str) -> tuple[di
             invalidate_dictionary_cache()
             log(f"🛡️  [ADMIN] Mot de dictionnaire supprimé (id {word_id})")
         return {"success": bool(removed)}, (200 if removed else 404)
+
+    if sub.startswith("users/"):
+        from ...db import delete_player_account, get_player_by_id
+        player_id = sub.split("/", 1)[1]
+        player = get_player_by_id(player_id)
+        if not player:
+            return {"error": "Joueur introuvable"}, 404
+        removed = delete_player_account(player_id)
+        if removed:
+            log(f"🛡️  [ADMIN] Joueur supprimé : {player.get('username')} (id {player_id})")
+            return {"success": True}, 200
+        return {"error": "Échec de la suppression"}, 500
 
     return {"error": "Route introuvable"}, 404
 
