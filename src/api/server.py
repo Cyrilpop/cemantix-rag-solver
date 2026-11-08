@@ -278,8 +278,8 @@ class GameAPIHandler(BaseHTTPRequestHandler):
         if path in ("/api/health", "/api/healthcheck", "/api/daily", "/api/dashboard"):
             if_none_match = self.headers.get("If-None-Match")
             res, status, etag = handle_system_get(_manager, path, query, if_none_match=if_none_match)
-        elif path.startswith("/api/game/"):
-            res, status = handle_solo_get(_manager, path)
+        elif path.startswith("/api/game/") or path.startswith("/api/solo/"):
+            res, status = handle_solo_get(_manager, path, query=query, headers=self.headers)
         elif path.startswith("/api/multi/"):
             res, status = handle_multi_get(_manager, path, query)
         elif path == "/api/challenge" or path.startswith("/api/challenge/"):
@@ -326,8 +326,8 @@ class GameAPIHandler(BaseHTTPRequestHandler):
             self._send_error_json("Gestionnaire non initialisé", 503)
             return
 
-        if path.startswith("/api/game/"):
-            res, status = handle_solo_post(_manager, path, data)
+        if path.startswith("/api/game/") or path.startswith("/api/solo/"):
+            res, status = handle_solo_post(_manager, path, data, headers=self.headers)
         elif path.startswith("/api/battle/"):
             res, status = handle_battle_post(_manager, path, data)
         elif path.startswith("/api/multi/"):
