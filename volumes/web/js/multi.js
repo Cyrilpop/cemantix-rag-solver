@@ -21,6 +21,7 @@ import {
 } from "./utils.js";
 import { initTheme } from "./theme.js";
 import { renderGuessesContainer } from "./render.js";
+import { getStoredSession, getPlayerUsername } from "./auth.js";
 
 // Clé de stockage local des duels
 const STORAGE_KEY = "cemantix_multi_sessions";
@@ -65,6 +66,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initArenaEvents();
   initRoomActions();
   renderRecentGames();
+  syncPlayerNameInputs();
+  window.addEventListener("cemantix:auth-changed", syncPlayerNameInputs);
 
   // Détection des paramètres d'URL (?r=DUEL-XXXXXXXX&k=J2-XXXXXXXX)
   const params = new URLSearchParams(window.location.search);
@@ -189,6 +192,9 @@ function renderRecentGames() {
       minute: "2-digit",
     });
     const modeLabel = g.mode === "custom_words" ? "✍️ Mots Choisis" : "🎯 Même Mot";
+    const storedUser = getPlayerUsername() || getStoredSession()?.username;
+    const roleLabel = g.role === "p1" ? "Hôte" : "Invité";
+    const myNameLabel = storedUser ? `${storedUser} (${roleLabel})` : (g.role === "p1" ? "Joueur 1 (Hôte)" : "Joueur 2 (Invité)");
     return `
       <div class="active-game-card">
         <div class="active-game-header">
@@ -198,7 +204,7 @@ function renderRecentGames() {
         <div style="font-size: 0.88rem; color: var(--text-secondary, #8b949e);">
           <div>Variante : <strong>${modeLabel}</strong></div>
           <div>Adversaire : <strong>${escapeHtml(g.opponent_name || "En attente")}</strong></div>
-          <div>Votre rôle : <strong style="color: #79c0ff;">${g.role === "p1" ? "Joueur 1 (Hôte)" : "Joueur 2 (Invité)"}</strong></div>
+          <div>Votre rôle : <strong style="color: #79c0ff;">${escapeHtml(myNameLabel)}</strong></div>
         </div>
         <div class="active-game-footer">
           <button type="button" class="btn btn-secondary btn-sm" data-delete-room="${escapeHtml(g.room_id)}">Supprimer</button>
@@ -231,6 +237,21 @@ async function multiDeleteGame(roomId) {
 // --------------------------------------------------------------------------
 // 3. Navigation entre les Vues Principales
 // --------------------------------------------------------------------------
+function syncPlayerNameInputs() {
+  const username = getPlayerUsername() || getStoredSession()?.username;
+  if (!username) return;
+
+  const createInput = document.getElementById("create-player-name");
+  if (createInput && (!createInput.value || createInput.value === "Joueur 1")) {
+    createInput.value = username;
+  }
+
+  const joinInput = document.getElementById("join-player-name");
+  if (joinInput && (!joinInput.value || joinInput.value === "Joueur 2")) {
+    joinInput.value = username;
+  }
+}
+
 function switchView(viewName) {
   document.querySelectorAll(".multi-view-section").forEach((sec) => sec.classList.remove("active"));
   const target = document.getElementById(`view-${viewName}`);
@@ -241,6 +262,7 @@ function switchView(viewName) {
   // Arrêt du polling si on retourne au lobby
   if (viewName === "lobby") {
     stopPolling();
+    syncPlayerNameInputs();
   }
 }
 
@@ -358,7 +380,9 @@ function initLobbyEvents() {
 async function handleCreateGame() {
   const nameInput = document.getElementById("create-player-name");
   const customWordInput = document.getElementById("create-custom-word");
-  const playerName = nameInput ? nameInput.value.trim() : "Joueur 1";
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  const inputVal = nameInput ? nameInput.value.trim() : "";
+  const playerName = (inputVal && inputVal !== "Joueur 1") ? inputVal : (storedUser || "Joueur 1");
   const customTarget = (state.selectedMode === "custom_words" && customWordInput) ? customWordInput.value.trim() : null;
 
   try {
@@ -406,7 +430,9 @@ async function handleJoinGame() {
 
   const roomCode = roomInput ? roomInput.value.trim().toUpperCase() : "";
   const playerKey = keyInput ? keyInput.value.trim().toUpperCase() : null;
-  const playerName = nameInput ? nameInput.value.trim() : "Joueur 2";
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  const inputVal = nameInput ? nameInput.value.trim() : "";
+  const playerName = (inputVal && inputVal !== "Joueur 2") ? inputVal : (storedUser || "Joueur 2");
 
   if (!roomCode) {
     showToast("Veuillez saisir un Code Salon valide.");
@@ -418,10 +444,15 @@ async function handleJoinGame() {
 
 async function autoJoinFromUrl(roomCode, playerKey) {
   showToast(`Connexion au salon ${roomCode}...`);
-  await connectToRoom(roomCode, playerKey || "", "");
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  await connectToRoom(roomCode, playerKey || "", storedUser || "");
 }
 
 async function connectToRoom(roomId, playerKey = "", playerName = "") {
+  if (!playerName) {
+    const storedUser = getPlayerUsername() || getStoredSession()?.username;
+    if (storedUser) playerName = storedUser;
+  }
   try {
     const res = await fetch("/api/multi/join", {
       method: "POST",
@@ -787,12 +818,14 @@ function startPolling() {
       // La cle du joueur voyage dans le corps de la requete, pas dans l'URL :
       // un GET mettrait le secret dans la ligne de requete, donc dans les logs
       // du proxy et dans l'historique. Le POST /api/multi/status est equivalent.
+      const storedUser = getPlayerUsername() || getStoredSession()?.username;
       const res = await fetch("/api/multi/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           room_id: state.currentRoomId,
           player_key: state.currentPlayerKey,
+          player_name: storedUser || "",
         }),
       });
       if (res.ok) {
@@ -851,12 +884,14 @@ function startWaitingPoll() {
       // La cle du joueur voyage dans le corps de la requete, pas dans l'URL :
       // un GET mettrait le secret dans la ligne de requete, donc dans les logs
       // du proxy et dans l'historique. Le POST /api/multi/status est equivalent.
+      const storedUser = getPlayerUsername() || getStoredSession()?.username;
       const res = await fetch("/api/multi/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           room_id: state.currentRoomId,
           player_key: state.currentPlayerKey,
+          player_name: storedUser || "",
         }),
       });
       if (!res.ok) return;
@@ -954,7 +989,13 @@ function updateArenaUI(data) {
   const myPct = document.getElementById("hud-my-pct");
   const myMetric = document.getElementById("hud-my-metric");
 
-  if (myName) myName.textContent = data.me?.name || "Vous";
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  let effectiveMyName = data.me?.name || "Vous";
+  if ((!data.me?.name || data.me.name === "Joueur 1" || data.me.name === "Joueur 2") && storedUser) {
+    effectiveMyName = storedUser;
+  }
+
+  if (myName) myName.textContent = effectiveMyName;
   if (myTarget) myTarget.textContent = data.me?.target ? data.me.target.toUpperCase() : "🔒 Secret";
   if (myGauge) myGauge.style.width = `${data.me?.progress_pct || 0}%`;
   if (myPct) myPct.textContent = `${data.me?.progress_pct || 0}%`;

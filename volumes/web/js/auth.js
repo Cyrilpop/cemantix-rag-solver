@@ -21,10 +21,18 @@ export function getStoredSession() {
   }
 }
 
+export function getPlayerUsername() {
+  const session = currentSession || getStoredSession();
+  return session && session.username ? session.username : null;
+}
+
 export function saveStoredSession(session) {
   try {
     localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(session));
     currentSession = session;
+    if (session && session.username) {
+      window.dispatchEvent(new CustomEvent("cemantix:auth-changed", { detail: { username: session.username } }));
+    }
   } catch (e) {
     // Mode navigation privée stricte
   }
@@ -57,6 +65,16 @@ function updateHeaderBadge(username) {
   if (welcomeNameEl && username) {
     welcomeNameEl.textContent = username;
   }
+  try {
+    window.dispatchEvent(new CustomEvent("cemantix:auth-changed", { detail: { username } }));
+  } catch (e) {}
+}
+
+if (typeof window !== "undefined") {
+  window.cemantixAuth = {
+    getStoredSession,
+    getPlayerUsername,
+  };
 }
 
 /**

@@ -104,6 +104,10 @@ def handle_multi_post(manager: GameManager, path: str, data: dict) -> tuple[dict
                 if player_name:
                     session.p2_name = player_name
                 manager.save_multi_session(session)
+            elif role == "p1":
+                if player_name and (session.p1_name in ("Joueur 1", "") or session.p1_name != player_name):
+                    session.p1_name = player_name
+                    manager.save_multi_session(session)
             return {
                 "valid": True,
                 "room_id": session.room_id,
@@ -150,10 +154,25 @@ def handle_multi_post(manager: GameManager, path: str, data: dict) -> tuple[dict
     if path == "/api/multi/status":
         room_id = str(data.get("room_id") or "").strip().upper()
         player_key = str(data.get("player_key") or "").strip().upper()
+        raw_name = data.get("player_name")
 
         session = manager.get_multiplayer(room_id)
         if not session:
             return {"error": "Salon introuvable ou expiré.", "valid": False}, 404
+
+        role = session.get_role(player_key)
+        if not role:
+            return {"valid": False, "error": "Clé joueur invalide."}, 403
+
+        if raw_name:
+            player_name, err = sanitize_player_name(raw_name, default="")
+            if not err and player_name:
+                if role == "p1" and session.p1_name in ("Joueur 1", ""):
+                    session.p1_name = player_name
+                    manager.save_multi_session(session)
+                elif role == "p2" and session.p2_name in ("Joueur 2", ""):
+                    session.p2_name = player_name
+                    manager.save_multi_session(session)
 
         res = session.to_dict(player_key)
         if not res.get("valid"):
