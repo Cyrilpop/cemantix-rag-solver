@@ -3,6 +3,7 @@
  */
 import { escapeHtml, getTierClass, showToast, showConfirmDialog } from "./utils.js";
 import { renderGuessesContainer } from "./render.js";
+import { getStoredSession, getPlayerUsername } from "./auth.js";
 
 const GAME_STORAGE_KEY = "cemantix_game_state_v2";
 
@@ -579,8 +580,10 @@ function handleGameWin(secretWord, tries) {
     winTitle.textContent = "🏆 Victoire triomphale ! Mot secret trouvé !";
     winTitle.style.color = "var(--success)";
   }
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  const greeting = storedUser ? `Bravo <strong>${escapeHtml(storedUser)}</strong> ! ` : "Bravo ! ";
   if (winDesc) {
-    winDesc.innerHTML = `Bravo ! Vous avez démasqué le mot <strong style="color: var(--success);">${escapeHtml(secretWord.toUpperCase())}</strong> en <strong>${tries}</strong> coups.`;
+    winDesc.innerHTML = `${greeting}Vous avez démasqué le mot <strong style="color: var(--success);">${escapeHtml(secretWord.toUpperCase())}</strong> en <strong>${tries}</strong> coups.`;
   }
   if (gameWinBanner) gameWinBanner.style.display = "block";
   if (gameStatusText) gameStatusText.textContent = `🏆 Victoire en ${tries} coups !`;

@@ -21,9 +21,87 @@ import {
 } from "./utils.js";
 import { initTheme } from "./theme.js";
 import { renderGuessesContainer } from "./render.js";
+import { getStoredSession, getPlayerUsername } from "./auth.js";
+import { SHARE_MESSAGES } from "./share_templates.js";
 
 // Clé de stockage local des duels
 const STORAGE_KEY = "cemantix_multi_sessions";
+
+async function triggerShareOrCopy({ mode, difficulty, url, forceCopyOnly = false }) {
+  if (!url) return;
+  const username = getPlayerUsername() || getStoredSession()?.username || "Un ami";
+  const selectedMode = mode || state.selectedMode || state.sessionData?.mode || "same_word";
+  const selectedDiff = difficulty || state.selectedDiff || state.sessionData?.difficulty || "moyen";
+  const template = SHARE_MESSAGES[selectedMode] || SHARE_MESSAGES.same_word;
+  const fullText = template.buildText({ username, url, difficulty: selectedDiff });
+
+  // Mode copie brute demandée explicitement (bouton 📋 ou desktop)
+  if (forceCopyOnly) {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("🔗 Lien direct copié !");
+    } catch {
+      showToast("Impossible de copier le lien.");
+    }
+    return;
+  }
+
+  // Partage mobile natif via Web Share API
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    try {
+      await navigator.share({
+        title: template.title,
+        text: fullText,
+      });
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") {
+        return; // Partage annulé par l'utilisateur
+      }
+      try {
+        await navigator.share({
+          title: template.title,
+          text: fullText,
+          url: url,
+        });
+        return;
+      } catch (err2) {
+        if (err2.name === "AbortError") return;
+      }
+    }
+  }
+
+  // Repli sur le presse-papier avec message enrichi
+  try {
+    await navigator.clipboard.writeText(fullText);
+    showToast("📋 Message d'invitation copié !");
+  } catch {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("🔗 Lien direct copié !");
+    } catch {
+      showToast("Impossible de copier le lien.");
+    }
+  }
+}
+
+function initWaitingShareButtons() {
+  const isMobile =
+    window.matchMedia("(max-width: 768px)").matches ||
+    (typeof navigator !== "undefined" && typeof navigator.share === "function");
+  const btnCopyPc = document.getElementById("btn-copy-share-url");
+  const mobileShareGroup = document.getElementById("waiting-mobile-share-group");
+
+  if (btnCopyPc && mobileShareGroup) {
+    if (isMobile) {
+      btnCopyPc.style.display = "none";
+      mobileShareGroup.style.display = "flex";
+    } else {
+      btnCopyPc.style.display = "inline-flex";
+      mobileShareGroup.style.display = "none";
+    }
+  }
+}
 
 // État actif du client
 const state = {
@@ -64,7 +142,15 @@ document.addEventListener("DOMContentLoaded", () => {
   initLobbyEvents();
   initArenaEvents();
   initRoomActions();
+  initWaitingShareButtons();
   renderRecentGames();
+  syncPlayerNameInputs();
+  window.addEventListener("cemantix:auth-changed", () => {
+    syncPlayerNameInputs();
+    if (state.sessionData) {
+      updateArenaUI(state.sessionData);
+    }
+  });
 
   // Détection des paramètres d'URL (?r=DUEL-XXXXXXXX&k=J2-XXXXXXXX)
   const params = new URLSearchParams(window.location.search);
@@ -139,24 +225,32 @@ function getStoredGames() {
 }
 
 function saveGameToStorage(room_id, player_key, role, meta = {}) {
-  const games = getStoredGames();
-  games[room_id] = {
-    room_id,
-    player_key,
-    role,
-    mode: meta.mode || "same_word",
-    opponent_name: meta.opponent_name || "Adversaire",
-    difficulty: meta.difficulty || "moyen",
-    updated_at: Date.now(),
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+  try {
+    const games = getStoredGames();
+    games[room_id] = {
+      room_id,
+      player_key,
+      role,
+      mode: meta.mode || "same_word",
+      opponent_name: meta.opponent_name || "Adversaire",
+      difficulty: meta.difficulty || "moyen",
+      updated_at: Date.now(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+  } catch (e) {
+    console.warn("Impossible d'enregistrer la partie dans l'historique local :", e);
+  }
   renderRecentGames();
 }
 
 function removeGameFromStorage(room_id) {
-  const games = getStoredGames();
-  delete games[room_id];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+  try {
+    const games = getStoredGames();
+    delete games[room_id];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+  } catch (e) {
+    console.warn("Impossible de retirer la partie de l'historique local :", e);
+  }
   renderRecentGames();
 }
 
@@ -189,6 +283,9 @@ function renderRecentGames() {
       minute: "2-digit",
     });
     const modeLabel = g.mode === "custom_words" ? "✍️ Mots Choisis" : "🎯 Même Mot";
+    const storedUser = getPlayerUsername() || getStoredSession()?.username;
+    const roleLabel = g.role === "p1" ? "Hôte" : "Invité";
+    const myNameLabel = storedUser ? `${storedUser} (${roleLabel})` : (g.role === "p1" ? "Joueur 1 (Hôte)" : "Joueur 2 (Invité)");
     return `
       <div class="active-game-card">
         <div class="active-game-header">
@@ -198,7 +295,7 @@ function renderRecentGames() {
         <div style="font-size: 0.88rem; color: var(--text-secondary, #8b949e);">
           <div>Variante : <strong>${modeLabel}</strong></div>
           <div>Adversaire : <strong>${escapeHtml(g.opponent_name || "En attente")}</strong></div>
-          <div>Votre rôle : <strong style="color: #79c0ff;">${g.role === "p1" ? "Joueur 1 (Hôte)" : "Joueur 2 (Invité)"}</strong></div>
+          <div>Votre rôle : <strong style="color: #79c0ff;">${escapeHtml(myNameLabel)}</strong></div>
         </div>
         <div class="active-game-footer">
           <button type="button" class="btn btn-secondary btn-sm" data-delete-room="${escapeHtml(g.room_id)}">Supprimer</button>
@@ -231,6 +328,21 @@ async function multiDeleteGame(roomId) {
 // --------------------------------------------------------------------------
 // 3. Navigation entre les Vues Principales
 // --------------------------------------------------------------------------
+function syncPlayerNameInputs() {
+  const username = getPlayerUsername() || getStoredSession()?.username;
+  if (!username) return;
+
+  const createInput = document.getElementById("create-player-name");
+  if (createInput && (!createInput.value || createInput.value === "Joueur 1")) {
+    createInput.value = username;
+  }
+
+  const joinInput = document.getElementById("join-player-name");
+  if (joinInput && (!joinInput.value || joinInput.value === "Joueur 2")) {
+    joinInput.value = username;
+  }
+}
+
 function switchView(viewName) {
   document.querySelectorAll(".multi-view-section").forEach((sec) => sec.classList.remove("active"));
   const target = document.getElementById(`view-${viewName}`);
@@ -241,6 +353,7 @@ function switchView(viewName) {
   // Arrêt du polling si on retourne au lobby
   if (viewName === "lobby") {
     stopPolling();
+    syncPlayerNameInputs();
   }
 }
 
@@ -322,8 +435,27 @@ function initLobbyEvents() {
     btnCopyUrl.addEventListener("click", () => {
       const urlInput = document.getElementById("waiting-share-url-input");
       if (urlInput?.value) {
-        navigator.clipboard.writeText(urlInput.value);
-        showToast("🔗 Lien d'invitation direct copié !");
+        triggerShareOrCopy({ url: urlInput.value, forceCopyOnly: true });
+      }
+    });
+  }
+
+  const btnMobileShare = document.getElementById("btn-mobile-share-invite");
+  if (btnMobileShare) {
+    btnMobileShare.addEventListener("click", () => {
+      const urlInput = document.getElementById("waiting-share-url-input");
+      if (urlInput?.value) {
+        triggerShareOrCopy({ url: urlInput.value, forceCopyOnly: false });
+      }
+    });
+  }
+
+  const btnMobileCopy = document.getElementById("btn-mobile-copy-url");
+  if (btnMobileCopy) {
+    btnMobileCopy.addEventListener("click", () => {
+      const urlInput = document.getElementById("waiting-share-url-input");
+      if (urlInput?.value) {
+        triggerShareOrCopy({ url: urlInput.value, forceCopyOnly: true });
       }
     });
   }
@@ -358,9 +490,12 @@ function initLobbyEvents() {
 async function handleCreateGame() {
   const nameInput = document.getElementById("create-player-name");
   const customWordInput = document.getElementById("create-custom-word");
-  const playerName = nameInput ? nameInput.value.trim() : "Joueur 1";
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  const inputVal = nameInput ? nameInput.value.trim() : "";
+  const playerName = (inputVal && inputVal !== "Joueur 1") ? inputVal : (storedUser || "Joueur 1");
   const customTarget = (state.selectedMode === "custom_words" && customWordInput) ? customWordInput.value.trim() : null;
 
+  let data;
   try {
     const res = await fetch("/api/multi/create", {
       method: "POST",
@@ -372,12 +507,18 @@ async function handleCreateGame() {
         custom_target: customTarget,
       }),
     });
-    const data = await res.json();
+    data = await res.json();
     if (!res.ok || !data.valid) {
       showToast(data.error || "Erreur lors de la création du salon.");
       return;
     }
+  } catch (err) {
+    console.error("Erreur réseau /api/multi/create :", err);
+    showToast("Impossible de contacter le serveur.");
+    return;
+  }
 
+  try {
     state.currentRoomId = data.room_id;
     state.currentPlayerKey = data.player_key;
     state.currentRole = data.role;
@@ -395,7 +536,8 @@ async function handleCreateGame() {
 
     openWaitingRoom(data);
   } catch (err) {
-    showToast("Impossible de contacter le serveur.");
+    console.error("Erreur affichage salon :", err);
+    showToast("Erreur lors de l'ouverture du salon.");
   }
 }
 
@@ -406,7 +548,9 @@ async function handleJoinGame() {
 
   const roomCode = roomInput ? roomInput.value.trim().toUpperCase() : "";
   const playerKey = keyInput ? keyInput.value.trim().toUpperCase() : null;
-  const playerName = nameInput ? nameInput.value.trim() : "Joueur 2";
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  const inputVal = nameInput ? nameInput.value.trim() : "";
+  const playerName = (inputVal && inputVal !== "Joueur 2") ? inputVal : (storedUser || "Joueur 2");
 
   if (!roomCode) {
     showToast("Veuillez saisir un Code Salon valide.");
@@ -418,10 +562,15 @@ async function handleJoinGame() {
 
 async function autoJoinFromUrl(roomCode, playerKey) {
   showToast(`Connexion au salon ${roomCode}...`);
-  await connectToRoom(roomCode, playerKey || "", "");
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  await connectToRoom(roomCode, playerKey || "", storedUser || "");
 }
 
 async function connectToRoom(roomId, playerKey = "", playerName = "") {
+  if (!playerName) {
+    const storedUser = getPlayerUsername() || getStoredSession()?.username;
+    if (storedUser) playerName = storedUser;
+  }
   try {
     const res = await fetch("/api/multi/join", {
       method: "POST",
@@ -464,6 +613,12 @@ async function connectToRoom(roomId, playerKey = "", playerName = "") {
       return;
     }
 
+    // Si on est l'hôte (p1) et que l'adversaire n'a pas encore rejoint, on ouvre la salle d'attente
+    if (data.role === "p1" && !data.session.p2_joined) {
+      openWaitingRoom(data);
+      return;
+    }
+
     // Sinon, on entre directement dans l'arène de jeu
     switchView("arena");
     updateArenaUI(data.session);
@@ -481,7 +636,8 @@ function openWaitingRoom(data) {
   if (roomCodeEl) roomCodeEl.textContent = data.room_id;
   if (shareInputEl) {
     const origin = window.location.origin;
-    shareInputEl.value = `${origin}/multi/?r=${data.room_id}&k=${data.guest_key || ""}`;
+    const guestKey = data.guest_key || data.session?.guest_key || "";
+    shareInputEl.value = `${origin}/multi/?r=${data.room_id}&k=${guestKey}`;
   }
 
   // Si le joueur doit définir un mot secret
@@ -494,6 +650,7 @@ function openWaitingRoom(data) {
   }
 
   switchView("waiting");
+  initWaitingShareButtons();
   startWaitingPoll();
 }
 
@@ -568,8 +725,10 @@ function initArenaEvents() {
       const origin = window.location.origin;
       const guestKey = state.sessionData?.guest_key || "";
       const url = `${origin}/multi/?r=${state.currentRoomId}${guestKey ? `&k=${guestKey}` : ""}`;
-      navigator.clipboard.writeText(url);
-      showToast("🔗 Lien d'invitation copié !");
+      const isMobile =
+        window.matchMedia("(max-width: 768px)").matches ||
+        (typeof navigator !== "undefined" && typeof navigator.share === "function");
+      triggerShareOrCopy({ url, forceCopyOnly: !isMobile });
     });
   }
 
@@ -787,12 +946,14 @@ function startPolling() {
       // La cle du joueur voyage dans le corps de la requete, pas dans l'URL :
       // un GET mettrait le secret dans la ligne de requete, donc dans les logs
       // du proxy et dans l'historique. Le POST /api/multi/status est equivalent.
+      const storedUser = getPlayerUsername() || getStoredSession()?.username;
       const res = await fetch("/api/multi/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           room_id: state.currentRoomId,
           player_key: state.currentPlayerKey,
+          player_name: storedUser || "",
         }),
       });
       if (res.ok) {
@@ -851,12 +1012,14 @@ function startWaitingPoll() {
       // La cle du joueur voyage dans le corps de la requete, pas dans l'URL :
       // un GET mettrait le secret dans la ligne de requete, donc dans les logs
       // du proxy et dans l'historique. Le POST /api/multi/status est equivalent.
+      const storedUser = getPlayerUsername() || getStoredSession()?.username;
       const res = await fetch("/api/multi/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           room_id: state.currentRoomId,
           player_key: state.currentPlayerKey,
+          player_name: storedUser || "",
         }),
       });
       if (!res.ok) return;
@@ -869,7 +1032,7 @@ function startWaitingPoll() {
       else delay = Math.min(delay * 1.6, WAITING_POLL_MAX_MS);
 
       // Si l'adversaire a rejoint et que la partie est prête
-      if (data.state === "in_progress") {
+      if (data.p2_joined && data.state === "in_progress") {
         showToast("🎮 Votre adversaire a rejoint le duel !");
         stopPolling();
         switchView("arena");
@@ -954,7 +1117,9 @@ function updateArenaUI(data) {
   const myPct = document.getElementById("hud-my-pct");
   const myMetric = document.getElementById("hud-my-metric");
 
-  if (myName) myName.textContent = data.me?.name || "Vous";
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  let effectiveMyName = storedUser || data.me?.name || "Vous";
+  if (myName) myName.textContent = effectiveMyName;
   if (myTarget) myTarget.textContent = data.me?.target ? data.me.target.toUpperCase() : "🔒 Secret";
   if (myGauge) myGauge.style.width = `${data.me?.progress_pct || 0}%`;
   if (myPct) myPct.textContent = `${data.me?.progress_pct || 0}%`;

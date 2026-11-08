@@ -93,6 +93,7 @@ def _row_to_challenge(row: Optional[dict]) -> Optional[dict]:
         "duration_seconds": float(duration) if duration is not None else None,
         "trajectory": trajectory if isinstance(trajectory, list) else [],
         "error": row.get("error"),
+        "player_name": row.get("player_name"),
         "created_at": str(row.get("created_at") or ""),
         "started_at": str(row.get("started_at") or ""),
         "finished_at": str(row.get("finished_at") or ""),
@@ -107,16 +108,27 @@ def _row_to_challenge(row: Optional[dict]) -> Optional[dict]:
 # File de tâches (DEFI-01..03)
 # --------------------------------------------------------------------------- #
 def create_challenge(secret_word: str, ip_hash_value: str,
-                     max_tries: int = CHALLENGE_MAX_TRIES) -> str:
+                     max_tries: int = CHALLENGE_MAX_TRIES,
+                     player_name: Optional[str] = None) -> str:
     """Empile un défi validé. Retourne son identifiant aléatoire 128 bits (SEC-22)."""
     challenge_id = secrets.token_hex(16)
-    db.execute(
-        """
-        INSERT INTO bot_challenges (id, secret_word, ip_hash, status, max_tries, created_at)
-        VALUES (%s, %s, %s, 'queued', %s, %s);
-        """,
-        (challenge_id, secret_word, ip_hash_value, int(max_tries), _utcnow()),
-    )
+    p_name = str(player_name).strip()[:64] if player_name else None
+    try:
+        db.execute(
+            """
+            INSERT INTO bot_challenges (id, secret_word, ip_hash, status, max_tries, created_at, player_name)
+            VALUES (%s, %s, %s, 'queued', %s, %s, %s);
+            """,
+            (challenge_id, secret_word, ip_hash_value, int(max_tries), _utcnow(), p_name),
+        )
+    except Exception:
+        db.execute(
+            """
+            INSERT INTO bot_challenges (id, secret_word, ip_hash, status, max_tries, created_at)
+            VALUES (%s, %s, %s, 'queued', %s, %s);
+            """,
+            (challenge_id, secret_word, ip_hash_value, int(max_tries), _utcnow()),
+        )
     return challenge_id
 
 
@@ -126,23 +138,42 @@ def get_challenge(challenge_id: str, include_trajectory: bool = True) -> Optiona
     Par défaut `include_trajectory=True` charge la trajectoire complète (utile au SSE/replay).
     Si `include_trajectory=False`, la colonne JSONB volumineuse est omise pour les contrôles d'existence.
     """
-    if include_trajectory:
-        query = """
-        SELECT id, secret_word, ip_hash, status, max_tries, tries_count,
-               duration_seconds, trajectory, error, heartbeat_at, started_at,
-               finished_at, created_at
-        FROM bot_challenges
-        WHERE id = %s;
-        """
-    else:
-        query = """
-        SELECT id, secret_word, ip_hash, status, max_tries, tries_count,
-               duration_seconds, error, heartbeat_at, started_at,
-               finished_at, created_at
-        FROM bot_challenges
-        WHERE id = %s;
-        """
-    row = db.fetch_one(query, (str(challenge_id),))
+    try:
+        if include_trajectory:
+            query = """
+            SELECT id, secret_word, ip_hash, status, max_tries, tries_count,
+                   duration_seconds, trajectory, error, heartbeat_at, started_at,
+                   finished_at, created_at, player_name
+            FROM bot_challenges
+            WHERE id = %s;
+            """
+        else:
+            query = """
+            SELECT id, secret_word, ip_hash, status, max_tries, tries_count,
+                   duration_seconds, error, heartbeat_at, started_at,
+                   finished_at, created_at, player_name
+            FROM bot_challenges
+            WHERE id = %s;
+            """
+        row = db.fetch_one(query, (str(challenge_id),))
+    except Exception:
+        if include_trajectory:
+            query = """
+            SELECT id, secret_word, ip_hash, status, max_tries, tries_count,
+                   duration_seconds, trajectory, error, heartbeat_at, started_at,
+                   finished_at, created_at
+            FROM bot_challenges
+            WHERE id = %s;
+            """
+        else:
+            query = """
+            SELECT id, secret_word, ip_hash, status, max_tries, tries_count,
+                   duration_seconds, error, heartbeat_at, started_at,
+                   finished_at, created_at
+            FROM bot_challenges
+            WHERE id = %s;
+            """
+        row = db.fetch_one(query, (str(challenge_id),))
     return _row_to_challenge(row)
 
 
@@ -368,10 +399,32 @@ def anonymize_player_token(ip_hash_value: str) -> str:
 
 
 def format_player_display(player_anon_id: str) -> str:
-    """Formate un identifiant pseudonymisé pour l'affichage (ex: 'Visiteur #a1b2')."""
-    raw = str(player_anon_id or "").replace("joueur_", "")
-    token = raw[:4] if raw else "0000"
-    return f"Visiteur #{token}"
+    """Formate un identifiant pseudonymisé pour l'affichage (ex: 'Visiteur #a1b2' ou pseudo réel)."""
+    raw = str(player_anon_id or "").strip()
+    if not raw:
+        return "Visiteur #0000"
+    if raw.startswith("joueur_"):
+        token = raw.replace("joueur_", "")[:4]
+        return f"Visiteur #{token}"
+    return raw
+
+
+def upgrade_player_challenges(legacy_anon_id: str, new_player_name: str) -> int:
+    """Met à niveau les défis historiques rattachés au token IP vers le pseudonyme du joueur."""
+    if not legacy_anon_id or not new_player_name:
+        return 0
+    cleaned = str(new_player_name).strip()[:32]
+    if not cleaned or cleaned.startswith("joueur_") or cleaned.startswith("Visiteur #"):
+        return 0
+    query = """
+    UPDATE bot_challenge_stats
+    SET player_anon_id = %s
+    WHERE player_anon_id = %s;
+    """
+    try:
+        return db.execute(query, (cleaned, legacy_anon_id))
+    except Exception:
+        return 0
 
 
 def record_challenge_stat(
@@ -382,9 +435,13 @@ def record_challenge_stat(
     tries_count: int,
     duration_seconds: Optional[float] = None,
     created_at: Optional[datetime] = None,
+    player_name: Optional[str] = None,
 ) -> bool:
     """Enregistre un défi terminé dans les statistiques. Idempotent via ON CONFLICT DO NOTHING."""
-    player_anon_id = anonymize_player_token(ip_hash_value)
+    if player_name and str(player_name).strip():
+        player_anon_id = str(player_name).strip()[:32]
+    else:
+        player_anon_id = anonymize_player_token(ip_hash_value)
     # Mapping outcome : 'solved' -> 'won', 'lost' -> 'lost', 'error' -> 'error'
     norm_outcome = "won" if outcome == "solved" else outcome
     created_val = created_at or _utcnow()
@@ -465,29 +522,42 @@ def get_challenge_stat(challenge_id: str) -> Optional[dict]:
     return db.fetch_one(query, (str(challenge_id),))
 
 
-def get_player_stats(player_ip_hash: Optional[str]) -> dict:
+def get_player_stats(player_ip_hash: Optional[str], player_name: Optional[str] = None) -> dict:
     """Bilan pseudonymisé d'un visiteur (M9) : le seul bloc non mis en cache."""
-    if not player_ip_hash:
+    cleaned_name = str(player_name).strip()[:32] if player_name else None
+    if not player_ip_hash and not cleaned_name:
         return {"identified": False, "display_name": None, "total_played": 0,
                 "player_wins": 0, "player_losses": 0, "player_win_rate_pct": 0.0}
-    player_anon_id = anonymize_player_token(player_ip_hash)
+    player_anon_id = anonymize_player_token(player_ip_hash) if player_ip_hash else None
+
+    conds = []
+    params = []
+    if player_anon_id:
+        conds.append("player_anon_id = %s")
+        params.append(player_anon_id)
+    if cleaned_name and cleaned_name != player_anon_id:
+        conds.append("player_anon_id = %s")
+        params.append(cleaned_name)
+
+    where_sql = " OR ".join(conds)
     row = db.fetch_one(
-        """
+        f"""
         SELECT
             COUNT(*) AS total_played,
             SUM(CASE WHEN outcome = 'lost' THEN 1 ELSE 0 END) AS player_wins,
             SUM(CASE WHEN outcome = 'won' THEN 1 ELSE 0 END) AS player_losses
         FROM bot_challenge_stats
-        WHERE player_anon_id = %s;
+        WHERE {where_sql};
         """,
-        (player_anon_id,),
+        tuple(params),
     ) or {}
     total = int(row.get("total_played") or 0)
     wins = int(row.get("player_wins") or 0)
     losses = int(row.get("player_losses") or 0)
+    disp = cleaned_name or (format_player_display(player_anon_id) if player_anon_id else "Visiteur #0000")
     return {
         "identified": True,
-        "display_name": format_player_display(player_anon_id),
+        "display_name": disp,
         "total_played": total,
         "player_wins": wins,
         "player_losses": losses,
@@ -522,17 +592,30 @@ def sync_legacy_challenges_to_stats(limit: int = 200, force: bool = False) -> in
         if not force and _legacy_sync_done:
             return 0
         try:
-            rows = db.fetch_all(
-                """
-                SELECT id, secret_word, ip_hash, status, tries_count, duration_seconds, trajectory, created_at
-                FROM bot_challenges
-                WHERE status IN ('solved', 'won', 'lost')
-                  AND id NOT IN (SELECT challenge_id FROM bot_challenge_stats)
-                ORDER BY created_at ASC
-                LIMIT %s;
-                """,
-                (int(limit),),
-            )
+            try:
+                rows = db.fetch_all(
+                    """
+                    SELECT id, secret_word, ip_hash, status, tries_count, duration_seconds, trajectory, created_at, player_name
+                    FROM bot_challenges
+                    WHERE status IN ('solved', 'won', 'lost')
+                      AND id NOT IN (SELECT challenge_id FROM bot_challenge_stats)
+                    ORDER BY created_at ASC
+                    LIMIT %s;
+                    """,
+                    (int(limit),),
+                )
+            except Exception:
+                rows = db.fetch_all(
+                    """
+                    SELECT id, secret_word, ip_hash, status, tries_count, duration_seconds, trajectory, created_at
+                    FROM bot_challenges
+                    WHERE status IN ('solved', 'won', 'lost')
+                      AND id NOT IN (SELECT challenge_id FROM bot_challenge_stats)
+                    ORDER BY created_at ASC
+                    LIMIT %s;
+                    """,
+                    (int(limit),),
+                )
         except Exception as exc:
             log(f"⚠️  [DÉFI] Erreur lecture défis historiques : {exc}", level="WARNING")
             return 0
@@ -569,6 +652,7 @@ def sync_legacy_challenges_to_stats(limit: int = 200, force: bool = False) -> in
                     tries_count=tries,
                     duration_seconds=dur,
                     created_at=created_dt,
+                    player_name=r.get("player_name"),
                 )
 
                 traj = r.get("trajectory")
@@ -648,7 +732,7 @@ def get_recent_challenges(limit: int = 20) -> list[dict]:
     return result
 
 
-def get_challenge_kpis(player_ip_hash: Optional[str] = None) -> dict:
+def get_challenge_kpis(player_ip_hash: Optional[str] = None, player_name: Optional[str] = None) -> dict:
     """Retourne la synthèse des KPIs globaux et les stats de la session courante."""
     sync_legacy_challenges_to_stats()
     row_counts = db.fetch_one(
@@ -766,31 +850,8 @@ def get_challenge_kpis(player_ip_hash: Optional[str] = None) -> dict:
             "date": date_str,
         })
 
-    if player_ip_hash:
-        player_anon_id = anonymize_player_token(player_ip_hash)
-        row_player = db.fetch_one(
-            """
-            SELECT
-                COUNT(*) AS total_played,
-                SUM(CASE WHEN outcome = 'lost' THEN 1 ELSE 0 END) AS player_wins,
-                SUM(CASE WHEN outcome = 'won' THEN 1 ELSE 0 END) AS player_losses
-            FROM bot_challenge_stats
-            WHERE player_anon_id = %s;
-            """,
-            (player_anon_id,),
-        ) or {}
-        p_total = int(row_player.get("total_played") or 0)
-        p_wins = int(row_player.get("player_wins") or 0)
-        p_losses = int(row_player.get("player_losses") or 0)
-        p_rate = round((p_wins / p_total) * 100, 1) if p_total > 0 else 0.0
-        player_data = {
-            "identified": True,
-            "display_name": format_player_display(player_anon_id),
-            "total_played": p_total,
-            "player_wins": p_wins,
-            "player_losses": p_losses,
-            "player_win_rate_pct": p_rate,
-        }
+    if player_ip_hash or player_name:
+        player_data = get_player_stats(player_ip_hash, player_name)
     else:
         player_data = {
             "identified": False,

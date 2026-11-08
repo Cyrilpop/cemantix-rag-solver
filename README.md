@@ -362,8 +362,18 @@ volumes/web/
 │   ├── trajectory.js # Visualisation et filtres de la trajectoire IA
 │   ├── game.js       # Moteur complet du jeu interactif (API locale)
 │   ├── battle.js     # Moteur du duel contre le bot IA RAG
-│   └── multi.js      # Moteur du mode multijoueur 1v1 temps réel
+│   ├── multi.js      # Moteur du mode multijoueur 1v1 temps réel
+│   ├── auth.js       # Authentification universelle des joueurs et synchronisation de session
+│   └── share_templates.js # Modèles et personnalisation des invitations 1v1 (WhatsApp, SMS, Web Share API)
 ```
+
+#### Personnalisation des invitations Multijoueur 1v1 (WhatsApp & Mobile) :
+Tous les textes, accroches, emojis et variantes de messages partagés lors d'une invitation à un duel 1v1 sont centralisés dans un fichier unique facile à éditer :
+- **Emplacement du fichier :** `volumes/web/js/share_templates.js`
+- **Comportement contextuel :**
+  - **Sur PC :** le bouton copie directement l'URL brute du salon dans le presse-papier.
+  - **Sur Mobile :** le bouton « 📲 Inviter un ami » déclenche l'API native de partage du téléphone (`navigator.share`) vers WhatsApp, SMS, Telegram, etc., avec un texte adapté au mode de jeu (mention du niveau de difficulté en mode *Même Mot*, ou message provocateur taquin en mode *Mots Choisis*). Un bouton rapide « 📋 » permet de ne copier que le lien.
+  - **Aperçu riche WhatsApp (Open Graph) :** l'illustration officielle est servie automatiquement via `volumes/web/og-image.jpg`.
 
 #### Fonctionnalités clés de la page web :
 - **Carte Héros du Mot du Jour** : Affiche la date, le numéro du puzzle officiel, le mot secret, le nombre d'essais et la durée de calcul.
@@ -651,6 +661,35 @@ La page hub à forte audience **`/mot-du-jour/`** propose un système de consult
    - La révélation s'opère par clic direct ou activation clavier (Entrée / Espace).
 5. **Accessibilité & Contraste WCAG AAA :** Rehaussement des contrastes sur les boutons actifs et les badges thermiques (`#ffb4ab` / `#b91c1c` avec ratio > 7:1).
 6. **Fiabilité IndexNow & Navigation :** Vérification de l'état d'indexation au démarrage (anti-429) et ancre dédiée `#history-table` pour la navigation fluide vers l'historique des puzzles.
+
+### Authentification Joueurs sans Email & Phrase de Secours (Jalon M14)
+Le système d'identité joueur offre une expérience sans friction, ludique et strictement respectueuse de la vie privée (Privacy by Design / 0 email) :
+1. **Attribution automatique d'un profil invité :**
+   - Dès la première visite, le joueur reçoit un identifiant unique (UUID) et un **pseudo loufoque en français** généré selon l'ordre grammatical strict `[Nom][Adjectif]` (CamelCase, 8 à 24 car., ex: `CastorCosmique`, `PangolinFurtif`).
+   - Le badge permanent `[ 👤 CastorCosmique ▾ ]` dans l'en-tête permet d'accéder à tout moment à la modale de profil.
+   - Une bannière toast d'accueil discrète s'affiche lors de la toute première visite sans bloquer le jeu (CLS = 0, préservation des Core Web Vitals).
+2. **Personnalisation unique du pseudo :**
+   - Possibilité de personnaliser son pseudo une seule et unique fois (`can_change_username = true` $\rightarrow$ `false`), avec validation d'unicité, longueur 8 à 24 caractères et filtrage anti-abus.
+3. **Protection de compte & Reconnexion multi-appareils (Modèle NickServ) :**
+   - Possibilité de sécuriser son profil par un mot de passe pour le retrouver sur un autre ordinateur ou smartphone (`POST /api/player/claim` puis `POST /api/player/login`).
+   - Hachage cryptographique sécurisé PBKDF2-HMAC-SHA256 (200 000 itérations avec sel aléatoire de 16 octets).
+4. **Phrase secrète de secours de 4 mots concrets :**
+   - En l'absence de collecte d'email, la récupération de compte repose sur une phrase secrète de 4 mots concrets français (`citron falaise navire vortex`).
+   - Réinitialisation sécurisée du mot de passe via `POST /api/player/reset-password`.
+5. **Conformité RGPD & Droit à l'effacement :**
+   - Exemption CNIL pour le `localStorage` technique fonctionnel.
+   - Suppression définitive et purge du profil possible en un clic depuis l'interface (`POST /api/player/delete-account`).
+   - En-tête HTTP obligatoire `Cache-Control: no-store, private` sur tous les endpoints `/api/player/*`.
+6. **Administration des vocabulaires :**
+   - Panneau de maintenance dédié dans la console d'exploitation `/panier-9x` permettant d'enrichir ou désactiver en direct les listes de noms, d'adjectifs et de mots de secours.
+7. **Propagation transverse du pseudo & synchronisation temps réel :**
+   - Le pseudo authentifié est automatiquement propagé dans les formulaires de défi (`/defi/`) et de duel multijoueur (`/multi/`), réagissant en temps réel à l'événement global `cemantix:auth-changed` sans rechargement de page.
+8. **Modèles d'invitation centralisés (`volumes/web/js/share_templates.js`) :**
+   - Centralisation isolée de tous les textes d'invitation (WhatsApp, SMS, presse-papier) pour une modification immédiate sans toucher au code applicatif.
+   - Personnalisation dynamique selon le mode : mention du niveau (`🟢 Facile`, `🟡 Moyen`, `🌶️ Difficile`, `🔴 Expert`) en mode *Même Mot*, et message provocateur/engageant en mode *Mots Choisis*.
+9. **Partage adaptatif Mobile / Desktop & Ergonomie du Palmarès :**
+   - Affichage responsive CSS natif : bouton PC `🔗 Copier le lien` sur grand écran (> 768px), et groupe mobile `📲 Inviter un ami` (Web Share API natif avec repli presse-papier) + `📋` sur mobile/tactile (<= 768px).
+   - Optimisation du palmarès des défis : affichage instantané du mot vainqueur (bypass cache `?fresh=1`, TTL KPIs 2s, insertion optimiste), suppression du scroll horizontal et masquage visuel des barres de défilement.
 
 ### Cache HTTP : cohérence avec la politique « no-cache »
 Le projet applique `Cache-Control: "no-cache, must-revalidate"` sur le code applicatif
@@ -1023,7 +1062,7 @@ cemantix-rag-solver/
 │       ├── multi/           # Mode Multijoueur 1v1 entre amis (URL : /multi/)
 │       │   └── index.html   # Page Multijoueur (Même Mot, Mots Choisis, lien direct)
 │       ├── css/             # Styles atomiques et bundles optimisés par page (dist/)
-│       ├── js/              # Modules JavaScript atomiques (app, utils, render, game, battle, multi...)
+│       ├── js/              # Modules JavaScript atomiques (app, multi, auth, share_templates...)
 │       ├── .well-known/     # Manifestes ARD et A2A auto-régénérés (ard.json, ai-catalog.json, agent-card.json)
 │       ├── robots.txt       # Directives d'exploration pour les moteurs de recherche
 │       └── sitemap.xml      # Plan de site XML généré automatiquement au démarrage des conteneurs (hors Git)
@@ -1061,7 +1100,16 @@ cemantix-rag-solver/
     │       ├── system.py    # Métriques système, cache mémoire et ETag 304 (/api/health, /api/daily)
     │       ├── solo.py      # Contrôleur du Mode Solo (/api/game/*)
     │       ├── battle.py    # Contrôleur du Mode Battle IA (/api/battle/*)
-    │       └── multi.py     # Contrôleur du Mode Multijoueur 1v1 (/api/multi/*)
+    │       ├── multi.py     # Contrôleur du Mode Multijoueur 1v1 (/api/multi/*)
+    │       └── player.py    # Contrôleur des Joueurs et Authentification sans email (/api/player/*)
+    ├── db/                  # Couche d'accès aux données relationnelles (DAO)
+    │   ├── __init__.py      # Exports des fonctions de persistance
+    │   ├── connection.py    # Gestionnaire de pool PostgreSQL / SQLite thread-safe et migrations
+    │   ├── daily.py         # Résolutions quotidiennes et indices IA
+    │   ├── multi.py         # Salons 1v1 multijoueurs
+    │   ├── solo.py          # Sessions d'entraînement solo
+    │   ├── challenges.py    # Défis bot et statistiques
+    │   └── players.py       # Profils joueurs et dictionnaires dynamiques (M14)
     ├── cli/                 # Interface en ligne de commande & Terminal UI (Console UX)
     │   ├── __init__.py      # Point d'entrée du package CLI
     │   ├── ui.py            # Rendu console, jauges ASCII, dashboard duel & débriefing
@@ -1077,6 +1125,8 @@ cemantix-rag-solver/
         ├── daemon.py        # Démon planificateur 24h/24 (veille, heartbeat threadé et résolution quotidienne)
         ├── hints.py         # Service sémantique RAG, calcul des paliers d'indices et bootstrap_database()
         ├── ai_hints.py      # Orchestration et génération idempotente des indices IA Gemini (M12)
+        ├── player_auth.py   # Service d'authentification joueur, pseudos [Nom][Adjectif] & phrase 4 mots (M14)
+        ├── layout_sync.py   # Synchronisation universelle du layout Header, Nav-tabs et badge joueur
         ├── web.py           # Générateur et exportateur de données web avec masquage anti-spoiler
         └── seo.py           # Orchestrateur SEO (archives avec 10 indices, hubs, sitemap.xml et manifestes ARD)
 ```

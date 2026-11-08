@@ -7,6 +7,7 @@
 import { escapeHtml, getTierClass, getTierWeatherIcon, showToast, initErrorHandling, showConfirmDialog } from "./utils.js";
 import { renderGuessesContainer } from "./render.js";
 import { initTheme } from "./theme.js";
+import { getStoredSession, getPlayerUsername } from "./auth.js";
 
 const BATTLE_STORAGE_KEY = "cemantix_battle_state_v1";
 
@@ -96,6 +97,8 @@ export function initBattle() {
 
   // Toggle mobile
   setupMobileDuelToggle();
+
+  window.addEventListener("cemantix:auth-changed", () => renderBattleUI());
 
   // Restauration de l'état local ou ouverture de la modale de démarrage
   const hasSaved = loadBattleState();
@@ -532,6 +535,12 @@ function renderBattleUI() {
   }
 
   // 4. HUD Confrontation & Doubles Jauges
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  const playerNameEl = document.getElementById("battle-player-name") || document.querySelector(".hud-player .entity-name");
+  if (playerNameEl) {
+    playerNameEl.textContent = storedUser ? storedUser.toUpperCase() : "VOUS";
+  }
+
   const playerPct = document.getElementById("player-progress-pct");
   const playerMetric = document.getElementById("player-best-metric");
   const playerBar = document.getElementById("player-gauge-bar");

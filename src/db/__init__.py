@@ -71,6 +71,23 @@ from .solo import (
     save_game_session,
     save_solo_session_record,
 )
+from .players import (
+    add_dictionary_word,
+    claim_player_account,
+    create_guest_player,
+    delete_dictionary_word,
+    delete_player_account,
+    get_active_dictionary,
+    get_dictionary_words,
+    get_player_by_id,
+    get_player_by_token,
+    get_player_by_username,
+    seed_default_dictionary_if_empty,
+    toggle_dictionary_word,
+    touch_player_activity,
+    update_player_password,
+    update_player_username,
+)
 
 __all__ = [
     "db",
@@ -104,6 +121,22 @@ __all__ = [
     "cleanup_old_solo",
     "save_game_session",
     "load_game_session",
+    # Joueurs & Authentification M14
+    "create_guest_player",
+    "get_player_by_id",
+    "get_player_by_token",
+    "get_player_by_username",
+    "update_player_username",
+    "claim_player_account",
+    "update_player_password",
+    "touch_player_activity",
+    "delete_player_account",
+    "get_active_dictionary",
+    "get_dictionary_words",
+    "add_dictionary_word",
+    "toggle_dictionary_word",
+    "delete_dictionary_word",
+    "seed_default_dictionary_if_empty",
     # Défis au bot (2026-10-06-defier-le-bot)
     "CHALLENGE_ENABLED",
     "CHALLENGE_MAX_QUEUE",

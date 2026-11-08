@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS bot_challenges (
     max_tries        INT NOT NULL DEFAULT 100,
     trajectory       JSONB NOT NULL DEFAULT '[]'::jsonb,
     error            VARCHAR(200),
+    player_name      VARCHAR(64),
     created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at       TIMESTAMPTZ,
     finished_at      TIMESTAMPTZ,
@@ -136,5 +137,37 @@ CREATE TABLE IF NOT EXISTS daily_puzzle_ai_hints (
     UNIQUE(puzzle_date, hint_level)
 );
 CREATE INDEX IF NOT EXISTS idx_ai_hints_date ON daily_puzzle_ai_hints(puzzle_date);
+
+-- 9. Table des joueurs et authentification sans email (M14)
+CREATE TABLE IF NOT EXISTS players (
+    id UUID PRIMARY KEY,
+    auth_token VARCHAR(64) NOT NULL UNIQUE,
+    username VARCHAR(32) NOT NULL UNIQUE,
+    can_change_username BOOLEAN NOT NULL DEFAULT TRUE,
+    is_claimed BOOLEAN NOT NULL DEFAULT FALSE,
+    password_hash VARCHAR(255),
+    recovery_key_hash VARCHAR(255),
+    auth_provider VARCHAR(16) NOT NULL DEFAULT 'local',
+    google_sub VARCHAR(64) UNIQUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    renamed_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_players_token ON players(auth_token);
+CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
+CREATE INDEX IF NOT EXISTS idx_players_google_sub ON players(google_sub);
+
+-- 10. Dictionnaire dynamique de vocabulaire pour identités & récupération (M14)
+-- Types : 'noun' (Noms), 'adjective' (Adjectifs), 'recovery' (Mots de secours)
+CREATE TABLE IF NOT EXISTS player_dictionary (
+    id SERIAL PRIMARY KEY,
+    word_type VARCHAR(16) NOT NULL,            -- 'noun', 'adjective', 'recovery'
+    word VARCHAR(32) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(word_type, word)
+);
+CREATE INDEX IF NOT EXISTS idx_dict_type ON player_dictionary(word_type, is_active);
+
 
 

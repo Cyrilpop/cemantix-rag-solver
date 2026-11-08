@@ -11,6 +11,7 @@
 import { escapeHtml } from "./utils.js";
 import { initTheme } from "./theme.js";
 import { initTrajectoryModal, openTrajectoryModal, buildTrajectoryStepHtml } from "./trajectory.js";
+import { getStoredSession, getPlayerUsername } from "./auth.js";
 
 const API = "/api/challenge";
 const POLL_MS = 2000;
@@ -184,9 +185,29 @@ function showResult(done) {
   const submit = el("defi-submit");
   if (submit) submit.disabled = false;
   setStatus("Défi terminé — lancez-en un autre (dans la limite de 10 par heure).");
-  // WOF-05/06 : le défi vient d'être archivé par le worker — rafraîchit palmarès et bandeau.
-  setTimeout(loadKpis, 1500);
-  loadKpis();
+
+  // Insertion immédiate dans le palmarès local pour affichage instantané
+  if (done.word && (done.status === "solved" || done.status === "lost")) {
+    const storedUser = getPlayerUsername() || getStoredSession()?.username;
+    const challengeId = currentId || done.challenge_id || ("temp-" + Date.now());
+    const alreadyPresent = challengesList.some((it) => it.challenge_id === challengeId || (it.secret_word === done.word && Math.abs(new Date(it.date).getTime() - Date.now()) < 10000));
+    if (!alreadyPresent) {
+      challengesList.unshift({
+        challenge_id: challengeId,
+        secret_word: done.word,
+        player: storedUser || "Vous",
+        outcome: done.status === "solved" ? "won" : "lost",
+        tries_count: done.tries_count || (displayedSteps.length || 0),
+        duration_seconds: parseFloat(displayDuration),
+        date: new Date().toISOString(),
+      });
+      renderChallengesList();
+    }
+  }
+
+  // WOF-05/06 : le défi vient d'être archivé par le worker — rafraîchit palmarès et bandeau (purge du cache serveur).
+  loadKpis(true);
+  setTimeout(() => loadKpis(true), 1200);
 }
 
 function openFullTrajectory() {
@@ -314,10 +335,11 @@ async function submitChallenge(word) {
   el("defi-result").style.display = "none";
 
   try {
+    const storedUser = getPlayerUsername() || getStoredSession()?.username;
     const res = await fetch(API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ word }),
+      body: JSON.stringify({ word, player_name: storedUser || "" }),
     });
     const data = await res.json().catch(() => ({}));
     if (res.status === 201 && data.id) {
@@ -398,6 +420,7 @@ export function initDefi() {
   }
 
   loadKpis();
+  window.addEventListener("cemantix:auth-changed", () => loadKpis());
 }
 
 // --------------------------------------------------------------------------- //
@@ -406,6 +429,7 @@ export function initDefi() {
 const FETCH_JSON = { headers: { Accept: "application/json" } };
 let challengesList = [];
 let activeChallengeFilter = "all";
+let currentGuestToken = "";
 
 function animateCount(node, target, decimals = 0) {
   if (!node) return;
@@ -449,7 +473,8 @@ function renderPlayerBanner(player) {
   const remaining = player.quota_remaining === "unlimited"
     ? "défis illimités"
     : `${player.quota_remaining} défi${player.quota_remaining > 1 ? "s" : ""} restant${player.quota_remaining > 1 ? "s" : ""} cette heure-ci`;
-  const name = player.display_name || "Visiteur";
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+  const name = storedUser || player.display_name || "Visiteur";
   if (player.total_played > 0) {
     banner.textContent = `Bienvenue ${name} — ${player.player_wins} victoire${player.player_wins > 1 ? "s" : ""} / ` +
       `${player.total_played} défi${player.total_played > 1 ? "s" : ""} lancé${player.total_played > 1 ? "s" : ""} ` +
@@ -478,35 +503,57 @@ function renderChallengesList() {
     return;
   }
 
+  const storedUser = getPlayerUsername() || getStoredSession()?.username;
+
   box.innerHTML = items.map((it) => {
     const isBotWon = it.outcome === "won" || it.outcome === "solved";
-    const date = it.date ? new Date(it.date).toLocaleDateString("fr-FR") : "";
+    const d = it.date ? new Date(it.date) : null;
+    const dateShort = d
+      ? `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`
+      : "";
+    const dateFull = d ? d.toLocaleString("fr-FR") : "";
     const durText = it.duration_seconds != null ? `${Number(it.duration_seconds).toFixed(1)} s` : "—";
     const badgeHtml = isBotWon
-      ? `<span class="badge badge-won">🤖 Trouvé</span>`
-      : `<span class="badge badge-lost">😅 Perdu</span>`;
-    const playerDisp = String(it.player || "").replace(/^Visiteur\s*/i, "");
+      ? `<span class="badge badge-won badge-icon" title="Trouvé par le bot" aria-label="Trouvé">🤖</span>`
+      : `<span class="badge badge-lost badge-icon" title="Perdu par le bot (mot non résolu)" aria-label="Perdu">😅</span>`;
+    let playerDisp = String(it.player || "").replace(/^Visiteur\s*/i, "").trim();
+
+    // Remplacement du token anonyme générique par le pseudo authentifié pour la session locale
+    if (storedUser && (!playerDisp || playerDisp.startsWith("#") || playerDisp.startsWith("joueur_"))) {
+      if (!currentGuestToken || playerDisp === currentGuestToken || playerDisp === `#${currentGuestToken.replace(/^#/, "")}`) {
+        playerDisp = storedUser;
+      }
+    }
+    const isMe = Boolean(storedUser && playerDisp === storedUser);
 
     return `<tr>
-      <td><strong style="font-family:var(--font-mono);font-size:0.88rem;">${escapeHtml(it.secret_word)}</strong></td>
-      <td>${badgeHtml}</td>
-      <td style="font-family:var(--font-mono);">${escapeHtml(String(it.tries_count))}</td>
-      <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.78rem;">${escapeHtml(durText)}</td>
-      <td style="color:var(--text-muted);font-family:var(--font-mono);font-size:0.75rem;" title="${escapeHtml(it.player)}">${escapeHtml(playerDisp)}</td>
-      <td style="color:var(--text-muted);font-size:0.75rem;">${escapeHtml(date)}</td>
-      <td style="text-align:right;">
-        <button type="button" class="btn btn-secondary btn-sm" data-challenge-id="${escapeHtml(it.challenge_id)}" title="Revoir le cheminement de ce défi">👁️ Revoir</button>
+      <td class="col-mot" title="${escapeHtml(it.secret_word)}"><strong>${escapeHtml(it.secret_word)}</strong></td>
+      <td class="col-center col-statut">${badgeHtml}</td>
+      <td class="col-center col-coups">${escapeHtml(String(it.tries_count))}</td>
+      <td class="col-center col-temps">${escapeHtml(durText)}</td>
+      <td class="col-joueur defi-player-cell ${isMe ? "is-me" : ""}" title="${escapeHtml(playerDisp)}">${escapeHtml(playerDisp)}</td>
+      <td class="col-center col-date" title="${escapeHtml(dateFull)}">${escapeHtml(dateShort)}</td>
+      <td class="col-center col-replay">
+        <button type="button" class="btn btn-secondary btn-sm btn-icon-replay" data-challenge-id="${escapeHtml(it.challenge_id)}" title="Revoir le cheminement complet (${escapeHtml(it.secret_word)})" aria-label="Revoir le défi ${escapeHtml(it.secret_word)}">👁️</button>
       </td>
     </tr>`;
   }).join("");
 }
 
 /** Charge (ou recharge) KPIs, liste des défis et bandeau. Silencieux en cas d'échec. */
-async function loadKpis() {
+async function loadKpis(fresh = false) {
   try {
-    const res = await fetch(`${API}/kpis`, FETCH_JSON);
+    const storedUser = getPlayerUsername() || getStoredSession()?.username;
+    const params = new URLSearchParams();
+    if (storedUser) params.set("player_name", storedUser);
+    if (fresh) params.set("fresh", "1");
+    const queryStr = params.toString() ? `?${params.toString()}` : "";
+    const res = await fetch(`${API}/kpis${queryStr}`, FETCH_JSON);
     if (!res.ok) return;
     const data = await res.json();
+    if (data.player && data.player.display_name) {
+      currentGuestToken = String(data.player.display_name).replace(/^Visiteur\s*/i, "").trim();
+    }
     renderKpis(data.global);
     challengesList = Array.isArray(data.recent_challenges) && data.recent_challenges.length
       ? data.recent_challenges
