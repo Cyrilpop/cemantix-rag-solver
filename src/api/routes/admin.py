@@ -473,6 +473,9 @@ def handle_admin_get(
             return
         safe_player = {k: v for k, v in player.items() if k not in ("password_hash", "recovery_key_hash")}
         send_json({"user": safe_player}, 200)
+    elif sub in ("daily-history", "daily"):
+        from ...db.solo import get_admin_daily_history
+        send_json({"history": get_admin_daily_history()}, 200)
     elif sub == "whoami":
         send_json({"ok": True, "expires_in": int(ADMIN_TOKEN_TTL)}, 200)
     else:
@@ -515,6 +518,18 @@ def handle_admin_post(manager, path: str, data: dict, headers, client_ip: str) -
         if not action:
             return {"error": f"Action inconnue : {name}"}, 404
         return _launch_action(name, action, manager)
+
+    if sub == "solo/simulate-bots":
+        force = bool((data or {}).get("force", True))
+        try:
+            from ...services.solo_daily import simulate_solo_daily_bots
+            store = getattr(manager, "store", None)
+            res = simulate_solo_daily_bots(store, force=force)
+            log(f"🛡️  [ADMIN] Simulation des habitués Solo exécutée : {res}")
+            return {"success": True, "result": res}, 200
+        except Exception as e:
+            log(f"⚠️  [ADMIN] Erreur simulation habitués : {e}")
+            return {"error": str(e)}, 500
 
     if sub == "whitelist":
         from ...db import add_whitelist_ip, get_whitelist

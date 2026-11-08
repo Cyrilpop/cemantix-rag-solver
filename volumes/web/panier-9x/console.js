@@ -327,6 +327,138 @@
       .catch(function (e) { toast(e.message, 'ko'); });
   }
 
+  // --- Mot du Jour & Indices IA --------------------------------------------
+  var dailyHistoryData = [];
+
+  function renderDailyDetail(entry) {
+    if (!entry) {
+      el('daily-detail-date').textContent = '—';
+      el('daily-detail-secret').textContent = '—';
+      el('daily-detail-diff').textContent = '—';
+      el('daily-detail-stats').textContent = '—';
+      el('daily-detail-hints').innerHTML = '<span class="muted">Aucun détail disponible.</span>';
+      return;
+    }
+
+    el('daily-detail-date').textContent = entry.puzzle_date || '—';
+    el('daily-detail-secret').textContent = (entry.secret_word || '—').toUpperCase();
+    el('daily-detail-diff').textContent = entry.difficulty ? (entry.difficulty.charAt(0).toUpperCase() + entry.difficulty.slice(1)) : 'Normal';
+    el('daily-detail-stats').textContent = (entry.players_succeeded || 0) + ' gagné(s) · ' + (entry.players_failed || 0) + ' abandon(s) / ' + (entry.players_attempted || 0) + ' total';
+
+    var hints = (entry.hints || []).slice();
+    if (!hints.length) {
+      el('daily-detail-hints').innerHTML = '<span class="muted">Aucun indice consigné pour ce jour.</span>';
+    } else {
+      hints.sort(function (a, b) { return a.hint_level - b.hint_level; });
+      el('daily-detail-hints').innerHTML = hints.map(function (h) {
+        var permilleStr = (h.permille !== null && h.permille !== undefined) ? (h.permille + '‰') : '—';
+        var scoreStr = (h.score !== null && h.score !== undefined) ? ('+' + Number(h.score).toFixed(2) + '°C · ') : '';
+        var wordStr = h.hint_word ? esc(h.hint_word.toUpperCase()) : '—';
+        var phraseStr = h.hint_phrase ? esc(h.hint_phrase) : '—';
+
+        return '<div style="background:#0d1017;border:1px solid var(--line);border-radius:6px;padding:9px 12px">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+          + '<strong style="color:var(--txt);font-size:12px">💡 Indice #' + esc(h.hint_level) + ' : <span style="color:#79b8ff">' + wordStr + '</span></strong>'
+          + '<span class="muted" style="font-size:11px;font-family:ui-monospace,Menlo,Consolas,monospace">' + esc(scoreStr) + esc(permilleStr) + '</span>'
+          + '</div>'
+          + '<p class="muted" style="margin:0;font-size:12px;font-style:italic">« ' + phraseStr + ' »</p>'
+          + '</div>';
+      }).join('');
+    }
+
+    var games = (entry.games || []).slice();
+    var playersEl = el('daily-detail-players');
+    if (playersEl) {
+      if (!games.length) {
+        playersEl.innerHTML = '<span class="muted" style="font-size:12px">Aucune partie enregistrée pour cette date.</span>';
+      } else {
+        var playersHtml = '<h5 style="margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)">Joueurs participants (' + games.length + ')</h5>';
+        playersHtml += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+        playersHtml += games.map(function (g) {
+          var isWin = (g.status === 'won');
+          var isGiveup = (g.status === 'given_up');
+          var badgeColor = isWin ? '#2ea043' : (isGiveup ? '#f85149' : '#8b949e');
+          var badgeBg = isWin ? 'rgba(46,160,67,0.15)' : (isGiveup ? 'rgba(248,81,73,0.15)' : 'rgba(139,148,158,0.15)');
+          var statusLabel = isWin ? 'Trouvé' : (isGiveup ? 'Abandon' : 'En cours');
+          var botIcon = g.is_bot ? ' 🤖' : '';
+          var timeStr = g.duration_seconds ? (Math.round(g.duration_seconds) + 's') : '';
+
+          return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:11px;background:' + badgeBg + ';border:1px solid ' + badgeColor + ';color:var(--txt)">'
+            + '<strong>' + esc(g.username) + '</strong>' + botIcon
+            + ' <span style="color:' + badgeColor + '">(' + statusLabel + ' · ' + g.tries_count + ' coups' + (timeStr ? ' · ' + timeStr : '') + ')</span>'
+            + '</span>';
+        }).join('');
+        playersHtml += '</div>';
+        playersEl.innerHTML = playersHtml;
+      }
+    }
+  }
+
+  function renderDailyHistory(history) {
+    dailyHistoryData = history || [];
+    var countEl = el('daily-total-count');
+    if (countEl) countEl.textContent = dailyHistoryData.length + ' énigme(s) enregistrée(s)';
+
+    var sel = el('daily-history-select');
+    if (sel) {
+      if (!dailyHistoryData.length) {
+        sel.innerHTML = '<option value="">Aucun mot dans l\'historique</option>';
+      } else {
+        sel.innerHTML = dailyHistoryData.map(function (item) {
+          var word = (item.secret_word || '').toUpperCase();
+          var diff = item.difficulty || 'normal';
+          return '<option value="' + esc(item.puzzle_date) + '">' + esc(item.puzzle_date) + ' — ' + esc(word) + ' (' + esc(diff) + ')</option>';
+        }).join('');
+      }
+    }
+
+    renderDailyDetail(dailyHistoryData[0] || null);
+
+    var tbody = el('daily-history-tbody');
+    if (!tbody) return;
+    if (!dailyHistoryData.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="muted" style="padding:14px;text-align:center">Aucun mot du jour consigné.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = dailyHistoryData.map(function (item) {
+      var hints = item.hints || [];
+      var h1 = hints.find(function (h) { return h.hint_level === 1; }) || {};
+      var h2 = hints.find(function (h) { return h.hint_level === 2; }) || {};
+      var h3 = hints.find(function (h) { return h.hint_level === 3; }) || {};
+
+      function fmtHintCell(h) {
+        if (!h.hint_word) return '<span class="muted">—</span>';
+        var pm = (h.permille !== null && h.permille !== undefined) ? (' <span style="color:#79b8ff;font-family:ui-monospace,monospace">(' + h.permille + '‰)</span>') : '';
+        var phr = h.hint_phrase ? ('<br><small class="muted" style="font-style:italic">« ' + esc(h.hint_phrase.slice(0, 55)) + (h.hint_phrase.length > 55 ? '…' : '') + ' »</small>') : '';
+        return '<b>' + esc(h.hint_word.toUpperCase()) + '</b>' + pm + phr;
+      }
+
+      var diffBadge = '<span class="badge badge-active">' + esc(item.difficulty || 'normal') + '</span>';
+      var playersStr = (item.players_succeeded || 0) + 'G · ' + (item.players_failed || 0) + 'A / ' + (item.players_attempted || 0) + 'T';
+
+      return '<tr>'
+        + '<td><code>' + esc(item.puzzle_date) + '</code></td>'
+        + '<td><strong style="color:#79b8ff;text-transform:uppercase">' + esc(item.secret_word) + '</strong></td>'
+        + '<td>' + diffBadge + '</td>'
+        + '<td style="max-width:210px">' + fmtHintCell(h1) + '</td>'
+        + '<td style="max-width:210px">' + fmtHintCell(h2) + '</td>'
+        + '<td style="max-width:210px">' + fmtHintCell(h3) + '</td>'
+        + '<td style="text-align:right"><code>' + esc(playersStr) + '</code></td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function loadDailyHistory() {
+    api('/daily-history', { headers: authHeaders() })
+      .then(function (res) {
+        renderDailyHistory(res.history || []);
+      })
+      .catch(function (err) {
+        toast('Impossible de charger l\'historique du mot du jour: ' + err.message, 'ko');
+      });
+  }
+
   function unlock() {
     el('gate').classList.add('hide');
     el('app').classList.remove('hide');
@@ -337,6 +469,7 @@
     loadWhitelist();
     loadDictionary();
     loadUsers();
+    loadDailyHistory();
   }
 
   function fmt(n) { return (n === null || n === undefined) ? '—' : n; }
@@ -415,7 +548,7 @@
   }
 
   function switchTab(name) {
-    ['stats', 'logs', 'actions', 'dictionary', 'users'].forEach(function (t) {
+    ['stats', 'logs', 'actions', 'dictionary', 'users', 'daily'].forEach(function (t) {
       var elem = el('tab-' + t);
       if (elem) elem.classList.toggle('hide', t !== name);
     });
@@ -427,6 +560,9 @@
     }
     if (name === 'users') {
       loadUsers();
+    }
+    if (name === 'daily') {
+      loadDailyHistory();
     }
   }
 
@@ -609,6 +745,23 @@
   var btnUserEditCancel = el('btn-user-edit-cancel');
   if (btnUserEditCancel) {
     btnUserEditCancel.addEventListener('click', closeUserEdit);
+  }
+
+  var dailySelect = el('daily-history-select');
+  if (dailySelect) {
+    dailySelect.addEventListener('change', function () {
+      var selectedDate = dailySelect.value;
+      var found = dailyHistoryData.find(function (d) { return d.puzzle_date === selectedDate; });
+      renderDailyDetail(found || null);
+    });
+  }
+
+  var btnDailyRefresh = el('btn-daily-refresh');
+  if (btnDailyRefresh) {
+    btnDailyRefresh.addEventListener('click', function () {
+      loadDailyHistory();
+      toast('Historique du mot du jour actualisé', 'ok');
+    });
   }
 
   if (token) {

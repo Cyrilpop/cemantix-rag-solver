@@ -42,6 +42,7 @@
       <button data-tab="actions">Actions</button>
       <button data-tab="dictionary">Dictionnaires</button>
       <button data-tab="users">Utilisateurs</button>
+      <button data-tab="daily">Mot du jour</button>
     </div>
 
     <div id="tab-stats">
@@ -193,6 +194,69 @@
             <button class="secondary" id="btn-users-prev" disabled>← Précédent</button>
             <button class="secondary" id="btn-users-next" disabled>Suivant →</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-daily" class="hide">
+      <div class="card">
+        <div class="row" style="align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <h3 style="margin:0;font-size:14px">Historique du Mot du Jour & Indices IA</h3>
+            <span class="muted" id="daily-total-count">—</span>
+          </div>
+          <button class="secondary" id="btn-daily-refresh">Actualiser</button>
+        </div>
+        <p class="muted" style="margin:0 0 14px">
+          Historique des mots du jour Solo, date, difficulté et indices IA associés (mots, phrases d'énigme et millièmes).
+        </p>
+
+        <div class="row" style="align-items:center;margin-bottom:14px;gap:8px">
+          <label for="daily-history-select" style="font-size:12px;color:var(--mut)">Sélectionner une date :</label>
+          <select id="daily-history-select" style="flex:1 1 280px">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div id="daily-selected-card" style="background:#12151d;border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:18px">
+          <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div>
+              <span id="daily-detail-date" style="font-size:14px;font-weight:bold;color:var(--txt)">—</span>
+              <span id="daily-detail-secret" style="margin-left:8px;font-size:15px;font-weight:bold;color:#79b8ff;text-transform:uppercase">—</span>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span id="daily-detail-diff" class="badge badge-active">—</span>
+              <span id="daily-detail-stats" class="muted" style="font-size:11px">—</span>
+            </div>
+          </div>
+
+          <div id="daily-detail-hints" style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+            <!-- Rempli dynamiquement -->
+          </div>
+
+          <div id="daily-detail-players" style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px">
+            <!-- Rempli dynamiquement : liste des joueurs (gagnants et perdants) -->
+          </div>
+        </div>
+
+        <h4 style="margin:16px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)">Tableau complet des énigmes (le plus récent en haut)</h4>
+        <div style="overflow-x:auto">
+          <table class="users-table" style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--line);text-align:left;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.04em">
+                <th style="padding:8px 6px">Date</th>
+                <th style="padding:8px 6px">Mot secret</th>
+                <th style="padding:8px 6px">Difficulté</th>
+                <th style="padding:8px 6px">Indice #1 (~700‰)</th>
+                <th style="padding:8px 6px">Indice #2 (~825‰)</th>
+                <th style="padding:8px 6px">Indice #3 (~950‰)</th>
+                <th style="padding:8px 6px;text-align:right">Joueurs (G/A/T)</th>
+              </tr>
+            </thead>
+            <tbody id="daily-history-tbody">
+              <tr><td colspan="7" class="muted" style="padding:14px;text-align:center">Chargement...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

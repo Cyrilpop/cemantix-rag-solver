@@ -28,11 +28,13 @@ class GameSession:
         puzzle_id: str,
         secret: str,
         store: VocabStore,
+        puzzle_date: Optional[str] = None,
     ):
         self.game_id = game_id
         self.mode = mode
         self.difficulty = difficulty
         self.puzzle_id = puzzle_id
+        self.puzzle_date = puzzle_date or str(puzzle_id)
         self.secret = secret.strip().lower()
         self.store = store
         self.v_secret = store.vec(self.secret)
@@ -40,6 +42,8 @@ class GameSession:
         self.is_given_up = False
         self.guesses: dict[str, dict] = {}
         self.hints: list[str] = []
+        self.hints_revealed: list[dict] = []
+        self.player_id: Optional[str] = None
         self.created_at = time.time()
         self.last_activity = time.time()
 
@@ -204,6 +208,8 @@ class GameSession:
             "mode": self.mode,
             "difficulty": self.difficulty,
             "puzzle_id": self.puzzle_id,
+            "puzzle_date": getattr(self, "puzzle_date", str(self.puzzle_id)),
+            "player_id": getattr(self, "player_id", None),
             "secret": self.secret,
             "created_at": self.created_at,
             "last_activity": self.last_activity,
@@ -211,6 +217,7 @@ class GameSession:
             "is_given_up": getattr(self, "is_given_up", False),
             "guesses": self.guesses,
             "hints": self.hints,
+            "hints_revealed": getattr(self, "hints_revealed", []),
         }
 
     @classmethod
@@ -222,13 +229,16 @@ class GameSession:
             puzzle_id=data.get("puzzle_id", "--"),
             secret=data["secret"],
             store=store,
+            puzzle_date=data.get("puzzle_date"),
         )
+        session.player_id = data.get("player_id")
         session.created_at = data.get("created_at", time.time())
         session.last_activity = data.get("last_activity", time.time())
         session.is_won = data.get("is_won", False)
         session.is_given_up = data.get("is_given_up", False)
         session.guesses = data.get("guesses", {})
         session.hints = data.get("hints", [])
+        session.hints_revealed = data.get("hints_revealed", [])
         return session
 
     def to_dict(self, reveal_secret: bool = False) -> dict:
@@ -248,12 +258,16 @@ class GameSession:
             "mode": self.mode,
             "difficulty": self.difficulty,
             "puzzle_id": self.puzzle_id,
-            "tries": len(self.guesses),
+            "puzzle_date": getattr(self, "puzzle_date", str(self.puzzle_id)),
+            "player_id": getattr(self, "player_id", None),
+            "tries": len(self.guesses) + len([h for h in getattr(self, "hints_revealed", []) if h.get("type") == "phrase"]),
             "is_won": self.is_won,
             "is_given_up": getattr(self, "is_given_up", False),
             "hints": list(self.hints),
-            "secret": self.secret if (self.is_won or reveal_secret) else None,
+            "hints_revealed": list(getattr(self, "hints_revealed", [])),
+            "secret": self.secret if (self.is_won or getattr(self, "is_given_up", False) or reveal_secret) else None,
             "top_guesses": sorted_guesses[:15],
+            "all_guesses": sorted_guesses,
             "history": chronological_guesses,
             "last_guess": last_guess,
             "created_at": self.created_at,

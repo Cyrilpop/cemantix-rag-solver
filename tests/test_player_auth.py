@@ -182,8 +182,13 @@ class TestPlayerAuth(unittest.TestCase):
         ok, msg = validate_username("salope_1234")
         self.assertFalse(ok)
 
-        # Valides
+        # Termes réservés pour habitués bots
         ok, msg = validate_username("CastorCosmique")
+        self.assertFalse(ok)
+        self.assertIn("terme réservé", msg)
+
+        # Valides
+        ok, msg = validate_username("ExplorateurVeloce")
         self.assertTrue(ok)
         ok, msg = validate_username("Loup-Solitaire_42")
         self.assertTrue(ok)
@@ -355,7 +360,7 @@ class TestPlayerAuth(unittest.TestCase):
 
         # 1. Création de joueurs de test via DAO et via admin API
         p1 = admin_create_player("TestUserAlpha", is_claimed=True)
-        p2 = create_guest_player("11111111-2222-3333-4444-555555555555", "token123", "CastorCosmique")
+        p2 = create_guest_player("11111111-2222-3333-4444-555555555555", "token123", "ExplorateurCosmique")
 
         # Création via POST /users
         create_res, status = handle_admin_post(

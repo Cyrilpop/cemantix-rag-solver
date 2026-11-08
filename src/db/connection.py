@@ -211,6 +211,77 @@ CREATE TABLE IF NOT EXISTS player_dictionary (
     UNIQUE(word_type, word)
 );
 CREATE INDEX IF NOT EXISTS idx_dict_type ON player_dictionary(word_type, is_active);
+
+-- M15: Tables du mot du jour Solo aléatoire & scores
+CREATE TABLE IF NOT EXISTS solo_daily_puzzles (
+    id SERIAL PRIMARY KEY,
+    puzzle_date DATE NOT NULL UNIQUE,
+    secret_word VARCHAR(64) NOT NULL,
+    difficulty VARCHAR(16) NOT NULL,
+    players_attempted INT NOT NULL DEFAULT 0,
+    players_succeeded INT NOT NULL DEFAULT 0,
+    players_failed INT NOT NULL DEFAULT 0,
+    bots_simulated BOOLEAN NOT NULL DEFAULT FALSE,
+    bots_simulated_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_solo_daily_puzzles_date ON solo_daily_puzzles(puzzle_date);
+CREATE INDEX IF NOT EXISTS idx_solo_daily_puzzles_diff ON solo_daily_puzzles(difficulty);
+
+CREATE TABLE IF NOT EXISTS solo_daily_ai_hints (
+    id SERIAL PRIMARY KEY,
+    puzzle_date DATE NOT NULL REFERENCES solo_daily_puzzles(puzzle_date) ON DELETE CASCADE,
+    hint_level INT NOT NULL,
+    weight NUMERIC(4, 2) NOT NULL,
+    hint_word VARCHAR(100) NOT NULL,
+    hint_phrase TEXT NOT NULL,
+    score NUMERIC(6, 2) DEFAULT 0.0,
+    permille INT DEFAULT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(puzzle_date, hint_level)
+);
+CREATE INDEX IF NOT EXISTS idx_solo_ai_hints_date ON solo_daily_ai_hints(puzzle_date);
+
+CREATE TABLE IF NOT EXISTS solo_player_games (
+    id UUID PRIMARY KEY,
+    puzzle_date DATE NOT NULL REFERENCES solo_daily_puzzles(puzzle_date) ON DELETE CASCADE,
+    player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    status VARCHAR(16) NOT NULL DEFAULT 'in_progress',
+    tries_count INT NOT NULL DEFAULT 0,
+    hints_used INT NOT NULL DEFAULT 0,
+    hints_revealed JSONB NOT NULL DEFAULT '[]'::jsonb,
+    best_score NUMERIC(6, 2) DEFAULT 0.0,
+    best_permille INT DEFAULT NULL,
+    duration_seconds NUMERIC(8, 2) DEFAULT 0.0,
+    is_bot BOOLEAN NOT NULL DEFAULT FALSE,
+    won_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(puzzle_date, player_id)
+);
+CREATE INDEX IF NOT EXISTS idx_solo_player_games_date ON solo_player_games(puzzle_date);
+CREATE INDEX IF NOT EXISTS idx_solo_player_games_player ON solo_player_games(player_id);
+CREATE INDEX IF NOT EXISTS idx_solo_player_games_leaderboard ON solo_player_games(puzzle_date, status, tries_count, duration_seconds);
+CREATE INDEX IF NOT EXISTS idx_solo_player_games_bot ON solo_player_games(is_bot);
+
+CREATE TABLE IF NOT EXISTS solo_player_guesses (
+    id BIGSERIAL PRIMARY KEY,
+    game_id UUID NOT NULL REFERENCES solo_player_games(id) ON DELETE CASCADE,
+    player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    puzzle_date DATE NOT NULL,
+    guess_order INT NOT NULL,
+    word VARCHAR(64) NOT NULL,
+    score NUMERIC(6, 2) NOT NULL,
+    permille INT,
+    weather VARCHAR(8),
+    is_hint BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(game_id, guess_order)
+);
+CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_game ON solo_player_guesses(game_id);
+CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_player_date ON solo_player_guesses(player_id, puzzle_date);
+CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_word ON solo_player_guesses(word);
 """
 
 SQLITE_SCHEMA = """
@@ -369,6 +440,77 @@ CREATE TABLE IF NOT EXISTS player_dictionary (
     UNIQUE(word_type, word)
 );
 CREATE INDEX IF NOT EXISTS idx_dict_type ON player_dictionary(word_type, is_active);
+
+-- M15: Tables du mot du jour Solo aléatoire & scores (SQLite)
+CREATE TABLE IF NOT EXISTS solo_daily_puzzles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    puzzle_date TEXT NOT NULL UNIQUE,
+    secret_word TEXT NOT NULL,
+    difficulty TEXT NOT NULL,
+    players_attempted INTEGER NOT NULL DEFAULT 0,
+    players_succeeded INTEGER NOT NULL DEFAULT 0,
+    players_failed INTEGER NOT NULL DEFAULT 0,
+    bots_simulated BOOLEAN NOT NULL DEFAULT 0,
+    bots_simulated_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_solo_daily_puzzles_date ON solo_daily_puzzles(puzzle_date);
+CREATE INDEX IF NOT EXISTS idx_solo_daily_puzzles_diff ON solo_daily_puzzles(difficulty);
+
+CREATE TABLE IF NOT EXISTS solo_daily_ai_hints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    puzzle_date TEXT NOT NULL REFERENCES solo_daily_puzzles(puzzle_date) ON DELETE CASCADE,
+    hint_level INTEGER NOT NULL,
+    weight REAL NOT NULL,
+    hint_word TEXT NOT NULL,
+    hint_phrase TEXT NOT NULL,
+    score REAL DEFAULT 0.0,
+    permille INTEGER DEFAULT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(puzzle_date, hint_level)
+);
+CREATE INDEX IF NOT EXISTS idx_solo_ai_hints_date ON solo_daily_ai_hints(puzzle_date);
+
+CREATE TABLE IF NOT EXISTS solo_player_games (
+    id TEXT PRIMARY KEY,
+    puzzle_date TEXT NOT NULL REFERENCES solo_daily_puzzles(puzzle_date) ON DELETE CASCADE,
+    player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'in_progress',
+    tries_count INTEGER NOT NULL DEFAULT 0,
+    hints_used INTEGER NOT NULL DEFAULT 0,
+    hints_revealed TEXT NOT NULL DEFAULT '[]',
+    best_score REAL DEFAULT 0.0,
+    best_permille INTEGER DEFAULT NULL,
+    duration_seconds REAL DEFAULT 0.0,
+    is_bot BOOLEAN NOT NULL DEFAULT 0,
+    won_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(puzzle_date, player_id)
+);
+CREATE INDEX IF NOT EXISTS idx_solo_player_games_date ON solo_player_games(puzzle_date);
+CREATE INDEX IF NOT EXISTS idx_solo_player_games_player ON solo_player_games(player_id);
+CREATE INDEX IF NOT EXISTS idx_solo_player_games_leaderboard ON solo_player_games(puzzle_date, status, tries_count, duration_seconds);
+CREATE INDEX IF NOT EXISTS idx_solo_player_games_bot ON solo_player_games(is_bot);
+
+CREATE TABLE IF NOT EXISTS solo_player_guesses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id TEXT NOT NULL REFERENCES solo_player_games(id) ON DELETE CASCADE,
+    player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    puzzle_date TEXT NOT NULL,
+    guess_order INTEGER NOT NULL,
+    word TEXT NOT NULL,
+    score REAL NOT NULL,
+    permille INTEGER,
+    weather TEXT,
+    is_hint BOOLEAN NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(game_id, guess_order)
+);
+CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_game ON solo_player_guesses(game_id);
+CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_player_date ON solo_player_guesses(player_id, puzzle_date);
+CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_word ON solo_player_guesses(word);
 """
 
 
@@ -689,8 +831,9 @@ class DatabaseManager:
                 self.release_connection(conn)
 
             try:
-                from .players import seed_default_dictionary_if_empty
+                from .players import seed_bot_players_if_empty, seed_default_dictionary_if_empty
                 seed_default_dictionary_if_empty()
+                seed_bot_players_if_empty()
             except Exception as seed_err:
                 log(f"⚠️  [BASE] Erreur amorçage dictionnaire joueurs : {seed_err}")
 

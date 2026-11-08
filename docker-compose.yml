@@ -72,6 +72,8 @@ services:
       # Google Gemini AI Hints (M12)
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_TIMEOUT=${GEMINI_TIMEOUT:-25}
+      # Google Tag Manager (GTM)
+      - GOOGLE_TAG_MANAGER_ID=${GOOGLE_TAG_MANAGER_ID:-}
     volumes:
       - ./cemantix_data:/app/cemantix_data:rw
       - ./volumes/web:/app/volumes/web:rw
@@ -139,6 +141,8 @@ services:
       # Google Gemini AI Hints (M12)
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_TIMEOUT=${GEMINI_TIMEOUT:-25}
+      # Google Tag Manager (GTM)
+      - GOOGLE_TAG_MANAGER_ID=${GOOGLE_TAG_MANAGER_ID:-}
     volumes:
       - ./cemantix_data:/app/cemantix_data:rw
       - ./volumes/web:/app/volumes/web:rw
@@ -202,6 +206,8 @@ services:
       # Google Gemini AI Hints (M12)
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_TIMEOUT=${GEMINI_TIMEOUT:-25}
+      # Google Tag Manager (GTM)
+      - GOOGLE_TAG_MANAGER_ID=${GOOGLE_TAG_MANAGER_ID:-}
     volumes:
       - ./cemantix_data:/app/cemantix_data
       - ./volumes/web:/app/volumes/web

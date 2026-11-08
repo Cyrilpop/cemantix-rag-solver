@@ -19,6 +19,7 @@ from ..db.players import (
     DEFAULT_ADJECTIVES,
     DEFAULT_NOUNS,
     DEFAULT_RECOVERY_WORDS,
+    FIXED_BOT_HABITUES,
     claim_player_account,
     create_guest_player,
     delete_player_account,
@@ -43,6 +44,8 @@ RESERVED_USERNAMES = {
     "modo", "bot", "cemantix", "staff", "support", "null", "undefined",
     "anonymous", "anonyme", "guest", "invite", "player", "joueur", "service"
 }
+
+RESERVED_USERNAMES.update(b.lower() for b in FIXED_BOT_HABITUES)
 
 # Regex de validation de pseudo : 8 à 24 caractères (alphanumériques, tirets, underscores)
 USERNAME_REGEX = re.compile(r"^[a-zA-Z0-9À-ÿ_-]{8,24}$")

@@ -40,6 +40,12 @@ from .ai_hints import (
     generate_and_store_ai_hints,
     has_daily_ai_hints,
 )
+from .solo_daily import (
+    check_and_run_startup_simulation,
+    ensure_solo_daily_puzzle,
+    get_current_paris_date,
+    simulate_solo_daily_bots,
+)
 from .player_auth import (
     claim_account,
     delete_player,
@@ -142,4 +148,9 @@ __all__ = [
     "validate_username",
     "generate_auth_token",
     "invalidate_dictionary_cache",
+    # Solo Quotidien (M15)
+    "ensure_solo_daily_puzzle",
+    "simulate_solo_daily_bots",
+    "check_and_run_startup_simulation",
+    "get_current_paris_date",
 ]
