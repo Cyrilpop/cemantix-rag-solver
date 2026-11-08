@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS bot_challenges (
     max_tries        INT NOT NULL DEFAULT 100,
     trajectory       JSONB NOT NULL DEFAULT '[]'::jsonb,
     error            VARCHAR(200),
+    player_name      VARCHAR(64),
     created_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at       TIMESTAMPTZ,
     finished_at      TIMESTAMPTZ,

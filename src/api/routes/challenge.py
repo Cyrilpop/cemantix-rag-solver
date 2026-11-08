@@ -134,7 +134,9 @@ def handle_challenge_post(manager, path: str, data: dict, client_ip: str,
             return {"error": "Le bot est déjà occupé, la file d'attente est pleine.",
                     "retry_after": 30}, 429
 
-    challenge_id = create_challenge(word, hashed, max_tries=dao.CHALLENGE_MAX_TRIES)
+    raw_player_name = (data or {}).get("player_name")
+    player_name = str(raw_player_name).strip()[:32] if raw_player_name else None
+    challenge_id = create_challenge(word, hashed, max_tries=dao.CHALLENGE_MAX_TRIES, player_name=player_name)
     log(f"⚔️  [DÉFI] Défi empilé ({'exempté de quota' if whitelisted else 'quota standard'})")
     return {"id": challenge_id, "status": "queued",
             "quota_restant": _quota_restant(hashed, whitelisted)}, 201
@@ -244,12 +246,20 @@ def _global_kpis_cached() -> dict:
         return payload
 
 
-def handle_kpis_get(client_ip: str = "", anonymized_ip: str = "") -> tuple[dict, int]:
+def handle_kpis_get(client_ip: str = "", anonymized_ip: str = "",
+                    player_name: Optional[str] = None) -> tuple[dict, int]:
     """KPIs communautaires (cache TTL) enrichis du bilan et du quota du visiteur."""
     try:
+        clean_player = str(player_name).strip()[:32] if player_name else None
+        if clean_player and anonymized_ip:
+            hashed_for_upgrade = ip_hash(anonymized_ip)
+            legacy_token = dao.anonymize_player_token(hashed_for_upgrade)
+            upgraded = dao.upgrade_player_challenges(legacy_token, clean_player)
+            if upgraded > 0:
+                reset_kpis_cache()
         cached = _global_kpis_cached()
         hashed = ip_hash(anonymized_ip) if anonymized_ip else None
-        player = dao.get_player_stats(hashed)
+        player = dao.get_player_stats(hashed, clean_player)
         quota_max = dao.CHALLENGE_QUOTA_PER_HOUR
         if hashed:
             remaining = _quota_restant(hashed, is_ip_whitelisted(client_ip))
@@ -328,7 +338,12 @@ def handle_challenge_get(manager, path: str, query: str = "",
     """
     sub_parts = [p for p in path[len("/api/challenge"):].split("/") if p]
     if sub_parts == ["kpis"]:
-        return handle_kpis_get(client_ip, anonymized_ip)
+        p_name = None
+        if query:
+            from urllib.parse import parse_qs
+            qs = parse_qs(query)
+            p_name = qs.get("player_name", [None])[0]
+        return handle_kpis_get(client_ip, anonymized_ip, player_name=p_name)
     if len(sub_parts) == 2 and sub_parts[1] == "guesses":
         return handle_guesses_get(sub_parts[0])
     challenge_id, _ = _parse_challenge_id(path)

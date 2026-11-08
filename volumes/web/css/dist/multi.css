@@ -329,6 +329,16 @@ html.is-keyboard-open .game-guesses-list{max-height:175px;max-height:min(175px,3
 .defi-table td{padding:0.45rem 0.4rem;border-bottom:1px solid var(--border-color);color:var(--text-main);white-space:nowrap;vertical-align:middle;}
 .defi-table tr:hover td{background:var(--bg-card-hover);}
 .defi-table .btn-sm{padding:0.2rem 0.45rem;font-size:0.72rem;}
+.defi-table th.col-center,.defi-table td.col-center{text-align:center;}
+.defi-table th.col-right,.defi-table td.col-right{text-align:right;}
+.defi-table .badge-icon{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border-radius:999px;font-size:0.82rem;line-height:1;}
+.defi-table .btn-icon-replay{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border-radius:var(--radius-sm,6px);font-size:0.82rem;line-height:1;cursor:pointer;border:1px solid var(--border-color);background:var(--bg-card);transition:transform 0.15s ease,background-color 0.15s ease,border-color 0.15s ease;}
+.defi-table .btn-icon-replay:hover{transform:scale(1.08);border-color:var(--accent);}
+.defi-player-cell{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-mono);font-size:0.76rem;color:var(--text-muted);}
+.defi-player-cell.is-me{color:var(--accent-light,#58a6ff);font-weight:600;}
+.defi-table-legend{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:0.85rem;padding:0.45rem 0.75rem;margin-top:0.65rem;background:rgba(255,255,255,0.02);border:1px solid var(--border-color);border-radius:var(--radius-md,8px);font-size:0.72rem;color:var(--text-muted);}
+.defi-table-legend .legend-item{display:inline-flex;align-items:center;gap:0.35rem;}
+.defi-table-legend .legend-badge,.defi-table-legend .legend-btn{width:22px;height:22px;font-size:0.75rem;pointer-events:none;display:inline-flex;align-items:center;justify-content:center;padding:0;}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;}
 .trajectory-modal-card{max-width:860px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg-card);border:1px solid var(--border-color);box-shadow:0 20px 50px rgba(0,0,0,0.6),var(--shadow-glow);}
 /* modal.css */

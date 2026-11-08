@@ -164,6 +164,7 @@ def process_next_challenge(store=None) -> bool:
                     outcome="error",
                     tries_count=len(solver.guesses),
                     duration_seconds=time.time() - started,
+                    player_name=challenge.get("player_name"),
                 )
                 save_challenge_guesses(challenge_id, steps)
             except Exception as exc:
@@ -184,6 +185,7 @@ def process_next_challenge(store=None) -> bool:
                 outcome="error",
                 tries_count=len(solver.guesses),
                 duration_seconds=time.time() - started,
+                player_name=challenge.get("player_name"),
             )
             save_challenge_guesses(challenge_id, list(solver.trajectory))
         except Exception as exc:
@@ -202,6 +204,7 @@ def process_next_challenge(store=None) -> bool:
             outcome=status,
             tries_count=tries,
             duration_seconds=duration,
+            player_name=challenge.get("player_name"),
         )
         save_challenge_guesses(challenge_id, list(solver.trajectory))
     except Exception as exc:

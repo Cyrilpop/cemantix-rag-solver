@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS bot_challenges (
     max_tries INT NOT NULL DEFAULT 100,
     trajectory JSONB NOT NULL DEFAULT '[]'::jsonb,
     error VARCHAR(200),
+    player_name VARCHAR(64),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at TIMESTAMPTZ,
     finished_at TIMESTAMPTZ,
@@ -279,6 +280,7 @@ CREATE TABLE IF NOT EXISTS bot_challenges (
     max_tries INTEGER NOT NULL DEFAULT 100,
     trajectory TEXT NOT NULL DEFAULT '[]',
     error VARCHAR(200),
+    player_name TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     started_at TEXT,
     finished_at TEXT,
@@ -646,6 +648,7 @@ class DatabaseManager:
                         # Migration idempotente de colonnes (M11 - Quota Google Indexing & IndexNow)
                         cur.execute("ALTER TABLE daily_puzzles ADD COLUMN IF NOT EXISTS google_indexed_at TIMESTAMPTZ;")
                         cur.execute("ALTER TABLE daily_puzzles ADD COLUMN IF NOT EXISTS indexnow_indexed_at TIMESTAMPTZ;")
+                        cur.execute("ALTER TABLE bot_challenges ADD COLUMN IF NOT EXISTS player_name VARCHAR(64);")
                     conn.commit()
 
                 else:
@@ -660,6 +663,12 @@ class DatabaseManager:
                     try:
                         cur = conn.cursor()
                         cur.execute("ALTER TABLE daily_puzzles ADD COLUMN indexnow_indexed_at TEXT;")
+                        conn.commit()
+                    except Exception:
+                        pass
+                    try:
+                        cur = conn.cursor()
+                        cur.execute("ALTER TABLE bot_challenges ADD COLUMN player_name TEXT;")
                         conn.commit()
                     except Exception:
                         pass
