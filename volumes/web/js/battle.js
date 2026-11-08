@@ -98,7 +98,7 @@ export function initBattle() {
   // Toggle mobile
   setupMobileDuelToggle();
 
-  window.addEventListener("cemantix:auth-changed", () => updateBattleUI());
+  window.addEventListener("cemantix:auth-changed", () => renderBattleUI());
 
   // Restauration de l'état local ou ouverture de la modale de démarrage
   const hasSaved = loadBattleState();
