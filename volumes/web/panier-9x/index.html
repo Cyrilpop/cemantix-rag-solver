@@ -39,6 +39,7 @@
       <button data-tab="logs">Journaux</button>
       <button data-tab="actions">Actions</button>
       <button data-tab="dictionary">Dictionnaires</button>
+      <button data-tab="users">Utilisateurs</button>
     </div>
 
     <div id="tab-stats">
@@ -128,8 +129,93 @@
         </div>
       </div>
     </div>
+
+    <div id="tab-users" class="hide">
+      <div class="card">
+        <div class="grid" id="users-stats-grid">
+          <div class="stat"><span>Total Joueurs</span><b id="stat-users-total">—</b></div>
+          <div class="stat"><span>Comptes Sécurisés</span><b id="stat-users-claimed">—</b></div>
+          <div class="stat"><span>Invités Temporaires</span><b id="stat-users-guests">—</b></div>
+          <div class="stat"><span>Actifs (7 jours)</span><b id="stat-users-active">—</b></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="align-items:center;margin-bottom:12px;gap:8px">
+          <input type="text" id="users-search" placeholder="Rechercher (pseudo ou ID)..." style="flex:1 1 200px" autocomplete="off">
+          <select id="users-filter">
+            <option value="">Tous les comptes</option>
+            <option value="claimed">Sécurisés uniquement</option>
+            <option value="guest">Invités uniquement</option>
+          </select>
+          <button id="btn-users-search">Rechercher</button>
+          <button class="secondary" id="btn-users-refresh">Actualiser</button>
+          <span style="flex:1"></span>
+          <button id="btn-users-create-toggle">+ Nouvel utilisateur</button>
+        </div>
+
+        <div id="users-create-panel" class="hide" style="background:#12151d;border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:14px">
+          <h4 style="margin:0 0 8px;font-size:13px">Créer un utilisateur en base de données</h4>
+          <div class="row" style="align-items:center;gap:8px">
+            <input type="text" id="new-user-name" placeholder="Pseudo (3 à 32 car.)" style="flex:1 1 180px" autocomplete="off">
+            <input type="password" id="new-user-pass" placeholder="Mot de passe (optionnel)" style="flex:1 1 180px" autocomplete="off">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+              <input type="checkbox" id="new-user-claimed" checked style="cursor:pointer"> Compte sécurisé
+            </label>
+            <button id="btn-users-create">Créer</button>
+            <button class="secondary" id="btn-users-create-cancel">Annuler</button>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table class="users-table" style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--line);text-align:left;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.04em">
+                <th style="padding:8px 6px">Pseudo</th>
+                <th style="padding:8px 6px">Statut</th>
+                <th style="padding:8px 6px">Renommage</th>
+                <th style="padding:8px 6px">Création</th>
+                <th style="padding:8px 6px">Dernière activité</th>
+                <th style="padding:8px 6px;text-align:right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody">
+              <tr><td colspan="6" class="muted" style="padding:14px;text-align:center">Chargement des utilisateurs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="row" style="align-items:center;justify-content:space-between;margin-top:14px">
+          <span class="muted" id="users-pagination-info">—</span>
+          <div class="row" style="gap:6px">
+            <button class="secondary" id="btn-users-prev" disabled>← Précédent</button>
+            <button class="secondary" id="btn-users-next" disabled>Suivant →</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 </main>
+
+<dialog id="user-edit-modal" class="modal">
+  <div class="modal-box">
+    <h3 id="user-edit-title">Modifier l'utilisateur</h3>
+    <input type="hidden" id="edit-user-id">
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:12px;color:var(--mut);margin-bottom:4px">Pseudo</label>
+      <input type="text" id="edit-user-username" style="width:100%" autocomplete="off">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+        <input type="checkbox" id="edit-user-can-rename" style="cursor:pointer"> Autoriser le renommage unique
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="btn-user-edit-cancel">Annuler</button>
+      <button type="button" id="btn-user-edit-save">Enregistrer</button>
+    </div>
+  </div>
+</dialog>
 
 <dialog id="confirm-modal" class="modal">
   <div class="modal-box">
