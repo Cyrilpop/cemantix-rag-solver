@@ -4,7 +4,13 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
-## [Non publié] - 2026-11-09 · Correctifs Trajectoires Replay BDD & Ergonomie Mode Solo
+## [Non publié] - 2026-11-09 · Protection Anti Crawl-Trap SEO & Rétablissement 404
+
+### Corrigé
+- **Suppression du Soft-404 et Rupture de Crawl-Trap SEO (`Caddyfile`, `README.md`)** :
+  - Remplacement de la directive globale de repli `try_files {path} {path}/index.html {path}/ /index.html` par `try_files {path} {path}/index.html {path}/ =404` dans la configuration Caddy du reverse-proxy.
+  - Élimine le renvoi silencieux de `HTTP 200 OK` (soft-404) sur les chemins inexistants ou tronqués (ex: `/page/3/`, `/page/3/play/mot-du-jour/puzzles/`).
+  - Stoppe les boucles d'exploration infinies induites par la résolution relative des liens de navigation par Googlebot et assainit la couverture d'indexation dans Google Search Console.
 
 ### Corrigé
 - **Persistance des Trajectoires en Base de Données (`database/init.sql`, `src/db/connection.py`, `src/db/solo.py`)** :
