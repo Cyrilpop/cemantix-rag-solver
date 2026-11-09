@@ -916,16 +916,62 @@
 }
 
 .defi-table .col-coups {
-  width: 38px;
+  width: 58px;
   font-family: var(--font-mono);
   font-size: 0.8rem;
 }
 
 .defi-table .col-temps {
-  width: 44px;
+  width: 62px;
   font-family: var(--font-mono);
   font-size: 0.74rem;
   color: var(--text-muted);
+}
+
+.defi-table .th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s ease;
+}
+
+.defi-table .th-sortable:hover {
+  color: var(--text-main);
+}
+
+.defi-table .th-sort-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 0.68rem;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.defi-table .th-sort-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  border-radius: 2px;
+}
+
+.defi-table .sort-arrow {
+  display: inline-block;
+  font-size: 0.6rem;
+  opacity: 0.35;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.defi-table .th-sortable.sorted .sort-arrow {
+  opacity: 1;
+  color: var(--accent);
 }
 
 .defi-table .col-joueur {

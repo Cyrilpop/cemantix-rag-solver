@@ -407,6 +407,30 @@ export function initDefi() {
   const wall = el("defi-wall-of-fame");
   if (wall) wall.addEventListener("click", onWallClick);
 
+  const tableHead = document.querySelector("#defi-table thead");
+  if (tableHead) {
+    tableHead.addEventListener("click", (evt) => {
+      const btn = evt.target.closest("button.th-sort-btn");
+      if (!btn) return;
+      const key = btn.dataset.sortKey;
+      if (!key) return;
+      if (activeSortKey === key) {
+        if (activeSortDir === "asc") {
+          activeSortDir = "desc";
+        } else {
+          // Remise à zéro (tri chronologique par défaut)
+          activeSortKey = null;
+          activeSortDir = "asc";
+        }
+      } else {
+        activeSortKey = key;
+        activeSortDir = "asc";
+      }
+      updateSortHeaders();
+      renderChallengesList();
+    });
+  }
+
   const filterGroup = el("defi-list-filters");
   if (filterGroup) {
     filterGroup.addEventListener("click", (evt) => {
@@ -434,6 +458,8 @@ const FETCH_JSON = { headers: { Accept: "application/json" } };
 let challengesList = [];
 let wallOfFameList = [];
 let activeChallengeFilter = "all";
+let activeSortKey = null; // 'tries' | 'duration' | null
+let activeSortDir = "asc"; // 'asc' | 'desc'
 let currentGuestToken = "";
 
 function animateCount(node, target, decimals = 0) {
@@ -490,6 +516,29 @@ function renderPlayerBanner(player) {
   banner.hidden = false;
 }
 
+function updateSortHeaders() {
+  document.querySelectorAll("#defi-table th.th-sortable").forEach((th) => {
+    const btn = th.querySelector(".th-sort-btn");
+    const key = btn ? btn.dataset.sortKey : null;
+    const arrow = th.querySelector(".sort-arrow");
+    if (!arrow) return;
+    if (activeSortKey === key) {
+      th.classList.add("sorted");
+      if (activeSortDir === "asc") {
+        arrow.textContent = "▲";
+        th.setAttribute("aria-sort", "ascending");
+      } else {
+        arrow.textContent = "▼";
+        th.setAttribute("aria-sort", "descending");
+      }
+    } else {
+      th.classList.remove("sorted");
+      arrow.textContent = "▲▼";
+      th.removeAttribute("aria-sort");
+    }
+  });
+}
+
 function renderChallengesList() {
   const box = el("defi-wall-of-fame");
   if (!box) return;
@@ -498,11 +547,28 @@ function renderChallengesList() {
     ? (wallOfFameList.length ? wallOfFameList : challengesList.filter((it) => it.outcome === "lost"))
     : challengesList;
 
-  const items = sourceList.filter((it) => {
+  let items = sourceList.filter((it) => {
     if (activeChallengeFilter === "lost") return it.outcome === "lost";
     if (activeChallengeFilter === "won") return it.outcome === "won" || it.outcome === "solved";
     return true;
   });
+
+  if (activeSortKey) {
+    items = items.slice().sort((a, b) => {
+      let valA;
+      let valB;
+      if (activeSortKey === "tries") {
+        valA = Number(a.tries_count ?? 99999);
+        valB = Number(b.tries_count ?? 99999);
+      } else if (activeSortKey === "duration") {
+        valA = Number(a.duration_seconds ?? 99999);
+        valB = Number(b.duration_seconds ?? 99999);
+      } else {
+        return 0;
+      }
+      return activeSortDir === "asc" ? valA - valB : valB - valA;
+    });
+  }
 
   if (!items.length) {
     const emptyMsg = activeChallengeFilter === "lost"
