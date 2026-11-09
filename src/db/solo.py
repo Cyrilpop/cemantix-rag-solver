@@ -594,11 +594,12 @@ def finish_solo_player_game(
                 try:
                     cur.execute(
                         insert_sql,
-                        (game_id, str(player_id), str(puzzle_date), order, w, sc, pm, weather, hint_val),
+                        (game_id, str(player_id), str(puzzle_date), order, w, sc, pm, weather[:32], hint_val),
                     )
-                except Exception:
-                    # En cas de doublon (game_id, guess_order), on ignore
-                    pass
+                except Exception as ex:
+                    # En cas de doublon (game_id, guess_order), on ignore, sinon on logue
+                    if "duplicate key" not in str(ex).lower() and "unique" not in str(ex).lower():
+                        log(f"⚠️  [SOLO] Erreur insertion coup #{order} '{w}' : {ex}")
 
     # Mise à jour des compteurs globaux du puzzle (uniquement si première finalisation)
     already_finished = (game.get("status") in ("won", "given_up"))
