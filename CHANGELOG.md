@@ -4,6 +4,83 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-09 · Découvrabilité agents IA : `llms.txt` et catalogue ARD enfin livrables (`SEO-22` à `SEO-25`)
+
+**Évolution :** [docs/roadmap/2026-11-09-decouvrabilite-agents-ia](docs/roadmap/2026-11-09-decouvrabilite-agents-ia/01-plan.md) ·
+**Branche :** `fix/livraison-ressources-agents-ia`
+
+### Corrigé
+- **Audit agentique : les deux erreurs venaient de la livraison, pas du contenu (`SEO-22`, `SEO-23`)** :
+  l'audit remontait « il manque un en-tête H1 obligatoire dans `llms.txt` », « le fichier ne semble pas
+  contenir de liens » et « Malformed JSON in manifest: `Unexpected token '<', "<!DOCTYPE "` » sur
+  `/.well-known/ai-catalog.json`. Les fichiers du dépôt étaient pourtant conformes (`llms.txt` porte son
+  H1 et vingt liens, le catalogue est un JSON valide) : l'audit lisait en réalité **la page d'accueil**.
+  - `volumes/web/robots.txt` : suppression du `Disallow: /.well-known/` qui interdisait la lecture du
+    catalogue ARD, de `ard.json` et de `agent-card.json` à tout crawleur conforme (Google, GPTBot,
+    ClaudeBot) — un manifeste qu'un robot n'a pas le droit d'ouvrir est remonté comme « schéma non
+    valide », sans jamais mentionner le refus de crawl. Quatre `Allow` explicites (`/.well-known/`,
+    `/llms.txt`, `/llms.md`, `/agent-skills.md`) remplacent le blocage, les retraits utiles (`/api/`,
+    `/panier-9x/`, données brutes, paramètres spoilants) étant conservés.
+  - Référence `Caddyfile` du `README.md` : le repli `try_files {path} {path}/index.html {path}/ /index.html`
+  transformait chaque URL inconnue en **HTTP 200 portant le HTML de l'accueil** (soft 404) — un manifeste
+  absent du webroot se lisait donc comme un JSON illisible ou un Markdown sans titre. Remplacé par
+  `=404`, comme le miroir nginx local le faisait déjà et comme son commentaire le prescrivait.
+- **Smoke test local : une attente erronée corrigée (`local/smoke-test.sh`)** : `/ai-catalog.json` était
+  attendu en `200` alors que ce fichier n'existe pas et que le chemin spécifié par ARD est
+  `/.well-known/ai-catalog.json` ; l'attente devient `404`. Surtout, un simple `200` valait succès : le
+  soft 404 HTML passait donc le test.
+- **Harnais de tests SEO local rétabli (`local/run_seo_tests.py`)** : il ne tournait plus depuis le
+  découpage de la chaîne SEO du jalon M4 — son paquet `src.services` factice ne déclarait que `seo.py`,
+  qui ré-exporte désormais depuis ses modules frères, et l'import échouait sur
+  « No module named 'src.services.seo_templates' ». Les modules sont maintenant enregistrés dans l'ordre
+  des dépendances (`gtm`, `layout_sync`, puis les sept modules SEO) ; la suite SEO locale est de nouveau
+  exécutable sur un poste sans `numpy` ni `requests`.
+
+### Ajouté
+- **Contrat de type MIME des ressources de découverte (`SEO-23`)** : trois blocs `handle @agents_json`,
+  `@agents_txt` et `@agents_md` dans la référence Caddy, déclarés **avant** le `handle` général (les blocs
+  `handle` sont exclusifs et ordonnés), qui fixent `application/json; charset=utf-8` pour les manifestes
+  ARD/A2A, `text/plain; charset=utf-8` pour `llms.txt` et `text/markdown; charset=utf-8` pour `llms.md`
+  et `agent-skills.md` — le type que le catalogue ARD déclare lui-même. Le miroir de test
+  `local/nginx/cemantix.local.conf` applique le même contrat (`types {}` vide + `default_type`, seul moyen
+  nginx d'imposer un type sans dupliquer l'en-tête).
+- **Garde-fous CI de découvrabilité (`SEO-24`)** :
+  - `tools/check_seo.py` : nouveau contrôle `check_decouvrabilite_agents()` — aucune ressource d'agent ne
+    doit être interdite par `robots.txt` (motif `Disallow` interprété à la RFC 9309, joker `*` compris),
+    et toute URL `cemantix.cyril-randon.fr` annoncée par `llms.txt`, `llms.md`, `agent-skills.md`,
+    `ai-catalog.json` ou `agent-card.json` doit être livrable : fichier du webroot, route d'API, ou page
+    produite au démarrage listée dans `URLS_GENREES` (`/mot-du-jour/`, `/methode/`, `/puzzles/…`,
+    `/sitemap.xml`, `/indexnow-key.txt`) pour qu'un dépôt cloné ne casse pas.
+  - `tests/test_agent_delivery.py` : 10 tests (stdlib seule, réutilise les fonctions du contrôle pour ne
+    jamais diverger de lui), dont le test de non-régression qui réinjecte `Disallow: /.well-known/` et
+    vérifie que le garde-fou le voit, le contrôle du repli soft 404 dans la référence Caddy et dans le
+    miroir nginx, et la déclaration des hubs dans les trois documents d'agents.
+  - `local/smoke-test.sh` : section « 1b. Livraison des ressources agents IA » — les six Content-Type
+    attendus, le premier caractère de `llms.txt` (`# `) et du catalogue (`{`), et l'absence du `Disallow`
+    sur `/.well-known/`.
+  - `local/run_seo_tests.py` : la suite SEO locale sans dépendances lourdes embarque `test_agent_delivery`.
+- **Hubs déclarés partout (`SEO-25`)** : `llms.md` gagne deux entrées de navigation (`/mot-du-jour/`,
+  `/methode/`) et `agent-skills.md` une « Compétence 4 — Mot du jour et lecture des indices » (source à
+  citer pour le puzzle en cours, conduite anti-spoiler, renvoi méthode). Seul `llms.txt` les déclarait
+  depuis `SEO-17`/`SEO-18` : un agent entrant par la version longue ou par la carte d'agent ne les
+  découvrait pas.
+
+### Vérifications
+- `py tools/check_seo.py` vert : 5 pages, 2 gabarits générés, audit agentique, **découvrabilité agents**,
+  anti-fuite GTM.
+- `py local/run_seo_tests.py` → **58 tests verts sur 4 modules** (`test_seo_archives`, `test_seo_hubs`,
+  `test_docs_agent`, `test_agent_delivery`) ; `py -m unittest discover -s tests -p "test_agent_delivery.py"`
+  → **10 tests verts**.
+- `py tools/check_docs.py` → `=== OK ===` (liens relatifs, tableaux, compteurs des suivis, dont le nouveau
+  suivi `SEO-22` à `SEO-25` : 4 annoncés, 4 réels).
+- Équilibre des accolades des deux configurations de proxy vérifié (mêmes écarts qu'avant édition, dus
+  aux jetons Go template `{{ env … }}`).
+- **Recette serveur à rejouer** (le `Caddyfile` réel n'est pas versionné) : `git pull`, redémarrage des
+  conteneurs, `caddy reload`, puis `curl -sI` sur `/llms.txt` (`200`, `text/plain`),
+  `/.well-known/ai-catalog.json` (`200`, `application/json`) et `/inexistant` (`404`).
+
+---
+
 ## [Non publié] - 2026-11-07 · Jalon M14 : Authentification Joueurs sans Email, Profils Invités, Pseudos [Nom][Adjectif] & Phrase de Secours
 
 ### Ajouté
