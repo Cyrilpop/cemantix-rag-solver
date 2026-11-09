@@ -39,6 +39,15 @@ def _install_seo_module() -> None:
     `src/__init__.py` importe le moteur (numpy, requests, urllib3) : on construit donc les
     paquets `src` et `src.services` a la main, puis on charge `config` et `seo`, qui n'ont
     que des dependances de la bibliotheque standard.
+
+    La chaine SEO a ete decoupee en modules au jalon M4 : `seo.py` ne contient plus le
+    code, il re-exporte depuis ses modules freres, qui dependent eux-memes de `gtm` et
+    `layout_sync` (`seo_templates`, `seo_sitemap`, `seo_archives`, `seo_hubs`,
+    `seo_agents`, `seo_google`, `seo_indexnow`). Un paquet factice n'explorant pas le
+    disque, chaque module doit etre enregistre a la main, dans l'ordre des dependances —
+    sinon `seo.py` echoue des l'import sur « No module named 'src.services.seo_templates' ».
+    `requests` n'est requis par aucun d'eux : les modules de notification l'importent sous
+    `try/except ImportError`, et `src.db` n'est jamais importe au niveau module.
     """
     for name in ("src", "src.services"):
         package = ModuleType(name)
@@ -46,12 +55,16 @@ def _install_seo_module() -> None:
         sys.modules[name] = package
     sys.modules["src"].__path__ = [str(ROOT / "src")]
     _load("src.config", "src/config.py")
+    for module in ("gtm", "layout_sync", "seo_templates", "seo_sitemap", "seo_archives",
+                   "seo_hubs", "seo_agents", "seo_google", "seo_indexnow"):
+        _load(f"src.services.{module}", f"src/services/{module}.py")
     _load("src.services.seo", "src/services/seo.py")
 
 
 _install_seo_module()
 
-NAMES = sys.argv[1:] or ["test_seo_archives", "test_seo_hubs", "test_docs_agent"]
+NAMES = sys.argv[1:] or ["test_seo_archives", "test_seo_hubs", "test_docs_agent",
+                         "test_agent_delivery"]
 loaded = []
 for name in NAMES:
     try:
