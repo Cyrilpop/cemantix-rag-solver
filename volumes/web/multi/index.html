@@ -154,11 +154,13 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand">
-        <img src="../icons/favicon.png" alt="Cémantix Solver" class="brand-icon" width="48" height="48">
-        <div class="brand-text">
-          <span class="brand-title">Cémantix Solver</span>
-          <span class="brand-subtitle">Mot du Jour &amp; IA Sémantique</span>
-        </div>
+        <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;color:inherit;">
+          <img src="/icons/favicon.png" alt="Cémantix Solver" class="brand-icon" width="48" height="48">
+          <div class="brand-text">
+            <span class="brand-title">Cémantix Solver</span>
+            <span class="brand-subtitle">Mot du Jour &amp; IA Sémantique</span>
+          </div>
+        </a>
       </div>
 
       <div class="header-actions">
@@ -189,30 +191,30 @@
     <!-- Navigation des Vues Principales -->
     <!-- NAV-TABS:START -->
     <nav class="nav-tabs" aria-label="Navigation des vues">
-      <a href="../" id="tab-dashboard" class="nav-tab">
+      <a href="/" id="tab-dashboard" class="nav-tab">
         <span class="tab-icon">🎯</span>
         <span>Mot du Jour</span>
       </a>
-      <a href="../play/" id="tab-play" class="nav-tab">
+      <a href="/play/" id="tab-play" class="nav-tab">
         <span class="tab-icon">🎮</span>
         <span>Jouer Solo</span>
       </a>
-      <a href="../battle/" id="tab-battle" class="nav-tab">
+      <a href="/battle/" id="tab-battle" class="nav-tab">
         <span class="tab-icon">⚔️</span>
         <span>Mode Battle</span>
         <span class="tab-badge">Versus IA</span>
       </a>
-      <a href="./" id="tab-multi" class="nav-tab active">
+      <a href="/multi/" id="tab-multi" class="nav-tab active">
         <span class="tab-icon">👥</span>
         <span>Mode Multijoueur</span>
         <span class="tab-badge">1v1 Ami</span>
       </a>
-      <a href="../defi/" id="tab-defi" class="nav-tab">
+      <a href="/defi/" id="tab-defi" class="nav-tab">
         <span class="tab-icon">🤖</span>
         <span>Défier le Bot</span>
         <span class="tab-badge">Live</span>
       </a>
-      <a href="../puzzles/" id="tab-archives" class="nav-tab">
+      <a href="/puzzles/" id="tab-archives" class="nav-tab">
         <span class="tab-icon">📚</span>
         <span>Archives</span>
       </a>
@@ -222,13 +224,13 @@
     <div class="multi-container">
       <h1 class="page-heading">Cémantix multijoueur : duel 1v1 entre amis au tour par tour</h1>
       <p class="page-intro">Créez un salon, partagez le code et affrontez un ami sur le même
-      mot secret. Pour départager les stratégies, la <a href="../methode/">méthode des indices
+      mot secret. Pour départager les stratégies, la <a href="/methode/">méthode des indices
       Cémantix</a> vaut mieux qu'un coup de chance — et le
-      <a href="../mot-du-jour/">mot du jour Cémantix</a> sert d'entraînement commun.</p>
+      <a href="/mot-du-jour/">mot du jour Cémantix</a> sert d'entraînement commun.</p>
       <noscript>
         <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent, #6366f1); padding: 1rem;">
           <h2 style="font-size: 1.1rem; margin-top: 0;">ℹ️ JavaScript requis pour le Multijoueur</h2>
-          <p>Le mode multijoueur 1v1 au tour par tour requiert JavaScript pour synchroniser l'état de la partie, échanger les tours de jeu et protéger les mots secrets de vos adversaires. Les puzzles passés restent consultables dans nos <a href="../puzzles/">archives indexables</a>.</p>
+          <p>Le mode multijoueur 1v1 au tour par tour requiert JavaScript pour synchroniser l'état de la partie, échanger les tours de jeu et protéger les mots secrets de vos adversaires. Les puzzles passés restent consultables dans nos <a href="/puzzles/">archives indexables</a>.</p>
         </div>
       </noscript>
 
@@ -587,16 +589,16 @@
     <div class="footer-container">
       <div class="footer-left">
         <p><strong>Cémantix Solver</strong> — Propulsé par RAG vectoriel (frWac Word2Vec + ChromaDB).</p>
-        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. · <a href="../#confidentialite" class="footer-author-link">Politique de confidentialité</a> · <a href="../#conditions-utilisation" class="footer-author-link">Conditions d'utilisation</a></span>
+        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. · <a href="/#confidentialite" class="footer-author-link">Politique de confidentialité</a> · <a href="/#conditions-utilisation" class="footer-author-link">Conditions d'utilisation</a></span>
       </div>
       <div class="footer-right">
-        <a href="../" class="btn btn-ghost btn-sm" title="Mot du Jour">
+        <a href="/" class="btn btn-ghost btn-sm" title="Mot du Jour">
           <span>🎯</span> Mot du Jour
         </a>
-        <a href="../play/" class="btn btn-ghost btn-sm" title="Jouer Solo">
+        <a href="/play/" class="btn btn-ghost btn-sm" title="Jouer Solo">
           <span>🎮</span> Mode Solo
         </a>
-        <a href="../battle/" class="btn btn-ghost btn-sm" title="Mode Battle">
+        <a href="/battle/" class="btn btn-ghost btn-sm" title="Mode Battle">
           <span>⚔️</span> Mode Battle
         </a>
       </div>

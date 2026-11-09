@@ -528,9 +528,10 @@ cemantix.cyril-randon.fr {
         respond @intercepted 404
     }
 
-    # Fichiers statiques et routes propres (/play, /battle, /multi)
+    # Fichiers statiques et routes propres (/play, /battle, /multi, /defi)
+    # Protection anti-crawl-trap SEO (évite les soft-404 et boucles de concaténation)
     handle {
-        try_files {path} {path}/index.html {path}/ /index.html
+        try_files {path} {path}/index.html {path}/ =404
         file_server
     }
 

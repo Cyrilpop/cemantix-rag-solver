@@ -19,7 +19,7 @@ from src.services.layout_sync import (
 class TestLayoutSync(unittest.TestCase):
     def test_render_header_desktop_and_depth(self):
         h = render_header("")
-        self.assertIn('<img src="icons/favicon.png"', h)
+        self.assertIn('<img src="/icons/favicon.png"', h)
         self.assertIn('class="brand-icon"', h)
         self.assertIn('Cémantix Solver', h)
         self.assertIn('id="theme-toggle"', h)
@@ -28,23 +28,23 @@ class TestLayoutSync(unittest.TestCase):
         self.assertIn('id="global-spoiler-toggle"', h)
 
         h_sub = render_header("../")
-        self.assertIn('<img src="../icons/favicon.png"', h_sub)
+        self.assertIn('<img src="/icons/favicon.png"', h_sub)
 
     def test_render_nav_tabs_active_states(self):
         tabs_play = render_nav_tabs("../", "play")
         self.assertIn('id="tab-play" class="nav-tab active"', tabs_play)
-        self.assertIn('href="./"', tabs_play)  # active page points to ./
+        self.assertIn('href="/play/"', tabs_play)
         self.assertIn('id="tab-dashboard" class="nav-tab"', tabs_play)
-        self.assertIn('href="../"', tabs_play)
+        self.assertIn('href="/"', tabs_play)
         self.assertIn('id="tab-battle" class="nav-tab"', tabs_play)
-        self.assertIn('href="../battle/"', tabs_play)
+        self.assertIn('href="/battle/"', tabs_play)
         self.assertIn('<span class="tab-badge">Versus IA</span>', tabs_play)
 
         tabs_dash = render_nav_tabs("", "dashboard")
         self.assertIn('id="tab-dashboard" class="nav-tab active"', tabs_dash)
-        self.assertIn('href="./"', tabs_dash)
+        self.assertIn('href="/"', tabs_dash)
         self.assertIn('id="tab-play" class="nav-tab"', tabs_dash)
-        self.assertIn('href="play/"', tabs_dash)
+        self.assertIn('href="/play/"', tabs_dash)
 
     def test_sync_html_file_injects_and_wraps_markers(self):
         initial_html = """<!DOCTYPE html>

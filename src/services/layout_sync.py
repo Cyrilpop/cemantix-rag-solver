@@ -30,15 +30,16 @@ TABS_CONFIG = [
 
 def render_header(depth: str = "") -> str:
     """Génère l'en-tête universel canonique (Header)."""
-    logo_src = f"{depth}icons/favicon.png" if depth else "icons/favicon.png"
-    return f"""  <header class="app-header">
+    return """  <header class="app-header">
     <div class="header-container">
       <div class="brand">
-        <img src="{logo_src}" alt="Cémantix Solver" class="brand-icon" width="48" height="48">
-        <div class="brand-text">
-          <span class="brand-title">Cémantix Solver</span>
-          <span class="brand-subtitle">Mot du Jour &amp; IA Sémantique</span>
-        </div>
+        <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;color:inherit;">
+          <img src="/icons/favicon.png" alt="Cémantix Solver" class="brand-icon" width="48" height="48">
+          <div class="brand-text">
+            <span class="brand-title">Cémantix Solver</span>
+            <span class="brand-subtitle">Mot du Jour &amp; IA Sémantique</span>
+          </div>
+        </a>
       </div>
 
       <div class="header-actions">
@@ -54,11 +55,11 @@ def render_header(depth: str = "") -> str:
         </button>
 
         <button id="theme-toggle" class="btn-icon" aria-label="Changer de thème" title="Basculer Mode Clair / Sombre">
-          <span class="theme-icon">☼</span>
+          <span class="theme-icon">☀️</span>
         </button>
 
         <button id="global-spoiler-toggle" class="btn-icon" aria-label="Mode anti-spoiler" title="Activer / Désactiver le flou anti-spoiler">
-          <span class="spoiler-icon">🔒</span>
+          <span class="spoiler-icon">🛡️</span>
         </button>
       </div>
     </div>
@@ -72,15 +73,8 @@ def render_nav_tabs(depth: str = "", active_tab: str = "dashboard") -> str:
         is_active = (tab_key == active_tab)
         active_cls = " active" if is_active else ""
 
-        # Calcul du href relatif
-        if is_active and depth == "../" and tab_key != "dashboard":
-            href = "./"
-        elif is_active and not depth and tab_key == "dashboard":
-            href = "./"
-        elif not depth:
-            href = "./" if tab_key == "dashboard" else subpath
-        else:
-            href = f"{depth}{subpath}"
+        # Calcul du href absolu depuis la racine (anti crawl-trap SEO)
+        href = f"/{subpath}"
 
         badge_html = f'\n        <span class="tab-badge">{badge}</span>' if badge else ""
         items.append(
@@ -97,22 +91,21 @@ def render_nav_tabs(depth: str = "", active_tab: str = "dashboard") -> str:
 
 
 def render_footer(depth: str = "") -> str:
-    """Génère le pied de page universel canonique (Footer)."""
-    home = depth if depth else "./"
-    return f"""  <footer class="app-footer">
+    """Génère le pied de page universel canonique (Footer) avec liens racine absolus."""
+    return """  <footer class="app-footer">
     <div class="footer-container">
       <div class="footer-left">
         <p><strong>Cémantix Solver</strong> — Propulsé par RAG vectoriel (frWac Word2Vec + ChromaDB).</p>
-        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. Projets <a href="https://github.com/Cyrilpop" target="_blank" rel="noopener noreferrer" class="footer-author-link">Github</a> · <a href="{home}#confidentialite" class="footer-author-link">Politique de confidentialité</a> · <a href="{home}#conditions-utilisation" class="footer-author-link">Conditions d'utilisation</a></span>
+        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. Projets <a href="https://github.com/Cyrilpop" target="_blank" rel="noopener noreferrer" class="footer-author-link">Github</a> · <a href="/#confidentialite" class="footer-author-link">Politique de confidentialité</a> · <a href="/#conditions-utilisation" class="footer-author-link">Conditions d'utilisation</a></span>
       </div>
       <div class="footer-right">
-        <a href="{home}" class="btn btn-ghost btn-sm" title="Mot du Jour">
+        <a href="/" class="btn btn-ghost btn-sm" title="Mot du Jour">
           <span>🎯</span> Mot du Jour
         </a>
-        <a href="{depth}play/" class="btn btn-ghost btn-sm" title="Jouer Solo">
+        <a href="/play/" class="btn btn-ghost btn-sm" title="Jouer Solo">
           <span>🎮</span> Jouer Solo
         </a>
-        <a href="{depth}battle/" class="btn btn-ghost btn-sm" title="Mode Battle">
+        <a href="/battle/" class="btn btn-ghost btn-sm" title="Mode Battle">
           <span>⚔️</span> Battle
         </a>
       </div>
