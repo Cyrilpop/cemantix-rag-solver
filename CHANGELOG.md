@@ -4,7 +4,21 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
-## [Non publié] - 2026-11-07 · Jalon M14 : Authentification Joueurs sans Email, Profils Invités, Pseudos [Nom][Adjectif] & Phrase de Secours
+## [Non publié] - 2026-11-09 · Correctifs Trajectoires Replay BDD & Ergonomie Mode Solo
+
+### Corrigé
+- **Persistance des Trajectoires en Base de Données (`database/init.sql`, `src/db/connection.py`, `src/db/solo.py`)** :
+  - Élargissement de la colonne `weather` de `VARCHAR(8)` à `VARCHAR(32)` dans `solo_player_guesses` et `bot_challenge_guesses` sous PostgreSQL et SQLite, évitant l'erreur `StringDataRightTruncation` sur les statuts chauds et victorieux (`🥵 Très chaud`, `😱 Brûlant`, `🥳 Trouvé !`).
+  - Ajout de la migration idempotente dans `init_db()` pour appliquer la modification automatiquement en production.
+  - Sécurisation de la troncature `weather[:32]` et logging explicite des exceptions lors des insertions des tentatives au lieu d'un masquage silencieux.
+  - Rétablissement complet de l'affichage de la modale de replay de partie pour les joueurs et les bots simulés.
+
+### Modifié
+- **Ergonomie du Mode Défi du Jour (`volumes/web/play/index.html`, `volumes/web/js/game.js`)** :
+  - Masquage automatique du bouton « Nouvelle Partie » en mode Défi du Jour (le mot quotidien étant unique chaque jour).
+  - Affichage réservé exclusivement au mode Illimité pour relancer une énigme aléatoire à volonté.
+
+## [1.15.0] - 2026-11-08 · Jalon M15 : Mot du Jour Solo Aléatoire, Classement Quotidien & Indices IA Révélables
 
 ### Ajouté
 - **Schémas SQL Idempotents PostgreSQL & SQLite (`database/init.sql`, `src/db/connection.py`)** :
