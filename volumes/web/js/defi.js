@@ -547,7 +547,27 @@ function renderChallengesList() {
     ? (wallOfFameList.length ? wallOfFameList : challengesList.filter((it) => it.outcome === "lost"))
     : challengesList;
 
-  let items = sourceList.filter((it) => {
+  // Déduplication par mot secret : si un mot a été défié plusieurs fois, on ne garde
+  // à l'affichage que sa première occurrence historique (le défi le plus ancien).
+  const oldestByWord = new Map();
+  sourceList.forEach((it) => {
+    const w = String(it.secret_word || "").toLowerCase();
+    if (!w) return;
+    const existing = oldestByWord.get(w);
+    if (!existing) {
+      oldestByWord.set(w, it);
+    } else {
+      const timeCur = it.date ? new Date(it.date).getTime() : Infinity;
+      const timeOld = existing.date ? new Date(existing.date).getTime() : Infinity;
+      if (timeCur < timeOld) {
+        oldestByWord.set(w, it);
+      }
+    }
+  });
+
+  const deduplicatedList = Array.from(oldestByWord.values());
+
+  let items = deduplicatedList.filter((it) => {
     if (activeChallengeFilter === "lost") return it.outcome === "lost";
     if (activeChallengeFilter === "won") return it.outcome === "won" || it.outcome === "solved";
     return true;

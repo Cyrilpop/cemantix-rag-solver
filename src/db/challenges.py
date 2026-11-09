@@ -680,20 +680,34 @@ def sync_legacy_challenges_to_stats(limit: int = 200, force: bool = False) -> in
 
 
 def get_wall_of_fame(limit: int = 12) -> list[dict]:
-    """Derniers mots invaincus (`outcome = 'lost'`), du plus récent au plus ancien (M9)."""
+    """Derniers mots invaincus (`outcome = 'lost'`), du plus récent au plus ancien (M9).
+    Si un mot apparaît plusieurs fois en échec, seule sa première occurrence historique
+    (la plus ancienne) est retenue pour l'affichage.
+    """
     rows = db.fetch_all(
         """
         SELECT challenge_id, secret_word, player_anon_id, outcome, tries_count,
                duration_seconds, created_at
         FROM bot_challenge_stats
         WHERE outcome = 'lost'
-        ORDER BY created_at DESC
-        LIMIT %s;
-        """,
-        (int(limit),),
+        ORDER BY created_at ASC;
+        """
     )
-    result = []
+    # Déduplication : on conserve le plus ancien par mot secret
+    seen_words: set[str] = set()
+    dedup: list[dict] = []
     for r in rows:
+        w = str(r["secret_word"]).strip().lower()
+        if w not in seen_words:
+            seen_words.add(w)
+            dedup.append(r)
+
+    # Ré-ordonne du plus récent au plus ancien et applique la limite
+    dedup.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
+    rows_limited = dedup[:int(limit)]
+
+    result = []
+    for r in rows_limited:
         created = r.get("created_at")
         date_str = created.isoformat() if isinstance(created, datetime) else str(created or "")
         dur = r.get("duration_seconds")
@@ -710,19 +724,33 @@ def get_wall_of_fame(limit: int = 12) -> list[dict]:
 
 
 def get_recent_challenges(limit: int = 20) -> list[dict]:
-    """Derniers défis joués (victoires ET défaites), du plus récent au plus ancien."""
+    """Derniers défis joués (victoires ET défaites), du plus récent au plus ancien.
+    Si un mot secret apparaît plusieurs fois, seule sa première occurrence historique
+    (la plus ancienne) est retenue pour l'affichage.
+    """
     rows = db.fetch_all(
         """
         SELECT challenge_id, secret_word, player_anon_id, outcome, tries_count,
                duration_seconds, created_at
         FROM bot_challenge_stats
-        ORDER BY created_at DESC
-        LIMIT %s;
-        """,
-        (int(limit),),
+        ORDER BY created_at ASC;
+        """
     )
-    result = []
+    # Déduplication : on conserve le plus ancien par mot secret
+    seen_words: set[str] = set()
+    dedup: list[dict] = []
     for r in rows:
+        w = str(r["secret_word"]).strip().lower()
+        if w not in seen_words:
+            seen_words.add(w)
+            dedup.append(r)
+
+    # Ré-ordonne du plus récent au plus ancien et applique la limite
+    dedup.sort(key=lambda x: str(x.get("created_at") or ""), reverse=True)
+    rows_limited = dedup[:int(limit)]
+
+    result = []
+    for r in rows_limited:
         created = r.get("created_at")
         date_str = created.isoformat() if isinstance(created, datetime) else str(created or "")
         dur = r.get("duration_seconds")
