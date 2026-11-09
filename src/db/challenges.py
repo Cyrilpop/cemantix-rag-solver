@@ -32,7 +32,7 @@ CHALLENGE_ENABLED = os.getenv("CHALLENGE_ENABLED", "1").strip().lower() not in (
 CHALLENGE_MAX_TRIES = int(os.getenv("CHALLENGE_MAX_TRIES", "100"))
 CHALLENGE_TIMEOUT = float(os.getenv("CHALLENGE_TIMEOUT", "900"))
 CHALLENGE_MAX_QUEUE = int(os.getenv("CHALLENGE_MAX_QUEUE", "20"))
-CHALLENGE_RETENTION_DAYS = int(os.getenv("CHALLENGE_RETENTION_DAYS", "30"))
+CHALLENGE_RETENTION_DAYS = int(os.getenv("CHALLENGE_RETENTION_DAYS", "0"))
 CHALLENGE_QUOTA_PER_HOUR = int(os.getenv("CHALLENGE_QUOTA_PER_HOUR", "10"))
 
 # Sel du HMAC d'IP (SEC-21) : secret d'exploitation, jamais le mot de passe
@@ -338,8 +338,14 @@ def requeue_stale_running(max_age_seconds: float = CHALLENGE_TIMEOUT) -> int:
     return recycled
 
 
-def purge_older_than(days: int = CHALLENGE_RETENTION_DAYS) -> int:
-    """Efface les défis plus vieux que `days` jours (SEC-27, purge RGPD)."""
+def purge_older_than(days: int = CHALLENGE_RETENTION_DAYS, force_purge: bool = False) -> int:
+    """Efface les défis plus vieux que `days` jours (si days > 0 ou force_purge=True).
+
+    Si `days <= 0` et `not force_purge`, la purge est désactivée afin de conserver
+    l'ensemble de l'historique des défis en base de données.
+    """
+    if int(days) <= 0 and not force_purge:
+        return 0
     cutoff = _utcnow() - timedelta(days=int(days))
     return db.execute("DELETE FROM bot_challenges WHERE created_at < %s;", (cutoff,))
 

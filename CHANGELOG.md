@@ -4,7 +4,16 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
-## [Non publié] - 2026-11-09 · Protection Anti Crawl-Trap SEO & Rétablissement 404
+## [Non publié] - 2026-11-09 · Rétention Intégrale des Défis au Bot
+
+### Modifié
+- **Désactivation de la Purge Destructive des Défis (`src/db/challenges.py`, `src/services/challenges.py`, `.env.example`, `README.md`)** :
+  - Modification de la politique de rétention par défaut `CHALLENGE_RETENTION_DAYS` de 30 jours à `0` (rétention infinie).
+  - La fonction `purge_older_than()` ne supprime plus rien si `days <= 0` (sauf appel explicite avec `force_purge=True`), préservant l'ensemble de l'historique des défis (`bot_challenges`, `bot_challenge_stats`, `bot_challenge_guesses`) en base de données.
+  - La routine de maintenance nocturne et au démarrage `challenge_maintenance()` vérifie si la rétention est strictement positive avant d'exécuter un quelconque nettoyage.
+  - Mise à jour de la documentation et des fichiers de configuration (`.env.example`, `README.md`) et validation complète de la suite de tests unitaires.
+
+## [1.15.1] - 2026-11-09 · Protection Anti Crawl-Trap SEO & Rétablissement 404
 
 ### Ajouté
 - **Enrichissement de la FAQ Pédagogique & Données Structurées FAQPage (`volumes/web/index.html`)** :
