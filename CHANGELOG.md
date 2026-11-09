@@ -6,8 +6,10 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ## [Non publié] - 2026-11-09 · Protection Anti Crawl-Trap SEO & Rétablissement 404
 
-### Corrigé
-- **Suppression du Soft-404 et Rupture de Crawl-Trap SEO (`Caddyfile`, `README.md`)** :
+### Ajouté
+- **Enrichissement de la FAQ Pédagogique & Données Structurées FAQPage (`volumes/web/index.html`)** :
+  - Ajout d'une nouvelle entrée didactique expliquant le fonctionnement du solveur : lemmatisation (concept neutre vs forme grammaticale), similarité cosinus (angle vectoriel de proximité sémantique Word2Vec frWac) et raisonnement RAG (triangulation et resserrement via ChromaDB).
+  - Synchronisation du schéma JSON-LD `FAQPage` pour l'affichage enrichi dans les résultats de recherche Google.
   - Remplacement de la directive globale de repli `try_files {path} {path}/index.html {path}/ /index.html` par `try_files {path} {path}/index.html {path}/ =404` dans la configuration Caddy du reverse-proxy.
   - Élimine le renvoi silencieux de `HTTP 200 OK` (soft-404) sur les chemins inexistants ou tronqués (ex: `/page/3/`, `/page/3/play/mot-du-jour/puzzles/`).
   - Stoppe les boucles d'exploration infinies induites par la résolution relative des liens de navigation par Googlebot et assainit la couverture d'indexation dans Google Search Console.

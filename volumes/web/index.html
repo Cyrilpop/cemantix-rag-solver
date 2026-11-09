@@ -155,10 +155,10 @@
           },
           {
             "@type": "Question",
-            "name": "Comment fonctionne le solveur IA de Cémantix ?",
+            "name": "Comment fonctionne le solveur IA : RAG, similarité cosinus et lemmes ?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Notre solveur exploite des plongements lexicaux vectoriels (Word2Vec entraîné sur le corpus français frWac) et une base vectorielle ChromaDB. L'algorithme calcule la proximité cosinus à travers plus de 150 000 mots pour converger rapidement vers le mot mystère."
+              "text": "Notre solveur ne devine pas au hasard : il combine la lemmatisation (regroupement sous la forme neutre de dictionnaire pour tester les concepts sans gaspiller de coups sur la grammaire), la similarité cosinus (mesure de l'angle géométrique entre les vecteurs issus du corpus frWac Word2Vec) et le raisonnement RAG (triangulation itérative via ChromaDB resserrant l'espace sémantique autour des zones les plus chaudes jusqu'à isoler le mot mystère)."
             }
           },
           {
@@ -618,6 +618,18 @@
               <summary class="faq-question">Comment demander un indice Cemantix pour m'aider ?</summary>
               <div class="faq-answer">
                 <p>Sur la page <em>« Jouer à Cémantix »</em>, cliquez sur le bouton <strong>« Indice (+1 coup) »</strong>. Un mot chaud issu du Top 1000 vous sera proposé pour relancer votre réflexion.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary class="faq-question">Comment fonctionne le solveur IA : RAG, similarité cosinus et lemmes ?</summary>
+              <div class="faq-answer">
+                <p>Notre solveur ne devine pas au hasard : il combine trois principes linguistiques et mathématiques pour converger méthodiquement vers le mot mystère :</p>
+                <ol class="seo-list" style="margin-top: 0.5rem;">
+                  <li><strong>La lemmatisation (le lemme) :</strong> Pour ne pas gaspiller de coups avec des variantes grammaticales (pluriels, féminins ou verbes conjugués), tous les mots sont ramenés à leur forme neutre de dictionnaire — le <em>lemme</em> (par exemple : <em>mangeait</em> ou <em>mangent</em> deviennent <em>manger</em>). Cela permet de tester directement le concept plutôt que sa grammaire.</li>
+                  <li><strong>La similarité cosinus (la boussole mathématique) :</strong> Dans notre modèle, chaque mot est traduit en coordonnées géométriques (un vecteur) selon ses apparitions dans des millions de textes en français. Pour mesurer si deux mots sont proches, on calcule l’angle entre leurs directions : c'est le <strong>cosinus</strong>. Plus l’angle est serré, plus le score grimpe vers 1000 ‰, signifiant que les deux mots partagent le même univers de sens.</li>
+                  <li><strong>Le raisonnement RAG (la triangulation par les données) :</strong> À chaque mot proposé, le solveur enregistre la température obtenue et interroge instantanément sa base de données vectorielle (<em>Retrieval</em>). Il compare cette réponse avec ses essais précédents pour éliminer les fausses pistes et orienter le prochain mot vers la zone la plus chaude, resserrant l'étau jusqu'à trouver le mot secret.</li>
+                </ol>
               </div>
             </details>
 
