@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS bot_challenge_guesses (
     word VARCHAR(64) NOT NULL,
     score NUMERIC(6, 2) NOT NULL,
     permille INT,
-    weather VARCHAR(8),
+    weather VARCHAR(32),
     is_record BOOLEAN DEFAULT FALSE,
     source VARCHAR(16) DEFAULT 'rag',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -274,7 +274,7 @@ CREATE TABLE IF NOT EXISTS solo_player_guesses (
     word VARCHAR(64) NOT NULL,
     score NUMERIC(6, 2) NOT NULL,
     permille INT,
-    weather VARCHAR(8),
+    weather VARCHAR(32),
     is_hint BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(game_id, guess_order)
@@ -796,6 +796,8 @@ class DatabaseManager:
                         cur.execute("ALTER TABLE multi_rooms ALTER COLUMN player1_key TYPE VARCHAR(128);")
                         cur.execute("ALTER TABLE multi_rooms ALTER COLUMN player2_key TYPE VARCHAR(128);")
                         cur.execute("ALTER TABLE multi_rooms ALTER COLUMN winner TYPE VARCHAR(32);")
+                        cur.execute("ALTER TABLE solo_player_guesses ALTER COLUMN weather TYPE VARCHAR(32);")
+                        cur.execute("ALTER TABLE bot_challenge_guesses ALTER COLUMN weather TYPE VARCHAR(32);")
                         cur.execute("CREATE INDEX IF NOT EXISTS idx_players_created_at ON players(created_at);")
                     conn.commit()
 

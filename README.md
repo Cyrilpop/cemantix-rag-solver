@@ -336,7 +336,7 @@ volumes/web/
 ├── mot-du-jour/      # Hub mot du jour, thermomètre et indices (généré hors Git)
 ├── methode/          # Guide des indices, FAQ et synonymes (généré hors Git)
 ├── play/             # Interface dédiée au jeu interactif (URL propre : /play/)
-│   └── index.html    # Page de jeu (mode défi du jour, mode illimité)
+│   └── index.html    # Page de jeu (défi quotidien unique, mode illimité avec relance)
 ├── battle/           # Mode Battle Joueur vs Bot IA RAG (URL propre : /battle/)
 │   └── index.html    # Page de duel contre l'IA, double jauge et indices
 ├── multi/            # Mode Multijoueur 1v1 Tour par Tour (URL propre : /multi/)

@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS bot_challenge_guesses (
     word         VARCHAR(64) NOT NULL,
     score        NUMERIC(6, 2) NOT NULL,
     permille     INT,
-    weather      VARCHAR(8),
+    weather      VARCHAR(32),
     is_record    BOOLEAN DEFAULT FALSE,
     source       VARCHAR(16) DEFAULT 'rag',
     created_at   TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS solo_player_guesses (
     word        VARCHAR(64) NOT NULL,
     score       NUMERIC(6, 2) NOT NULL,
     permille    INT,
-    weather     VARCHAR(8),
+    weather     VARCHAR(32),
     is_hint     BOOLEAN NOT NULL DEFAULT FALSE,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(game_id, guess_order)

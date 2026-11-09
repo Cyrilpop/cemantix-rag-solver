@@ -54,11 +54,11 @@ def render_header(depth: str = "") -> str:
         </button>
 
         <button id="theme-toggle" class="btn-icon" aria-label="Changer de thème" title="Basculer Mode Clair / Sombre">
-          <span class="theme-icon">☀️</span>
+          <span class="theme-icon">☼</span>
         </button>
 
         <button id="global-spoiler-toggle" class="btn-icon" aria-label="Mode anti-spoiler" title="Activer / Désactiver le flou anti-spoiler">
-          <span class="spoiler-icon">🛡️</span>
+          <span class="spoiler-icon">🔒</span>
         </button>
       </div>
     </div>
