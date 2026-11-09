@@ -192,7 +192,7 @@ function showResult(done) {
     const challengeId = currentId || done.challenge_id || ("temp-" + Date.now());
     const alreadyPresent = challengesList.some((it) => it.challenge_id === challengeId || (it.secret_word === done.word && Math.abs(new Date(it.date).getTime() - Date.now()) < 10000));
     if (!alreadyPresent) {
-      challengesList.unshift({
+      const newEntry = {
         challenge_id: challengeId,
         secret_word: done.word,
         player: storedUser || "Vous",
@@ -200,7 +200,11 @@ function showResult(done) {
         tries_count: done.tries_count || (displayedSteps.length || 0),
         duration_seconds: parseFloat(displayDuration),
         date: new Date().toISOString(),
-      });
+      };
+      challengesList.unshift(newEntry);
+      if (newEntry.outcome === "lost") {
+        wallOfFameList.unshift(newEntry);
+      }
       renderChallengesList();
     }
   }
@@ -428,6 +432,7 @@ export function initDefi() {
 // --------------------------------------------------------------------------- //
 const FETCH_JSON = { headers: { Accept: "application/json" } };
 let challengesList = [];
+let wallOfFameList = [];
 let activeChallengeFilter = "all";
 let currentGuestToken = "";
 
@@ -489,7 +494,11 @@ function renderChallengesList() {
   const box = el("defi-wall-of-fame");
   if (!box) return;
 
-  const items = challengesList.filter((it) => {
+  const sourceList = activeChallengeFilter === "lost"
+    ? (wallOfFameList.length ? wallOfFameList : challengesList.filter((it) => it.outcome === "lost"))
+    : challengesList;
+
+  const items = sourceList.filter((it) => {
     if (activeChallengeFilter === "lost") return it.outcome === "lost";
     if (activeChallengeFilter === "won") return it.outcome === "won" || it.outcome === "solved";
     return true;
@@ -558,6 +567,7 @@ async function loadKpis(fresh = false) {
     challengesList = Array.isArray(data.recent_challenges) && data.recent_challenges.length
       ? data.recent_challenges
       : (data.wall_of_fame || []);
+    wallOfFameList = Array.isArray(data.wall_of_fame) ? data.wall_of_fame : [];
     renderChallengesList();
     renderPlayerBanner(data.player);
   } catch (_err) {

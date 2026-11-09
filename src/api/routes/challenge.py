@@ -209,7 +209,7 @@ def _parse_challenge_id(path: str) -> tuple[Optional[str], bool]:
 # GET /api/challenge/kpis & /api/challenge/<id>/guesses (M9, WOF-01/02)
 # --------------------------------------------------------------------------- #
 KPIS_CACHE_TTL_SECONDS = 2.0
-WALL_OF_FAME_LIMIT = 12
+WALL_OF_FAME_LIMIT = 50
 STATS_ID_RE = CHALLENGE_ID_RE
 
 _kpis_cache: dict = {"expires": 0.0, "payload": None}
