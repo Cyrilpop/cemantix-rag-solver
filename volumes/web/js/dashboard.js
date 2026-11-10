@@ -544,7 +544,8 @@ export function renderClues(currentOrGuesses, aiHintsParam = null) {
       const meta = DASHBOARD_AI_META[level] || DASHBOARD_AI_META[1];
       const rawPhrase = String(hint.hint_phrase || "").trim();
       const cleanPhrase = rawPhrase.replace(/^[«"'\s]+|[»"'\s]+$/g, "");
-      const formattedPhrase = cleanPhrase ? `« ${escapeHtml(cleanPhrase)} »` : "";
+      const escapedPhrase = escapeHtml(cleanPhrase).replace(/\s([^\s]+)$/, "&nbsp;$1");
+      const formattedPhrase = cleanPhrase ? `«&nbsp;${escapedPhrase}&nbsp;»` : "";
       const rawWord = String(hint.hint_word || "").trim();
       const formattedWord = rawWord ? escapeHtml(rawWord.charAt(0).toUpperCase() + rawWord.slice(1).toLowerCase()) : "";
 

@@ -1160,7 +1160,15 @@ def render_hints_component(
             })
             raw_phrase = str(h.get("hint_phrase") or h.get("phrase") or "").strip()
             clean_phrase = raw_phrase.strip('«»"\' ')
-            formatted_phrase = f"« {escape(clean_phrase)} »" if clean_phrase else ""
+            if clean_phrase:
+                # Espace insécable devant le dernier mot et guillemets français avec insécables
+                escaped_body = escape(clean_phrase)
+                if " " in escaped_body:
+                    head, tail = escaped_body.rsplit(" ", 1)
+                    escaped_body = f"{head}&nbsp;{tail}"
+                formatted_phrase = f"«&nbsp;{escaped_body}&nbsp;»"
+            else:
+                formatted_phrase = ""
 
             raw_word = str(h.get("hint_word") or h.get("word") or "").strip()
             formatted_word = escape(raw_word.capitalize()) if raw_word else ""
