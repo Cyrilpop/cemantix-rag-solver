@@ -1,6 +1,19 @@
 User-agent: *
 Allow: /
 
+# Ressources de découverte pour agents IA : catalogue ARD, carte d'agent,
+# compétences et documentation llms. Elles ne sont pas indexables (ce ne sont
+# pas des pages HTML) mais elles DOIVENT rester crawlables : un robot qui n'a
+# pas le droit de les lire ne peut pas les valider. Google Lighthouse (audit
+# « Navigation agentique », règle ard-schema) et les crawleurs d'agents
+# (GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot) tombent exactement là-dessus
+# quand /.well-known/ est en Disallow : le manifeste est déclaré « non valide ».
+# D'où un Allow explicite et, surtout, l'absence de tout Disallow les visant.
+Allow: /.well-known/
+Allow: /llms.txt
+Allow: /llms.md
+Allow: /agent-skills.md
+
 # Ressources non indexables : API JSON, données brutes et paramètres spoilants
 Disallow: /api/
 Disallow: /panier-9x/
@@ -8,7 +21,6 @@ Disallow: /*?reveal=
 Disallow: /*?r=
 Disallow: /*?k=
 Disallow: /data.json
-Disallow: /.well-known/
 
 Sitemap: https://cemantix.cyril-randon.fr/sitemap.xml
 

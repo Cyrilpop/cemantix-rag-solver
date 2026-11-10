@@ -494,6 +494,43 @@ cemantix.cyril-randon.fr {
     @sitemap path /sitemap.xml /robots.txt /llms.txt /llms.md /agent-skills.md /.well-known/*
     header @sitemap Cache-Control "no-cache, must-revalidate"
 
+    # 5. Ressources de découverte pour agents IA (`SEO-23`) -------------------
+    # Ces fichiers sont lus par des robots, jamais par un navigateur : leur
+    # Content-Type fait partie du contrat, au même titre que leur contenu.
+    # Sans ce bloc, deux pannes silencieuses se produisent côté audit :
+    #   - le type MIME est deviné par le serveur (un `.md` servi en
+    #     `application/octet-stream` n'est plus un Markdown exploitable) ;
+    #   - surtout, si le fichier manque au webroot (clonage frais, erreur
+    #     d'écriture du worker, fichier caché par le serveur de fichiers), le
+    #     `try_files … /index.html` du `handle` plus bas répond la page
+    #     d'accueil en HTTP 200 : l'audit llms.txt n'y trouve « aucun en-tête H1
+    #     ni lien » et l'audit ARD lit « Unexpected token '<', "<!DOCTYPE " » —
+    #     exactement les deux erreurs remontées par l'audit Google. Un `handle`
+    #     dédié, déclaré AVANT le `handle` fourre-tout (les blocs `handle` sont
+    #     exclusifs et évalués dans l'ordre d'écriture), garantit le type et
+    #     laisse un fichier manquant répondre un vrai 404.
+    @agents_json path /.well-known/ai-catalog.json /.well-known/ard.json /.well-known/agent-card.json
+    @agents_txt path /llms.txt
+    @agents_md path /llms.md /agent-skills.md
+    handle @agents_json {
+        header Content-Type "application/json; charset=utf-8"
+        header Cache-Control "no-cache, must-revalidate"
+        file_server
+    }
+    # llms.txt se lit comme du texte brut (spécification llms.txt) ; llms.md et
+    # agent-skills.md sont déclarés `text/markdown` par le catalogue ARD, ils
+    # doivent être livrés avec le type qu'ils annoncent.
+    handle @agents_txt {
+        header Content-Type "text/plain; charset=utf-8"
+        header Cache-Control "no-cache, must-revalidate"
+        file_server
+    }
+    handle @agents_md {
+        header Content-Type "text/markdown; charset=utf-8"
+        header Cache-Control "no-cache, must-revalidate"
+        file_server
+    }
+
     # Flux « Défier le bot » en direct (SSE) — chemin plus spécifique que /api/*
     # Un défi peut rester silencieux le temps que le worker le prenne : sans
     # flush_interval -1, Caddy met le flux en tampon et le navigateur ne reçoit
@@ -529,7 +566,14 @@ cemantix.cyril-randon.fr {
     }
 
     # Fichiers statiques et routes propres (/play, /battle, /multi, /defi)
-    # Protection anti-crawl-trap SEO (évite les soft-404 et boucles de concaténation)
+    # PAS de repli sur /index.html (`SEO-23`, anti crawl-trap) : un repli transforme
+    # chaque URL inconnue en HTTP 200 portant la page d'accueil (soft 404). Google le
+    # signale comme soft 404 et s'enferme dans les boucles de concaténation de chemins
+    # relatifs ; surtout, un robot qui demande /llms.txt ou
+    # /.well-known/ai-catalog.json reçoit du HTML qu'il tente de parser comme du
+    # Markdown ou du JSON — c'est l'origine des deux erreurs d'audit remontées.
+    # Le miroir local nginx (local/nginx/cemantix.local.conf) applique déjà
+    # `=404` ; la référence Caddy doit dire la même chose.
     handle {
         try_files {path} {path}/index.html {path}/ =404
         file_server

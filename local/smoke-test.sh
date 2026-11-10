@@ -30,13 +30,43 @@ check() {   # check "libellé" "attendu" "obtenu"
 echo "=== 1. Statuts HTTP (nginx -> fichiers statiques) ==="
 for pair in "/:200" "/play/:200" "/battle/:200" "/multi/:200" \
             "/robots.txt:200" "/sitemap.xml:200" "/llms.txt:200" \
-            "/ai-catalog.json:200" "/.well-known/ai-catalog.json:200" \
+            "/ai-catalog.json:404" "/.well-known/ai-catalog.json:200" \
             "/css/variables.css:200" "/js/app.js:200" \
             "/nexiste-pas:404" "/api/sans-objet:404"; do
     url="${pair%:*}"; want="${pair##*:}"
     code=$(curl_nx -o /dev/null -w '%{http_code}' "$BASE$url")
     check "GET $url" "$want" "$code"
 done
+
+echo "=== 1b. Livraison des ressources agents IA (SEO-23) ==="
+# Un audit d'agent ne pardonne ni le soft 404 ni le mauvais type : la page
+# d'accueil servie à la place d'un manifeste se lit « Unexpected token '<',
+# "<!DOCTYPE " » côté JSON et « aucun en-tête H1, aucun lien » côté llms.txt.
+for pair in "/llms.txt:text/plain" "/llms.md:text/markdown" \
+            "/agent-skills.md:text/markdown" \
+            "/.well-known/ai-catalog.json:application/json" \
+            "/.well-known/ard.json:application/json" \
+            "/.well-known/agent-card.json:application/json"; do
+    url="${pair%%:*}"; want="${pair##*:}"
+    ctype=$(curl_nx -o /dev/null -w '%{content_type}' "$BASE$url")
+    case "$ctype" in
+        *"$want"*) got=oui ;;
+        *)         got=non ;;
+    esac
+    check "Content-Type $url ($want)" "oui" "$got"
+done
+
+# Le corps doit être le contrat annoncé, pas du HTML déguisé.
+llms_h1=$(curl_nx "$BASE/llms.txt" | head -1)
+case "$llms_h1" in "# "*) r=oui ;; *) r=non ;; esac
+check "llms.txt commence par un en-tete H1" "oui" "$r"
+
+catalog_head=$(curl_nx "$BASE/.well-known/ai-catalog.json" | head -c 1)
+check "ai-catalog.json commence par '{'" "{" "$catalog_head"
+
+# /.well-known/ doit rester crawlable, sinon le manifeste est déclaré invalide.
+curl_nx "$BASE/robots.txt" | grep -q '^Disallow: /.well-known/' && r=oui || r=non
+check "robots.txt n'interdit pas /.well-known/" "non" "$r"
 
 echo "=== 2. En-têtes de sécurité (plan SEC-08) ==="
 H=$(curl_nx -D - -o /dev/null "$BASE/")

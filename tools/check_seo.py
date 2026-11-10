@@ -20,6 +20,13 @@ Le contrôle audite aussi les deux pages hub produites par `src/services/seo.py`
 (`mot-du-jour`, `methode`) : elles sont régénérées à chaque publication et jamais
 versionnées, donc seul un audit du gabarit rendu en mémoire protège la CI.
 
+Il audite enfin la **découvrabilité** des ressources d'agents (`SEO-22`, `SEO-24`) :
+`robots.txt` ne doit interdire ni `/.well-known/` ni les documents `llms.*` (un
+robot qui n'a pas le droit de lire un manifeste le déclare « non valide »), et
+toute URL de premier ordre annoncée par ces documents doit correspondre à un
+fichier livrable du webroot — l'audit Google ne signale jamais plus tôt qu'un
+lien mort vers sa propre documentation.
+
 Usage :
     python tools/check_seo.py
 """
@@ -358,6 +365,130 @@ def check_agentique() -> list[str]:
     return errors
 
 
+# --- Découvrabilité des ressources d'agents (`SEO-22`, `SEO-24`) ------------ #
+
+WEB_ROOT = RACINE / "volumes" / "web"
+ROBOTS_TXT = WEB_ROOT / "robots.txt"
+LLMS_MD = WEB_ROOT / "llms.md"
+SITE_ORIGIN = "https://cemantix.cyril-randon.fr"
+
+# Ressources que tout agent IA est censé pouvoir lire. `robots.txt` ne doit en
+# interdire aucune : un crawleur conforme aux usages robots (Google, GPTBot,
+# ClaudeBot…) qui n'a pas le droit de lire un manifeste ne peut pas le valider —
+# l'audit agentique remonte alors « le schéma ai-catalog.json n'est pas valide »
+# sans jamais dire que c'est un refus de crawl. Et si le serveur de fichiers
+# replie de surcroît sur la page d'accueil, le JSON attendu se lit
+# « Unexpected token '<', "<!DOCTYPE " ».
+RESSOURCES_AGENTS = (
+    "/llms.txt",
+    "/llms.md",
+    "/agent-skills.md",
+    "/.well-known/ai-catalog.json",
+    "/.well-known/ard.json",
+    "/.well-known/agent-card.json",
+)
+
+# URLs qui ne correspondent à aucun fichier versionné parce qu'elles sont servies
+# par l'API ou produites au démarrage par `ensure_seo_published()` : elles ne
+# peuvent pas être tenues en défaut dans un dépôt fraîchement cloné.
+URLS_GENREES = (
+    "/",
+    "/sitemap.xml",
+    "/indexnow-key.txt",
+    "/mot-du-jour/",
+    "/methode/",
+    "/puzzles/",
+)
+
+
+def _robots_interdit(robots: str, url_path: str):
+    """Motif `Disallow:` qui bloque `url_path`, ou `None` si la ressource est lisible.
+
+    Convention robots (RFC 9309) : un motif est un préfixe du chemin, `*` étant le
+    seul joker reconnu par les crawleurs.
+    """
+    for ligne in robots.splitlines():
+        ligne = ligne.strip()
+        if not ligne.lower().startswith("disallow:"):
+            continue
+        motif = ligne.split(":", 1)[1].strip()
+        if not motif:
+            continue
+        regex = "^" + "".join(".*" if car == "*" else re.escape(car) for car in motif)
+        if re.match(regex, url_path):
+            return motif
+    return None
+
+
+def _urls_de_meme_origine(texte: str) -> list[str]:
+    """Chemins `SITE_ORIGIN/...` cités dans un document Markdown ou JSON.
+
+    La classe exclut les délimiteurs qui ne font jamais partie d'un chemin de ce
+    site : parenthèse d'un lien Markdown, guillemet d'un attribut JSON, backtick
+    d'un code en ligne, virgule et ponctuation collée à l'URL.
+    """
+    return re.findall(re.escape(SITE_ORIGIN) + r"(/[^\s)\]\"'`,]*)", texte)
+
+
+def _fichier_livrable(chemin: str) -> bool:
+    """Le webroot peut-il répondre sur cette URL (fichier, page générée ou API) ?"""
+    if chemin.startswith("/api/") or chemin in URLS_GENREES or chemin.startswith("/puzzles/"):
+        return True
+    cible = WEB_ROOT / chemin.lstrip("/")
+    if chemin.endswith("/"):
+        return (cible / "index.html").exists() or cible.exists()
+    return cible.exists()
+
+
+def check_decouvrabilite_agents() -> list[str]:
+    """`robots.txt` laisse lire les manifestes, et chaque URL annoncée est livrable."""
+    erreurs: list[str] = []
+
+    if not ROBOTS_TXT.exists():
+        erreurs.append("volumes/web/robots.txt manquant (les agents y cherchent le plan du site)")
+    else:
+        robots = ROBOTS_TXT.read_text(encoding="utf-8")
+        for ressource in RESSOURCES_AGENTS:
+            motif = _robots_interdit(robots, ressource)
+            if motif:
+                erreurs.append(
+                    f"volumes/web/robots.txt : « Disallow: {motif} » interdit {ressource} — "
+                    "une ressource de découverte illisible par le robot est remontée "
+                    "par l'audit agentique comme un manifeste absent ou invalide"
+                )
+
+    vus = set()
+    for source in (LLMS_TXT, LLMS_MD, AGENT_SKILLS):
+        if not source.exists():
+            continue
+        for chemin in _urls_de_meme_origine(source.read_text(encoding="utf-8")):
+            if (source, chemin) in vus or _fichier_livrable(chemin):
+                continue
+            vus.add((source, chemin))
+            erreurs.append(
+                f"{source.relative_to(RACINE)} : lien mort vers {SITE_ORIGIN}{chemin} — "
+                "aucun fichier du webroot ne correspond (page générée absente d'URLS_GENREES ?)"
+            )
+
+    for manifest in (AI_CATALOG, AGENT_CARD):
+        if not manifest.exists():
+            continue
+        try:
+            contenu = json.loads(manifest.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue  # déjà remonté par check_agentique()
+        for chemin in _urls_de_meme_origine(json.dumps(contenu, ensure_ascii=False)):
+            if (manifest, chemin) in vus or _fichier_livrable(chemin):
+                continue
+            vus.add((manifest, chemin))
+            erreurs.append(
+                f"{manifest.relative_to(RACINE)} : ressource annoncée injoignable "
+                f"{SITE_ORIGIN}{chemin}"
+            )
+
+    return erreurs
+
+
 def check_gtm_fuite() -> list[str]:
     """Anti-fuite GTM : aucun identifiant réel ne doit être écrit sur le disque.
 
@@ -389,6 +520,7 @@ def main() -> int:
         total_errors.extend(errs)
     total_errors.extend(check_pages_generees())
     total_errors.extend(check_agentique())
+    total_errors.extend(check_decouvrabilite_agents())
     total_errors.extend(check_gtm_fuite())
 
     if total_errors:
@@ -400,6 +532,7 @@ def main() -> int:
     print(f"[OK] Audit SEO reussi sur {len(PAGES)} pages principales (title, description, canonical, OG, JSON-LD).")
     print("[OK] Audit des pages hub generees reussi (mot-du-jour, methode).")
     print("[OK] Audit agentique reussi (llms.txt H1 + liens, catalogue ARD conforme).")
+    print("[OK] Decouvrabilite agents : robots.txt ne bloque aucune ressource, aucun lien mort annonce.")
     print("[OK] Anti-fuite GTM : aucun ID reel commité dans volumes/web (placeholder uniquement).")
     return 0
 
