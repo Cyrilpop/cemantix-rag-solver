@@ -278,12 +278,29 @@ def handle_solo_post(
         mode = data.get("mode", "daily")
         difficulty = data.get("difficulty", "normal")
 
-        session = manager.get_session(game_id) if game_id else None
-        if not session:
-            log(f"🔄  [API JEU] Session « {game_id} » expirée/inconnue -> auto-renouvellement ({mode}, {difficulty})")
-            session = manager.new_game(
-                mode=mode, difficulty=difficulty, force=False, player_id=player_id
-            )
+        # Pour le mode daily, vérifier si la session demandée correspond à la date du jour
+        if mode == "daily":
+            # Si le game_id fait référence à une date antérieure (ex: daily-2026-11-08-...)
+            # ou si aucun game_id valide pour aujourd'hui n'est fourni, on bascule sur la session du jour
+            expected_prefix = f"daily-{today_str}"
+            if not game_id or not game_id.startswith(expected_prefix):
+                log(f"🔄  [API JEU] Session daily « {game_id} » périmée ou d'une date antérieure -> bascule sur le puzzle du jour ({today_str})")
+                session = manager.new_game(
+                    mode="daily", difficulty=difficulty, force=False, player_id=player_id
+                )
+            else:
+                session = manager.get_session(game_id)
+                if not session:
+                    session = manager.new_game(
+                        mode="daily", difficulty=difficulty, force=False, player_id=player_id
+                    )
+        else:
+            session = manager.get_session(game_id) if game_id else None
+            if not session:
+                log(f"🔄  [API JEU] Session « {game_id} » expirée/inconnue -> auto-renouvellement ({mode}, {difficulty})")
+                session = manager.new_game(
+                    mode=mode, difficulty=difficulty, force=False, player_id=player_id
+                )
 
         if mode == "daily" and player_id:
             db_game = get_or_create_solo_player_game(today_str, player_id)

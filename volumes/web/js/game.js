@@ -26,6 +26,20 @@ export const gameState = {
   leaderboard: [],
 };
 
+export function getParisTodayDate() {
+  try {
+    const formatter = new Intl.DateTimeFormat("fr-CA", {
+      timeZone: "Europe/Paris",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return formatter.format(new Date()); // Format standard YYYY-MM-DD
+  } catch (_) {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 export function formatFrenchDate(dateStr) {
   if (!dateStr) return "";
   try {
@@ -254,6 +268,17 @@ function loadGameState(targetMode) {
     }
 
     if (!sessionToLoad || !sessionToLoad.gameId) return false;
+
+    // Pour le mode Défi du Jour : si la date sauvegardée n'est pas celle d'aujourd'hui (fuseau Paris),
+    // la session locale est obsolète et ne doit pas restaurer l'écran de victoire de la veille.
+    const requestedMode = targetMode || data.currentMode || gameState.mode || "daily";
+    if (requestedMode === "daily") {
+      const todayParis = getParisTodayDate();
+      if (sessionToLoad.puzzleDate && sessionToLoad.puzzleDate !== todayParis) {
+        modeSessions.daily = null;
+        return false;
+      }
+    }
 
     if (sessionToLoad.savedAt && (Date.now() - sessionToLoad.savedAt > 24 * 3600 * 1000)) {
       return false;

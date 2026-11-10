@@ -454,7 +454,20 @@ class GameManager:
             # Si c'est le défi du jour et que la session n'était pas en mémoire sous cet ID
             if game_id.startswith("daily-") or game_id == "daily":
                 secret, puzzle_id, puzzle_date = self.get_daily_secret()
-                canonical_id = game_id if game_id.startswith(f"daily-{puzzle_date}") else f"daily-{puzzle_date}"
+
+                # Si l'ID demandé est pour une date obsolète (ex: daily-2026-11-08-uuid alors qu'on est le 2026-11-10),
+                # on extrait le player_id s'il existe pour cibler la partie du jour de ce joueur
+                p_id = None
+                parts = game_id.split("-")
+                # Exemples de format: daily-YYYY-MM-DD-player_id ou daily-YYYY-MM-DD
+                if len(parts) >= 5:
+                    p_id = "-".join(parts[4:]).strip()
+
+                if game_id.startswith(f"daily-{puzzle_date}"):
+                    canonical_id = game_id
+                else:
+                    canonical_id = f"daily-{puzzle_date}-{p_id}" if p_id else f"daily-{puzzle_date}"
+
                 if canonical_id in self.sessions:
                     self.sessions[game_id] = self.sessions[canonical_id]
                     return self.sessions[canonical_id]
@@ -467,11 +480,11 @@ class GameManager:
                         self.sessions[game_id] = db_s
                     return db_s
 
-                # Extraction de player_id si présent dans game_id (ex: daily-2026-11-08-uuid)
-                p_id = None
-                prefix = f"daily-{puzzle_date}-"
-                if game_id.startswith(prefix):
-                    p_id = game_id[len(prefix):].strip()
+                # Si p_id non extrait par split, vérifier le préfixe du jour
+                if not p_id:
+                    prefix = f"daily-{puzzle_date}-"
+                    if game_id.startswith(prefix):
+                        p_id = game_id[len(prefix):].strip()
 
                 session = GameSession(
                     game_id=canonical_id,
