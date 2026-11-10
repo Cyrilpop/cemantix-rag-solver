@@ -989,7 +989,6 @@ function renderLeaderboard() {
         <div class="guess-left" style="display: flex; align-items: center; gap: 0.65rem;">
           <span class="guess-order" style="font-weight: 700; color: ${rankColor};">#${item.rank}</span>
           <span class="guess-player-name" style="font-size: 0.88rem; font-weight: 600; text-transform: none; ${isMe ? "color: var(--accent); font-weight: 800;" : ""}">${escapeHtml(item.username)}</span>
-          ${item.is_bot ? '<span style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7;">🤖</span>' : ""}
           ${statusBadge}
         </div>
         <div class="guess-right" style="display: flex; align-items: center; gap: 0.75rem;">
