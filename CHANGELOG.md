@@ -4,7 +4,17 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
-## [Non publié] - 2026-11-09 · Découvrabilité agents IA : `llms.txt` et catalogue ARD enfin livrables (`SEO-22` à `SEO-25`)
+## [Non publié] - 2026-11-10 · Correction de la réinitialisation et synchronisation du Défi du Jour après minuit
+
+**Branche :** `fix/daily-puzzle-midnight-reset-persistence`
+
+### Corrigé
+- **Défi du Jour solo : réinitialisation garantie lors du changement de date à minuit (`JEU-01`)** :
+  - **Frontend (`volumes/web/js/game.js`)** : calcul de la date courante de référence (`Europe/Paris`) via `getParisTodayDate()`. Si la session sauvegardée dans le `localStorage` appartient à un jour antérieur, elle est immédiatement déclarée caduque lors du chargement : l'écran de victoire de la veille n'est plus restauré et les inputs ne sont plus bloqués.
+  - **Backend (`src/api/routes/solo.py`)** : dans la route `/api/game/resume`, si une demande de reprise de partie en mode `daily` comporte un identifiant ou une date obsolète, le serveur bascule automatiquement sur la session officielle du jour (`daily-{today_str}`) pour le joueur au lieu d'ignorer la mise à jour.
+  - **Backend (`src/game/manager.py`)** : dans `get_session()`, extraction systématique du `player_id` même en présence d'un ancien identifiant de partie journalière pour restaurer correctement la partie du jour sans orphelin.
+
+## 2026-11-09 · Découvrabilité agents IA : `llms.txt` et catalogue ARD enfin livrables (`SEO-22` à `SEO-25`)
 
 **Évolution :** [docs/roadmap/2026-11-09-decouvrabilite-agents-ia](docs/roadmap/2026-11-09-decouvrabilite-agents-ia/01-plan.md) ·
 **Branche :** `fix/livraison-ressources-agents-ia`
