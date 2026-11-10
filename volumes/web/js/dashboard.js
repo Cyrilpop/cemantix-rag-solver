@@ -21,7 +21,7 @@ let cachedAppVersion = null;
 async function loadAppVersion() {
   if (cachedAppVersion) return cachedAppVersion;
   try {
-    const res = await fetch("version.json", { cache: "no-cache" });
+    const res = await fetch("/version.json", { cache: "no-cache" });
     if (res.ok) {
       const data = await res.json();
       if (data && data.version) {

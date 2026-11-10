@@ -17,6 +17,20 @@ export function activateDeferredStyles() {
   }
 }
 
+export async function initAppVersion() {
+  const el = document.getElementById("last-updated") || document.getElementById("app-version");
+  if (!el) return;
+  try {
+    const res = await fetch("/version.json", { cache: "no-cache" });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.version) {
+        el.textContent = `v${data.version}`;
+      }
+    }
+  } catch (_) {}
+}
+
 export function initTheme() {
   activateDeferredStyles();
 
@@ -35,6 +49,7 @@ export function initTheme() {
   initSpoiler();
   initMobileNavScroll();
   initMobileKeyboardAdapt();
+  initAppVersion();
 }
 
 export function initMobileKeyboardAdapt() {
