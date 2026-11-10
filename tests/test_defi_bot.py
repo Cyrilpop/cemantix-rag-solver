@@ -256,7 +256,12 @@ class TestFileDeTaches(unittest.TestCase):
 
     def test_purge(self):
         dao.create_challenge("amour", self.h)
-        self.assertGreaterEqual(dao.purge_older_than(days=-30), 1)
+        # days <= 0 ne purge rien (rétention infinie par défaut)
+        self.assertEqual(dao.purge_older_than(days=0), 0)
+        self.assertEqual(dao.purge_older_than(days=-1), 0)
+        self.assertEqual(dao.count_queued(), 1)
+        # Avec force_purge=True, la suppression s'exécute même pour des dates passées
+        self.assertGreaterEqual(dao.purge_older_than(days=-30, force_purge=True), 1)
         self.assertEqual(dao.count_queued(), 0)
 
     def test_statut_terminal_reserve(self):
