@@ -81,7 +81,38 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ---
 
-## [Non publié] - 2026-11-07 · Jalon M14 : Authentification Joueurs sans Email, Profils Invités, Pseudos [Nom][Adjectif] & Phrase de Secours
+## [Non publié] - 2026-11-09 · Rétention Intégrale des Défis au Bot
+
+### Modifié
+- **Désactivation de la Purge Destructive des Défis (`src/db/challenges.py`, `src/services/challenges.py`, `.env.example`, `README.md`)** :
+  - Modification de la politique de rétention par défaut `CHALLENGE_RETENTION_DAYS` de 30 jours à `0` (rétention infinie).
+  - La fonction `purge_older_than()` ne supprime plus rien si `days <= 0` (sauf appel explicite avec `force_purge=True`), préservant l'ensemble de l'historique des défis (`bot_challenges`, `bot_challenge_stats`, `bot_challenge_guesses`) en base de données.
+  - La routine de maintenance nocturne et au démarrage `challenge_maintenance()` vérifie si la rétention est strictement positive avant d'exécuter un quelconque nettoyage.
+  - Mise à jour de la documentation et des fichiers de configuration (`.env.example`, `README.md`) et validation complète de la suite de tests unitaires.
+
+## [1.15.1] - 2026-11-09 · Protection Anti Crawl-Trap SEO & Rétablissement 404
+
+### Ajouté
+- **Enrichissement de la FAQ Pédagogique & Données Structurées FAQPage (`volumes/web/index.html`)** :
+  - Ajout d'une nouvelle entrée didactique expliquant le fonctionnement du solveur : lemmatisation (concept neutre vs forme grammaticale), similarité cosinus (angle vectoriel de proximité sémantique Word2Vec frWac) et raisonnement RAG (triangulation et resserrement via ChromaDB).
+  - Synchronisation du schéma JSON-LD `FAQPage` pour l'affichage enrichi dans les résultats de recherche Google.
+  - Remplacement de la directive globale de repli `try_files {path} {path}/index.html {path}/ /index.html` par `try_files {path} {path}/index.html {path}/ =404` dans la configuration Caddy du reverse-proxy.
+  - Élimine le renvoi silencieux de `HTTP 200 OK` (soft-404) sur les chemins inexistants ou tronqués (ex: `/page/3/`, `/page/3/play/mot-du-jour/puzzles/`).
+  - Stoppe les boucles d'exploration infinies induites par la résolution relative des liens de navigation par Googlebot et assainit la couverture d'indexation dans Google Search Console.
+
+### Corrigé
+- **Persistance des Trajectoires en Base de Données (`database/init.sql`, `src/db/connection.py`, `src/db/solo.py`)** :
+  - Élargissement de la colonne `weather` de `VARCHAR(8)` à `VARCHAR(32)` dans `solo_player_guesses` et `bot_challenge_guesses` sous PostgreSQL et SQLite, évitant l'erreur `StringDataRightTruncation` sur les statuts chauds et victorieux (`🥵 Très chaud`, `😱 Brûlant`, `🥳 Trouvé !`).
+  - Ajout de la migration idempotente dans `init_db()` pour appliquer la modification automatiquement en production.
+  - Sécurisation de la troncature `weather[:32]` et logging explicite des exceptions lors des insertions des tentatives au lieu d'un masquage silencieux.
+  - Rétablissement complet de l'affichage de la modale de replay de partie pour les joueurs et les bots simulés.
+
+### Modifié
+- **Ergonomie du Mode Défi du Jour (`volumes/web/play/index.html`, `volumes/web/js/game.js`)** :
+  - Masquage automatique du bouton « Nouvelle Partie » en mode Défi du Jour (le mot quotidien étant unique chaque jour).
+  - Affichage réservé exclusivement au mode Illimité pour relancer une énigme aléatoire à volonté.
+
+## [1.15.0] - 2026-11-08 · Jalon M15 : Mot du Jour Solo Aléatoire, Classement Quotidien & Indices IA Révélables
 
 ### Ajouté
 - **Schémas SQL Idempotents PostgreSQL & SQLite (`database/init.sql`, `src/db/connection.py`)** :

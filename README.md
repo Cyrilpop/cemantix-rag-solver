@@ -336,7 +336,7 @@ volumes/web/
 ├── mot-du-jour/      # Hub mot du jour, thermomètre et indices (généré hors Git)
 ├── methode/          # Guide des indices, FAQ et synonymes (généré hors Git)
 ├── play/             # Interface dédiée au jeu interactif (URL propre : /play/)
-│   └── index.html    # Page de jeu (mode défi du jour, mode illimité)
+│   └── index.html    # Page de jeu (défi quotidien unique, mode illimité avec relance)
 ├── battle/           # Mode Battle Joueur vs Bot IA RAG (URL propre : /battle/)
 │   └── index.html    # Page de duel contre l'IA, double jauge et indices
 ├── multi/            # Mode Multijoueur 1v1 Tour par Tour (URL propre : /multi/)
@@ -395,7 +395,7 @@ Le visiteur propose **un mot secret** ; le solveur RAG du site doit le retrouver
 3. **Le front affiche** — `js/defi.js` ouvre un `EventSource` sur `/api/challenge/<id>/stream` (repli polling automatique si le flux tombe) et rend chaque coup au gabarit exact de la trajectoire du mot du jour ; le bot peut **perdre** (statut `lost`), c'est une issue affichée.
 4. **Traçage analytique & KPIs communautaires (M8)** — à la clôture du défi, le worker enregistre de façon atomique et pérenne la performance dans `bot_challenge_stats` et le cheminement coup par coup dans `bot_challenge_guesses`. Les identifiants visiteurs sont pseudonymisés (`Visiteur #a1b2`, RGPD sans stockage d'IP brute), et l'API DAO agrège les indicateurs clés (taux de victoire IA/joueur, coups moyens, top mots joués, mots invaincus).
 
-Sécurité : IP hachée (HMAC-SHA256 salé, /24 avec sel persistant sur disque), purge automatique à 30 jours, identifiants de défis aléatoires 128 bits, `Cache-Control: no-store`, mot jamais révélé avant le statut terminal (et seulement si le bot a gagné), anti-XSS en trois couches, plafond de 16 flux SSE simultanés. Les IP exemptées se gèrent dans la console d'exploitation (onglet Actions).
+Sécurité : IP hachée (HMAC-SHA256 salé, /24 avec sel persistant sur disque), conservation intégrale de l'historique sans purge destructive (ou configurable via `CHALLENGE_RETENTION_DAYS`), identifiants de défis aléatoires 128 bits, `Cache-Control: no-store`, mot jamais révélé avant le statut terminal (et seulement si le bot a gagné), anti-XSS en trois couches, plafond de 16 flux SSE simultanés. Les IP exemptées se gèrent dans la console d'exploitation (onglet Actions).
 
 #### Configuration Caddy (Production & Anti-Cache Automatique) :
 Dans votre conteneur Caddy ou votre machine hôte, pointez la racine sur `./volumes/web` et appliquez la politique de cache HTTP optimisée.
@@ -565,10 +565,11 @@ cemantix.cyril-randon.fr {
         respond @intercepted 404
     }
 
-    # Fichiers statiques et routes propres (/play, /battle, /multi)
-    # PAS de repli sur /index.html (`SEO-23`) : un repli transforme chaque URL
-    # inconnue en HTTP 200 portant la page d'accueil (soft 404). Google le
-    # signale comme soft 404, et surtout un robot qui demande /llms.txt ou
+    # Fichiers statiques et routes propres (/play, /battle, /multi, /defi)
+    # PAS de repli sur /index.html (`SEO-23`, anti crawl-trap) : un repli transforme
+    # chaque URL inconnue en HTTP 200 portant la page d'accueil (soft 404). Google le
+    # signale comme soft 404 et s'enferme dans les boucles de concaténation de chemins
+    # relatifs ; surtout, un robot qui demande /llms.txt ou
     # /.well-known/ai-catalog.json reçoit du HTML qu'il tente de parser comme du
     # Markdown ou du JSON — c'est l'origine des deux erreurs d'audit remontées.
     # Le miroir local nginx (local/nginx/cemantix.local.conf) applique déjà

@@ -134,7 +134,7 @@ def _daily_summary(entry: dict) -> str:
 
     clue_words = format_clue_words_list(guesses, limit=10, secret_word=word)
     clue_part = (
-        f" Les 10 mots indices et synonymes les plus proches observés étaient {clue_words}."
+        f" Les 10 mots les plus proches calculés par la méthode cosinus RAG étaient {clue_words}."
         if clue_words
         else ""
     )
@@ -142,10 +142,10 @@ def _daily_summary(entry: dict) -> str:
     return (
         f"<strong>Cémantix du {escape(date_fr)}</strong> : {puzzle_label} a été "
         f"{status} en <strong>{escape(str(tries or '--'))} coups</strong> "
-        f"({escape(duration)}) par le solveur {escape(source_label)}."
+        f"et en {escape(duration)} par le solveur {escape(source_label)}."
         f"{clue_part} La solution reste masquée tant que vous ne la demandez pas ; elle est "
-        f"consultable sur la <a href=\"mot-du-jour/\">page du mot du jour Cémantix</a> et sur la "
-        f"<a href=\"puzzles/{escape(str(entry.get('date')), quote=True)}/\">"
+        f"consultable sur la <a href=\"/mot-du-jour/\">page du mot du jour Cémantix</a> et sur la "
+        f"<a href=\"/puzzles/{escape(str(entry.get('date')), quote=True)}/\">"
         f"page d'archive du jour</a>."
     )
 
@@ -178,10 +178,10 @@ def prerender_dashboard(entry: Optional[dict], web_root: Path = None) -> bool:
             "resume-subtitle": "Indices thermiques, synonymes et performance du solveur IA du jour",
             "resume-body": _daily_summary(entry),
             "resume-link": (
-                "Le <a href=\"mot-du-jour/\">mot du jour Cémantix</a> reprend ces indices "
-                "avec la solution dépliable, la <a href=\"methode/\">méthode des indices</a> "
+                "Le <a href=\"/mot-du-jour/\">mot du jour Cémantix</a> reprend ces indices "
+                "avec la solution dépliable, la <a href=\"/methode/\">méthode des indices</a> "
                 "explique le thermomètre et les synonymes à tester, et l'"
-                "<a href=\"puzzles/\">archive complète des puzzles</a> les retrouve jour "
+                "<a href=\"/puzzles/\">archive complète des puzzles</a> les retrouve jour "
                 "par jour."
             ),
         }
@@ -194,9 +194,9 @@ def prerender_dashboard(entry: Optional[dict], web_root: Path = None) -> bool:
                 "résolution de minuit."
             ),
             "resume-link": (
-                "Suivez le <a href=\"mot-du-jour/\">mot du jour Cémantix</a> dès sa "
-                "publication, consultez la <a href=\"methode/\">méthode des indices</a> et "
-                "l'<a href=\"puzzles/\">archive complète des puzzles</a>."
+                "Suivez le <a href=\"/mot-du-jour/\">mot du jour Cémantix</a> dès sa "
+                "publication, consultez la <a href=\"/methode/\">méthode des indices</a> et "
+                "l'<a href=\"/puzzles/\">archive complète des puzzles</a>."
             ),
         }
 

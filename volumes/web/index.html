@@ -155,10 +155,10 @@
           },
           {
             "@type": "Question",
-            "name": "Comment fonctionne le solveur IA de Cémantix ?",
+            "name": "Comment fonctionne le solveur IA : RAG, similarité cosinus et lemmes ?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Notre solveur exploite des plongements lexicaux vectoriels (Word2Vec entraîné sur le corpus français frWac) et une base vectorielle ChromaDB. L'algorithme calcule la proximité cosinus à travers plus de 150 000 mots pour converger rapidement vers le mot mystère."
+              "text": "Notre solveur ne devine pas au hasard : il combine la lemmatisation (regroupement sous la forme neutre de dictionnaire pour tester les concepts sans gaspiller de coups sur la grammaire), la similarité cosinus (mesure de l'angle géométrique entre les vecteurs issus du corpus frWac Word2Vec) et le raisonnement RAG (triangulation itérative via ChromaDB resserrant l'espace sémantique autour des zones les plus chaudes jusqu'à isoler le mot mystère)."
             }
           },
           {
@@ -256,11 +256,13 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand">
-        <img src="icons/favicon.png" alt="Cémantix Solver" class="brand-icon" width="48" height="48">
-        <div class="brand-text">
-          <span class="brand-title">Cémantix Solver</span>
-          <span class="brand-subtitle">Mot du Jour &amp; IA Sémantique</span>
-        </div>
+        <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;color:inherit;">
+          <img src="/icons/favicon.png" alt="Cémantix Solver" class="brand-icon" width="48" height="48">
+          <div class="brand-text">
+            <span class="brand-title">Cémantix Solver</span>
+            <span class="brand-subtitle">Mot du Jour &amp; IA Sémantique</span>
+          </div>
+        </a>
       </div>
 
       <div class="header-actions">
@@ -291,30 +293,30 @@
     <!-- Navigation des Vues Principales -->
     <!-- NAV-TABS:START -->
     <nav class="nav-tabs" aria-label="Navigation des vues">
-      <a href="./" id="tab-dashboard" class="nav-tab active">
+      <a href="/" id="tab-dashboard" class="nav-tab active">
         <span class="tab-icon">🎯</span>
         <span>Mot du Jour</span>
       </a>
-      <a href="play/" id="tab-play" class="nav-tab">
+      <a href="/play/" id="tab-play" class="nav-tab">
         <span class="tab-icon">🎮</span>
         <span>Jouer Solo</span>
       </a>
-      <a href="battle/" id="tab-battle" class="nav-tab">
+      <a href="/battle/" id="tab-battle" class="nav-tab">
         <span class="tab-icon">⚔️</span>
         <span>Mode Battle</span>
         <span class="tab-badge">Versus IA</span>
       </a>
-      <a href="multi/" id="tab-multi" class="nav-tab">
+      <a href="/multi/" id="tab-multi" class="nav-tab">
         <span class="tab-icon">👥</span>
         <span>Mode Multijoueur</span>
         <span class="tab-badge">1v1 Ami</span>
       </a>
-      <a href="defi/" id="tab-defi" class="nav-tab">
+      <a href="/defi/" id="tab-defi" class="nav-tab">
         <span class="tab-icon">🤖</span>
         <span>Défier le Bot</span>
         <span class="tab-badge">Live</span>
       </a>
-      <a href="puzzles/" id="tab-archives" class="nav-tab">
+      <a href="/puzzles/" id="tab-archives" class="nav-tab">
         <span class="tab-icon">📚</span>
         <span>Archives</span>
       </a>
@@ -323,15 +325,17 @@
 
     <!-- Vue : Mot du Jour & Supervision -->
     <div id="view-dashboard" class="view-content active">
-      <h1 class="page-heading">Cémantix du jour : indices, mot du jour et solution</h1>
-      <p class="page-intro">Le mot secret reste masqué jusqu'à votre clic. Les dix indices
-      mesurés par le solveur et la solution dépliable sont sur la page
-      <a href="mot-du-jour/">mot du jour Cémantix</a> ; la
-      <a href="methode/">méthode des indices</a> explique le thermomètre et les synonymes à tester.</p>
+      <h1 class="page-heading">Cémantix du <span id="heading-date"></span> : aide, indices, et solution</h1>
+      <p class="page-intro">Le mot du jour reste masqué jusqu'à votre clic. Vous avez trois indices pour le trouver
+        vous même, garanti sans divulgâcher (merci les québécois pour ce néologisme) !
+        Chaque jour retrouvez trois indices sous forme au choix de mot ou de petite énigme.
+      <a href="/mot-du-jour/">Cémantix</a> ; la <a href="/methode/">méthode des indices</a> explique le thermomètre et les
+        synonymes à tester.</p>
       <noscript>
         <div class="card" style="margin-bottom: 1.5rem; border-left: 4px solid var(--accent, #6366f1); padding: 1rem;">
           <h2 style="font-size: 1.1rem; margin-top: 0;">ℹ️ Navigation sans JavaScript</h2>
-          <p>Le suivi dynamique du mot du jour et les fonctionnalités interactives nécessitent JavaScript. Vous pouvez néanmoins consulter nos <a href="puzzles/">archives complètes des puzzles</a> avec indices et résolutions indexables au format HTML statique, ou découvrir les règles et stratégies ci-dessous.</p>
+          <p>Le suivi dynamique du mot du jour et les fonctionnalités interactives nécessitent JavaScript.
+            Vous pouvez néanmoins consulter nos <a href="/puzzles/">archives complètes des puzzles</a> avec indices et résolutions indexables au format HTML statique, ou découvrir les règles et stratégies ci-dessous.</p>
         </div>
       </noscript>
 
@@ -351,7 +355,7 @@
             <div class="secret-container">
               <div id="secret-word-card" class="secret-word-card is-spoiled" tabindex="0" role="button" aria-expanded="false" aria-label="Révéler le mot secret du jour">
                 <div class="secret-word-revealed">
-                  <span class="secret-label">MOT SECRET DU JOUR</span>
+                  <span class="secret-label">Cémantix du jour</span>
                   <h2 id="secret-word" class="secret-word-text">MOTDUJOUR</h2>
                   <div class="secret-actions">
                     <button id="copy-word-btn" class="btn btn-secondary btn-sm" title="Copier le mot dans le presse-papier">
@@ -368,7 +372,7 @@
             <!-- Badges métriques de la session du jour -->
             <div class="metrics-grid">
               <div class="metric-card">
-                <span class="metric-icon">🎯</span>
+                <span class="metric-icon">🔎</span>
                 <div class="metric-info">
                   <span class="metric-label">Coups Joués</span>
                   <span id="metric-tries" class="metric-value">-- essais</span>
@@ -376,7 +380,7 @@
               </div>
 
               <div class="metric-card">
-                <span class="metric-icon">⚡</span>
+                <span class="metric-icon">🧮</span>
                 <div class="metric-info">
                   <span class="metric-label">Temps Calcul</span>
                   <span id="metric-time" class="metric-value">-- s</span>
@@ -410,7 +414,7 @@
                   <span class="btn-icon">📝</span> Phrases
                 </button>
                 <button type="button" class="segment-btn" id="btn-dashboard-word" role="radio" aria-checked="false" title="Afficher sous forme de mots repères">
-                  <span class="btn-icon">🎯</span> Mots
+                  <span class="btn-icon">🔎</span> Mots
                 </button>
               </div>
             </div>
@@ -475,17 +479,17 @@
             <div class="stat-label">Puzzles Résolus</div>
           </div>
           <div class="stat-card card">
-            <span class="stat-icon">🎯</span>
+            <span class="stat-icon">🔎</span>
             <div class="stat-value" id="stat-avg-tries">0</div>
-            <div class="stat-label">Moyenne de Coups</div>
+            <div class="stat-label">Coups en moyenne</div>
           </div>
           <div class="stat-card card">
-            <span class="stat-icon">⚡</span>
+            <span class="stat-icon">⏱️</span>
             <div class="stat-value" id="stat-avg-time">0.0s</div>
             <div class="stat-label">Temps Moyen</div>
           </div>
           <div class="stat-card card">
-            <span class="stat-icon">💯</span>
+            <span class="stat-icon">🥳</span>
             <div class="stat-value" id="stat-win-rate">100%</div>
             <div class="stat-label">Taux de Succès</div>
           </div>
@@ -546,8 +550,8 @@
           </div>
           <!-- SEO-PRERENDER:DEBUT : contenu régénéré par `--publish-seo`
                (src/services/seo.py) pour rester lisible sans JavaScript. -->
-          <p id="seo-daily-summary" data-seo="resume-body"><strong>Cémantix du dimanche 8 novembre 2026</strong> : le puzzle #1712 a été résolu en <strong>10 coups</strong> (11,8 s) par le solveur 100 % RAG pur. Les 10 mots indices et synonymes les plus proches observés étaient médecine, justice, géographie, sport, animal, banque, transport, maison, temps. La solution reste masquée tant que vous ne la demandez pas ; elle est consultable sur la <a href="mot-du-jour/">page du mot du jour Cémantix</a> et sur la <a href="puzzles/2026-11-08/">page d'archive du jour</a>.</p>
-          <p class="seo-list" data-seo="resume-link">Le <a href="mot-du-jour/">mot du jour Cémantix</a> reprend ces indices avec la solution dépliable, la <a href="methode/">méthode des indices</a> explique le thermomètre et les synonymes à tester, et l'<a href="puzzles/">archive complète des puzzles</a> les retrouve jour par jour.</p>
+          <p id="seo-daily-summary" data-seo="resume-body"><strong>Cémantix du dimanche 8 novembre 2026</strong> : le puzzle #1712 a été résolu en <strong>10 coups</strong> (11,8 s) par le solveur 100 % RAG pur. Les 10 mots indices et synonymes les plus proches observés étaient médecine, justice, géographie, sport, animal, banque, transport, maison, temps. La solution reste masquée tant que vous ne la demandez pas ; elle est consultable sur la <a href="/mot-du-jour/">page du mot du jour Cémantix</a> et sur la <a href="/puzzles/2026-11-08/">page d'archive du jour</a>.</p>
+          <p class="seo-list" data-seo="resume-link">Le <a href="/mot-du-jour/">mot du jour Cémantix</a> reprend ces indices avec la solution dépliable, la <a href="/methode/">méthode des indices</a> explique le thermomètre et les synonymes à tester, et l'<a href="/puzzles/">archive complète des puzzles</a> les retrouve jour par jour.</p>
           <!-- SEO-PRERENDER:FIN -->
         </div>
       </section>
@@ -618,6 +622,18 @@
             </details>
 
             <details class="faq-item">
+              <summary class="faq-question">Comment fonctionne le solveur IA : RAG, similarité cosinus et lemmes ?</summary>
+              <div class="faq-answer">
+                <p>Notre solveur ne devine pas au hasard : il combine trois principes linguistiques et mathématiques pour converger méthodiquement vers le mot mystère :</p>
+                <ol class="seo-list" style="margin-top: 0.5rem;">
+                  <li><strong>La lemmatisation (le lemme) :</strong> Pour ne pas gaspiller de coups avec des variantes grammaticales (pluriels, féminins ou verbes conjugués), tous les mots sont ramenés à leur forme neutre de dictionnaire — le <em>lemme</em> (par exemple : <em>mangeait</em> ou <em>mangent</em> deviennent <em>manger</em>). Cela permet de tester directement le concept plutôt que sa grammaire.</li>
+                  <li><strong>La similarité cosinus (la boussole mathématique) :</strong> Dans notre modèle, chaque mot est traduit en coordonnées géométriques (un vecteur) selon ses apparitions dans des millions de textes en français. Pour mesurer si deux mots sont proches, on calcule l’angle entre leurs directions : c'est le <strong>cosinus</strong>. Plus l’angle est serré, plus le score grimpe vers 1000 ‰, signifiant que les deux mots partagent le même univers de sens.</li>
+                  <li><strong>Le raisonnement RAG (la triangulation par les données) :</strong> À chaque mot proposé, le solveur enregistre la température obtenue et interroge instantanément sa base de données vectorielle (<em>Retrieval</em>). Il compare cette réponse avec ses essais précédents pour éliminer les fausses pistes et orienter le prochain mot vers la zone la plus chaude, resserrant l'étau jusqu'à trouver le mot secret.</li>
+                </ol>
+              </div>
+            </details>
+
+            <details class="faq-item">
               <summary class="faq-question">Quelle est la différence entre Cémantix, Cemantle et Semantix ?</summary>
               <div class="faq-answer">
                 <p><strong>Cémantix</strong> (ou <strong>Cemantix</strong> sans accent) est le jeu quotidien en langue française basé sur la sémantique vectorielle. <strong>Cemantle</strong> est son équivalent officiel en langue anglaise. Les termes comme <strong>Semantix</strong> ou <strong>Cementix</strong> sont des fautes d'orthographe ou variantes phonétiques fréquentes recherchées sur Google pour trouver le même jeu.</p>
@@ -634,14 +650,14 @@
             <details class="faq-item">
               <summary class="faq-question">Quel est le mot du jour Cémantix ?</summary>
               <div class="faq-answer">
-                <p>Le mot du jour Cémantix est renouvelé chaque nuit à <strong>minuit, heure de Paris</strong>. Il reste masqué sur ce site tant que vous ne le demandez pas : la page <a href="mot-du-jour/">mot du jour Cémantix</a> publie les dix mots les plus proches mesurés par le solveur, et la solution se déplie à votre initiative.</p>
+                <p>Le mot du jour Cémantix est renouvelé chaque nuit à <strong>minuit, heure de Paris</strong>. Il reste masqué sur ce site tant que vous ne le demandez pas : la page <a href="/mot-du-jour/">mot du jour Cémantix</a> publie les dix mots les plus proches mesurés par le solveur, et la solution se déplie à votre initiative.</p>
               </div>
             </details>
 
             <details class="faq-item">
               <summary class="faq-question">Comment lire les indices du Cémantix du jour ?</summary>
               <div class="faq-answer">
-                <p>Un indice Cémantix est une similarité exprimée en pour mille : le mot secret vaut exactement <strong>1000 ‰</strong>. Au-delà de 500 ‰ vous êtes dans le Top 1000 des mots les plus proches ; sous 200 ‰ le champ lexical est étranger à la cible ; en dessous de 0, vous avez éliminé une famille entière — c'est déjà une information. Le détail des paliers est dans la <a href="methode/">méthode des indices Cémantix</a>.</p>
+                <p>Un indice Cémantix est une similarité exprimée en pour mille : le mot secret vaut exactement <strong>1000 ‰</strong>. Au-delà de 500 ‰ vous êtes dans le Top 1000 des mots les plus proches ; sous 200 ‰ le champ lexical est étranger à la cible ; en dessous de 0, vous avez éliminé une famille entière — c'est déjà une information. Le détail des paliers est dans la <a href="/methode/">méthode des indices Cémantix</a>.</p>
               </div>
             </details>
 

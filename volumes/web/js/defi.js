@@ -192,7 +192,7 @@ function showResult(done) {
     const challengeId = currentId || done.challenge_id || ("temp-" + Date.now());
     const alreadyPresent = challengesList.some((it) => it.challenge_id === challengeId || (it.secret_word === done.word && Math.abs(new Date(it.date).getTime() - Date.now()) < 10000));
     if (!alreadyPresent) {
-      challengesList.unshift({
+      const newEntry = {
         challenge_id: challengeId,
         secret_word: done.word,
         player: storedUser || "Vous",
@@ -200,7 +200,11 @@ function showResult(done) {
         tries_count: done.tries_count || (displayedSteps.length || 0),
         duration_seconds: parseFloat(displayDuration),
         date: new Date().toISOString(),
-      });
+      };
+      challengesList.unshift(newEntry);
+      if (newEntry.outcome === "lost") {
+        wallOfFameList.unshift(newEntry);
+      }
       renderChallengesList();
     }
   }
@@ -403,6 +407,30 @@ export function initDefi() {
   const wall = el("defi-wall-of-fame");
   if (wall) wall.addEventListener("click", onWallClick);
 
+  const tableHead = document.querySelector("#defi-table thead");
+  if (tableHead) {
+    tableHead.addEventListener("click", (evt) => {
+      const btn = evt.target.closest("button.th-sort-btn");
+      if (!btn) return;
+      const key = btn.dataset.sortKey;
+      if (!key) return;
+      if (activeSortKey === key) {
+        if (activeSortDir === "asc") {
+          activeSortDir = "desc";
+        } else {
+          // Remise à zéro (tri chronologique par défaut)
+          activeSortKey = null;
+          activeSortDir = "asc";
+        }
+      } else {
+        activeSortKey = key;
+        activeSortDir = "asc";
+      }
+      updateSortHeaders();
+      renderChallengesList();
+    });
+  }
+
   const filterGroup = el("defi-list-filters");
   if (filterGroup) {
     filterGroup.addEventListener("click", (evt) => {
@@ -428,7 +456,10 @@ export function initDefi() {
 // --------------------------------------------------------------------------- //
 const FETCH_JSON = { headers: { Accept: "application/json" } };
 let challengesList = [];
+let wallOfFameList = [];
 let activeChallengeFilter = "all";
+let activeSortKey = null; // 'tries' | 'duration' | null
+let activeSortDir = "asc"; // 'asc' | 'desc'
 let currentGuestToken = "";
 
 function animateCount(node, target, decimals = 0) {
@@ -485,15 +516,79 @@ function renderPlayerBanner(player) {
   banner.hidden = false;
 }
 
+function updateSortHeaders() {
+  document.querySelectorAll("#defi-table th.th-sortable").forEach((th) => {
+    const btn = th.querySelector(".th-sort-btn");
+    const key = btn ? btn.dataset.sortKey : null;
+    const arrow = th.querySelector(".sort-arrow");
+    if (!arrow) return;
+    if (activeSortKey === key) {
+      th.classList.add("sorted");
+      if (activeSortDir === "asc") {
+        arrow.textContent = "▲";
+        th.setAttribute("aria-sort", "ascending");
+      } else {
+        arrow.textContent = "▼";
+        th.setAttribute("aria-sort", "descending");
+      }
+    } else {
+      th.classList.remove("sorted");
+      arrow.textContent = "▲▼";
+      th.removeAttribute("aria-sort");
+    }
+  });
+}
+
 function renderChallengesList() {
   const box = el("defi-wall-of-fame");
   if (!box) return;
 
-  const items = challengesList.filter((it) => {
+  const sourceList = activeChallengeFilter === "lost"
+    ? (wallOfFameList.length ? wallOfFameList : challengesList.filter((it) => it.outcome === "lost"))
+    : challengesList;
+
+  // Déduplication par mot secret : si un mot a été défié plusieurs fois, on ne garde
+  // à l'affichage que sa première occurrence historique (le défi le plus ancien).
+  const oldestByWord = new Map();
+  sourceList.forEach((it) => {
+    const w = String(it.secret_word || "").toLowerCase();
+    if (!w) return;
+    const existing = oldestByWord.get(w);
+    if (!existing) {
+      oldestByWord.set(w, it);
+    } else {
+      const timeCur = it.date ? new Date(it.date).getTime() : Infinity;
+      const timeOld = existing.date ? new Date(existing.date).getTime() : Infinity;
+      if (timeCur < timeOld) {
+        oldestByWord.set(w, it);
+      }
+    }
+  });
+
+  const deduplicatedList = Array.from(oldestByWord.values());
+
+  let items = deduplicatedList.filter((it) => {
     if (activeChallengeFilter === "lost") return it.outcome === "lost";
     if (activeChallengeFilter === "won") return it.outcome === "won" || it.outcome === "solved";
     return true;
   });
+
+  if (activeSortKey) {
+    items = items.slice().sort((a, b) => {
+      let valA;
+      let valB;
+      if (activeSortKey === "tries") {
+        valA = Number(a.tries_count ?? 99999);
+        valB = Number(b.tries_count ?? 99999);
+      } else if (activeSortKey === "duration") {
+        valA = Number(a.duration_seconds ?? 99999);
+        valB = Number(b.duration_seconds ?? 99999);
+      } else {
+        return 0;
+      }
+      return activeSortDir === "asc" ? valA - valB : valB - valA;
+    });
+  }
 
   if (!items.length) {
     const emptyMsg = activeChallengeFilter === "lost"
@@ -558,6 +653,7 @@ async function loadKpis(fresh = false) {
     challengesList = Array.isArray(data.recent_challenges) && data.recent_challenges.length
       ? data.recent_challenges
       : (data.wall_of_fame || []);
+    wallOfFameList = Array.isArray(data.wall_of_fame) ? data.wall_of_fame : [];
     renderChallengesList();
     renderPlayerBanner(data.player);
   } catch (_err) {

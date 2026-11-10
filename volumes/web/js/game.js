@@ -311,6 +311,10 @@ function restoreGameUI() {
   if (difficultyWrapper) {
     difficultyWrapper.style.display = gameState.mode === "unlimited" ? "flex" : "none";
   }
+  const gameActionsWrapper = document.getElementById("game-actions-wrapper");
+  if (gameActionsWrapper) {
+    gameActionsWrapper.style.display = gameState.mode === "unlimited" ? "block" : "none";
+  }
   if (difficultyBtns) {
     difficultyBtns.forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.diff === gameState.difficulty);

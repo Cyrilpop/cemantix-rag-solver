@@ -194,6 +194,21 @@ export function initDashboard() {
   // Historique - pagination
   const historyPrev = document.getElementById("history-prev");
   const historyNext = document.getElementById("history-next");
+
+  // Date format France
+  const headingDateEl = document.getElementById("heading-date");
+  if (headingDateEl) {
+    const now = new Date();
+    // Formate la date en français, ex : « du 8 novembre 2026 »
+    const formatted = now.toLocaleDateString("fr-FR", {
+      timeZone: "Europe/Paris",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+    headingDateEl.textContent = `du ${formatted}`;
+  }
+
   if (historyPrev) {
     historyPrev.addEventListener("click", () => {
       if (dashboardState.historyPage > 1) {

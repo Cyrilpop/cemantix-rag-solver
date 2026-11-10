@@ -226,7 +226,9 @@ def challenge_tick(store=None) -> bool:
 
 
 def challenge_maintenance() -> None:
-    """Purge RGPD des défis périmés (SEC-27), appelée au réveil du démon."""
+    """Purge périodique des défis périmés, appelée au réveil du démon si activée (CHALLENGE_RETENTION_DAYS > 0)."""
+    if CHALLENGE_RETENTION_DAYS <= 0:
+        return
     try:
         removed = purge_older_than(CHALLENGE_RETENTION_DAYS)
         if removed:
