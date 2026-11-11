@@ -780,7 +780,43 @@ python tools/build_css_bundles.py --check   # échoue si un bundle ou un bloc in
 ```
 
 À faire **après chaque modification d'un fichier de `css/`**, avant de déployer.
-Les sources (`variables.css`, `base.css`, …) et les bundles `css/dist/*.css` restent dans le dépôt : `src/services/seo.py` injecte également les tokens et `css/dist/puzzle.css` dans les pages d'archives `/puzzles/*`, qui n'emploient aucun lien CSS externe.
+Les sources (`variables.css`, `base.css`, `layout.css`, …) et les bundles `css/dist/*.css` restent dans le dépôt : `src/services/seo.py` injecte également les tokens et `css/dist/puzzle.css` dans les pages d'archives `/puzzles/*`, qui n'emploient aucun lien CSS externe.
+
+### Synchronisation universelle du Layout (Header, Menu, Footer)
+Le projet applique le principe de **source unique de vérité** pour la structure visuelle globale. Pour éviter les dérives entre les 5 vues applicatives (`/`, `/play/`, `/battle/`, `/multi/`, `/defi/`) et les gabarits SEO générés dynamiquement (`/puzzles/`, `/mot-du-jour/`, `/methode/`) :
+
+1. **Source de vérité du balisage HTML :**
+   - Les gabarits canoniques sont définis en Python dans [`src/services/layout_sync.py`](src/services/layout_sync.py) :
+     - `render_header()` : logo, marque, badge joueur, boutons de bascule de thème et mode anti-spoiler.
+     - `render_nav_tabs()` : barre d'onglets principale avec états actifs et badges de statut.
+     - `render_footer()` : mentions légales, liens auteur, liens d'accès rapide et version dynamique.
+   - Les fichiers HTML portent des balises d'encadrement strictes : `<!-- APP-HEADER:START -->` / `<!-- APP-HEADER:END -->`, `<!-- NAV-TABS:START -->` / `<!-- NAV-TABS:END -->` et `<!-- APP-FOOTER:START -->` / `<!-- APP-FOOTER:END -->`.
+
+2. **Source de vérité du style visuel :**
+   - [`volumes/web/css/base.css`](volumes/web/css/base.css) : reset CSS, variables de polices, comportement de défilement et charte des liens hypertextes généraux (soulignement animé dégradé au survol uniquement via `::after`, pas de soulignement au repos).
+   - [`volumes/web/css/layout.css`](volumes/web/css/layout.css) : disposition flexbox/grid du header, de la marque `.brand`, du menu de navigation et du footer.
+   - Les gabarits SEO (`src/services/seo_templates.py`) chargent directement `base.css` et `layout.css` à la source lors de la génération des pages d'archives, assurant une **parité visuelle stricte à 100%**.
+
+3. **Comment mettre à jour le Header, le Menu ou le Footer ?**
+   - **Pour modifier la structure HTML** (nouveau lien, icône, texte de copyright, attribut ARIA) :
+     1. Modifier la fonction correspondante dans [`src/services/layout_sync.py`](src/services/layout_sync.py).
+     2. Lancer la synchronisation locale pour répercuter immédiatement sur tous les fichiers HTML statiques :
+        ```bash
+        python tools/sync_layout.py
+        ```
+     3. Régénérer les pages SEO d'archives et de hubs :
+        ```bash
+        python -m src.services.seo --publish-seo
+        # Ou sous Docker :
+        docker compose run --rm cemantix --publish-seo
+        ```
+   - **Pour modifier le style CSS** (couleurs, espacements, animations hover des liens) :
+     1. Modifier [`volumes/web/css/layout.css`](volumes/web/css/layout.css) ou [`volumes/web/css/base.css`](volumes/web/css/base.css).
+     2. Recompiler les bundles et mettre à jour le CSS critique inliné :
+        ```bash
+        python tools/build_css_bundles.py
+        ```
+   - **Vérification automatique :** Au démarrage des conteneurs, `layout_sync.sync_all_pages()` est exécuté automatiquement, garantissant l'alignement absolu en production.
 
 Côté JavaScript, `js/app.js` charge `dashboard.js` et `game.js` en `import()` dynamique :
 un module n'est téléchargé et évalué que si la vue correspondante est présente dans le

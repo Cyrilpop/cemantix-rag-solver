@@ -37,6 +37,11 @@ html {
   scroll-behavior: smooth;
 }
 
+html.modal-open,
+body.modal-open {
+  overflow: hidden !important;
+}
+
 html,
 body {
   width: 100%;
@@ -59,21 +64,20 @@ body {
 }
 
 /* Liens Hypertextes Généraux (Style identique aux liens du footer) */
-a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable) {
+a:not(.btn):not(.nav-tab):not(.brand):not(.brand-link):not(.logo):not(.history-row-clickable):not(.archive-list a):not(.pager a) {
   color: #58a6ff;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration: none;
   font-weight: 600;
   position: relative;
   display: inline;
   transition: color 0.25s ease, text-shadow 0.25s ease;
 }
 
-[data-theme="light"] a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable) {
+[data-theme="light"] a:not(.btn):not(.nav-tab):not(.brand):not(.brand-link):not(.logo):not(.history-row-clickable):not(.archive-list a):not(.pager a) {
   color: #0969da;
 }
 
-a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable)::after {
+a:not(.btn):not(.nav-tab):not(.brand):not(.brand-link):not(.logo):not(.history-row-clickable):not(.archive-list a):not(.pager a)::after {
   content: "";
   position: absolute;
   left: 0;
@@ -85,16 +89,16 @@ a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable)::af
   border-radius: 1px;
 }
 
-a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hover {
+a:not(.btn):not(.nav-tab):not(.brand):not(.brand-link):not(.logo):not(.history-row-clickable):not(.archive-list a):not(.pager a):hover {
   color: #a5d6ff;
   text-shadow: 0 0 12px var(--accent-glow);
 }
 
-a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hover::after {
+a:not(.btn):not(.nav-tab):not(.brand):not(.brand-link):not(.logo):not(.history-row-clickable):not(.archive-list a):not(.pager a):hover::after {
   width: 100%;
 }
 
-[data-theme="light"] a:not(.btn):not(.nav-tab):not(.brand):not(.logo):not(.history-row-clickable):hover {
+[data-theme="light"] a:not(.btn):not(.nav-tab):not(.brand):not(.brand-link):not(.logo):not(.history-row-clickable):not(.archive-list a):not(.pager a):hover {
   color: #0550ae;
   text-shadow: 0 0 8px rgba(9, 105, 218, 0.25);
 }

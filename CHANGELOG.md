@@ -4,7 +4,29 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
-## [Non publié] - 2026-11-11 · Correction de la réinitialisation du Défi du Jour, harmonisation du Layout et fiabilisation Gemini
+## [Non publié] - 2026-11-11 · Architecture CSS modulaire, parité visuelle universelle et correctifs UI
+
+**Branche :** `feat/seo-modular-css-architecture`
+
+### Ajouté
+- **Architecture CSS modulaire & Parité visuelle universelle (`SEO-26`)** :
+  - Découplage de la feuille de style statique brute `PAGE_CSS` dans `src/services/seo_templates.py` : injection dynamique directe de `volumes/web/css/base.css` et `volumes/web/css/layout.css` à la source lors de la génération des pages d'archives et des hubs SEO.
+  - Parité visuelle stricte à 100% entre les pages applicatives interactives (`/play/`, `/battle/`, `/multi/`, `/defi/`) et les pages SEO (`/puzzles/`, `/mot-du-jour/`, `/methode/`) avec zéro requête HTTP bloquante (CSS critique inliné).
+  - Documentation exhaustive dans `README.md` détaillant la procédure pas-à-pas pour synchroniser et styliser le Header, le Menu d'onglets et le Footer universel.
+
+### Modifié
+- **Charte visuelle des liens hypertextes & animation de survol (`UI-02`)** :
+  - Suppression du soulignement statique au repos (`text-decoration: none`) sur tous les liens du site (`base.css`) et du footer (`layout.css`).
+  - Déploiement exclusif de la ligne bleue dégradée animée (`::after`) de gauche à droite lors du survol (`:hover`) avec halo lumineux.
+  - Protection des blocs de liens de navigation paginée (`.archive-list a`, `.pager a`) contre les surcharges CSS inline intempestives.
+
+### Corrigé
+- **Modale Trajectoire Bot : blocage de la fuite de défilement et restauration du scroll souris (`UI-03`)** :
+  - Correction du bug où la molette de la souris faisait défiler la page d'arrière-plan au lieu de la liste des coups dans la modale de trajectoire (`#trajectory-modal`).
+  - Ajout de la classe de verrouillage `modal-open` sur `<html>` et `<body>` avec `overflow: hidden !important` pour neutraliser le `overflow-y: scroll` de base.
+  - Ajout de `overscroll-behavior: contain;`, `flex: 1 1 auto;`, `min-height: 0;` et `-webkit-overflow-scrolling: touch;` sur `.trajectory-scroll-body` et `.modal-backdrop`.
+
+## 2026-11-11 · Correction de la réinitialisation du Défi du Jour, harmonisation du Layout et fiabilisation Gemini
 
 **Branche :** `fix/daily-puzzle-midnight-reset-persistence`
 

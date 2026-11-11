@@ -322,6 +322,8 @@ export function openTrajectoryModal(puzzleId, data, secretWordOverride = null) {
 
   if (modal) {
     modal.style.display = "flex";
+    document.documentElement.classList.add("modal-open");
+    document.body.classList.add("modal-open");
     document.body.style.overflow = "hidden";
   }
 }
@@ -330,6 +332,8 @@ export function closeTrajectoryModal() {
   const modal = document.getElementById("trajectory-modal");
   if (modal) {
     modal.style.display = "none";
+    document.documentElement.classList.remove("modal-open");
+    document.body.classList.remove("modal-open");
     document.body.style.overflow = "";
   }
 }
