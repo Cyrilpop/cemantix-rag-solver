@@ -410,8 +410,7 @@
 .footer-author-link,
 .footer-sub a {
   color: #58a6ff;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration: none;
   font-weight: 600;
   position: relative;
   display: inline;
