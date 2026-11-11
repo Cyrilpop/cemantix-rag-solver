@@ -5,9 +5,9 @@ import os
 from typing import Any, Dict
 
 DEFAULT_MODEL = "gemini-3.8-flash"
-FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-1.5-flash"]
+FALLBACK_MODELS = ["gemini-2.5-flash-lite", "gemini-3.5-flash"]
 DEFAULT_TEMPERATURE = 0.3
-DEFAULT_TIMEOUT_SECONDS = 10.0
+DEFAULT_TIMEOUT_SECONDS = 30.0
 
 
 def get_target_model() -> str:

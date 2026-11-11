@@ -119,7 +119,7 @@
   <header class="app-header">
     <div class="header-container">
       <div class="brand">
-        <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;color:inherit;">
+        <a href="/" class="brand-link" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;color:inherit;">
           <img src="/icons/favicon.png" alt="Cémantix Solver" class="brand-icon" width="48" height="48">
           <div class="brand-text">
             <span class="brand-title">Cémantix Solver</span>
@@ -141,11 +141,11 @@
         </button>
 
         <button id="theme-toggle" class="btn-icon" aria-label="Changer de thème" title="Basculer Mode Clair / Sombre">
-          <span class="theme-icon">☀️</span>
+          <span class="theme-icon">☼</span>
         </button>
 
         <button id="global-spoiler-toggle" class="btn-icon" aria-label="Mode anti-spoiler" title="Activer / Désactiver le flou anti-spoiler">
-          <span class="spoiler-icon">🛡️</span>
+          <span class="spoiler-icon">🔒</span>
         </button>
       </div>
     </div>
@@ -405,22 +405,28 @@
   <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
   <!-- Footer -->
+  <!-- APP-FOOTER:START -->
   <footer class="app-footer">
     <div class="footer-container">
       <div class="footer-left">
         <p><strong>Cémantix Solver</strong> — Propulsé par RAG vectoriel (frWac Word2Vec + ChromaDB).</p>
-        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. · <a href="/#confidentialite" class="footer-author-link">Politique de confidentialité</a> · <a href="/#conditions-utilisation" class="footer-author-link">Conditions d'utilisation</a></span>
+        <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. Projets <a href="https://github.com/Cyrilpop" target="_blank" rel="noopener noreferrer" class="footer-author-link">Github</a> · <a href="/#confidentialite" class="footer-author-link">Politique de confidentialité</a> · <a href="/#conditions-utilisation" class="footer-author-link">Conditions d'utilisation</a></span>
       </div>
       <div class="footer-right">
-        <a href="/" class="btn btn-ghost btn-sm" title="Retour au Mot du Jour">
+        <span id="app-version" class="footer-time">v--</span>
+        <a href="/" class="btn btn-ghost btn-sm" title="Mot du Jour">
           <span>🎯</span> Mot du Jour
         </a>
-        <a href="/battle/" class="btn btn-ghost btn-sm" title="Défier l'IA en Mode Battle">
-          <span>⚔️</span> Mode Battle
+        <a href="/play/" class="btn btn-ghost btn-sm" title="Jouer Solo">
+          <span>🎮</span> Jouer Solo
+        </a>
+        <a href="/battle/" class="btn btn-ghost btn-sm" title="Mode Battle">
+          <span>⚔️</span> Battle
         </a>
       </div>
     </div>
   </footer>
+  <!-- APP-FOOTER:END -->
 
   <script type="module" src="../js/defi.js"></script>
   <script type="module" src="../js/auth.js"></script>

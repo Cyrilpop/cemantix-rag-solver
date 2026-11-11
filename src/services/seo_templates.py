@@ -718,7 +718,7 @@ PAGE_CSS = """
           border-color: var(--accent);
         }
 
-        a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand) {
+        a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):not(.brand-link):not(.brand a) {
           color: #58a6ff;
           text-decoration: underline;
           text-underline-offset: 3px;
@@ -727,14 +727,14 @@ PAGE_CSS = """
           display: inline;
           transition: color 0.25s ease, text-shadow 0.25s ease;
         }
-        [data-theme="light"] a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand) {
+        [data-theme="light"] a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):not(.brand-link):not(.brand a) {
           color: #0969da;
         }
-        a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):hover {
+        a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):not(.brand-link):not(.brand a):hover {
           color: #a5d6ff;
           text-shadow: 0 0 12px var(--accent-glow);
         }
-        [data-theme="light"] a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):hover {
+        [data-theme="light"] a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):not(.brand-link):not(.brand a):hover {
           color: #0550ae;
           text-shadow: 0 0 8px rgba(9, 105, 218, 0.25);
         }
@@ -894,9 +894,9 @@ def render_page(
         for label, target in NAV_LINKS
     )
     home = resolve("")
-    header_html = render_header(depth=home)
-    nav_tabs = render_nav_tabs(depth=home, active_tab=active_tab)
-    footer_html = render_footer(depth=home)
+    header_html = f"<!-- APP-HEADER:START -->\n{render_header(depth=home)}\n<!-- APP-HEADER:END -->"
+    nav_tabs = f"<!-- NAV-TABS:START -->\n{render_nav_tabs(depth=home, active_tab=active_tab)}\n<!-- NAV-TABS:END -->"
+    footer_html = f"<!-- APP-FOOTER:START -->\n{render_footer(depth=home)}\n<!-- APP-FOOTER:END -->"
     breadcrumbs_block = (
         f'    <nav class="breadcrumbs" aria-label="Fil d\'Ariane">{breadcrumbs}</nav>\n'
         if breadcrumbs
@@ -936,21 +936,12 @@ def render_page(
   <link rel="apple-touch-icon" href="{home}icons/apple-touch-icon.png">
   <style>{_load_style_tokens()}{PAGE_CSS}{_load_auth_css()}{_load_puzzle_css()}</style>
 {json_ld}
+  <script type="module">
+    import {{ initTheme }} from "{home}js/theme.js";
+    initTheme();
+  </script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {{
-      var toggle = document.getElementById("theme-toggle");
-      if (toggle) {{
-        toggle.addEventListener("click", function() {{
-          var current = document.documentElement.getAttribute("data-theme") || "dark";
-          var next = current === "dark" ? "light" : "dark";
-          document.documentElement.setAttribute("data-theme", next);
-          try {{ localStorage.setItem("cemantix_theme", next); }} catch(e) {{}}
-        }});
-      }}
-      try {{
-        var saved = localStorage.getItem("cemantix_theme");
-        if (saved) document.documentElement.setAttribute("data-theme", saved);
-      }} catch(e) {{}}
 
       // M13 — Double Commutateur Dynamique & Masquage Anti-Spoiler
       var tabAi = document.getElementById("tab-hints-ai");
@@ -1135,6 +1126,18 @@ _AI_HINT_LEVELS_META = {
 }
 
 
+def format_hint_phrase(phrase: str) -> str:
+    """Met en forme une phrase indice avec guillemets français et espace insécable final."""
+    clean = str(phrase or "").strip().strip('«»"\' ')
+    if not clean:
+        return ""
+    escaped = escape(clean)
+    if " " in escaped:
+        head, tail = escaped.rsplit(" ", 1)
+        escaped = f"{head}&nbsp;{tail}"
+    return f"«&nbsp;{escaped}&nbsp;»"
+
+
 def render_hints_component(
     *,
     guesses: list,
@@ -1159,8 +1162,7 @@ def render_hints_component(
                 "weight": f"Poids {float(h.get('weight', 0)):.2f}",
             })
             raw_phrase = str(h.get("hint_phrase") or h.get("phrase") or "").strip()
-            clean_phrase = raw_phrase.strip('«»"\' ')
-            formatted_phrase = f"« {escape(clean_phrase)} »" if clean_phrase else ""
+            formatted_phrase = format_hint_phrase(raw_phrase)
 
             raw_word = str(h.get("hint_word") or h.get("word") or "").strip()
             formatted_word = escape(raw_word.capitalize()) if raw_word else ""

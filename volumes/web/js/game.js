@@ -26,6 +26,20 @@ export const gameState = {
   leaderboard: [],
 };
 
+export function getParisTodayDate() {
+  try {
+    const formatter = new Intl.DateTimeFormat("fr-CA", {
+      timeZone: "Europe/Paris",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return formatter.format(new Date()); // Format standard YYYY-MM-DD
+  } catch (_) {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 export function formatFrenchDate(dateStr) {
   if (!dateStr) return "";
   try {
@@ -254,6 +268,17 @@ function loadGameState(targetMode) {
     }
 
     if (!sessionToLoad || !sessionToLoad.gameId) return false;
+
+    // Pour le mode Défi du Jour : si la date sauvegardée n'est pas celle d'aujourd'hui (fuseau Paris),
+    // la session locale est obsolète et ne doit pas restaurer l'écran de victoire de la veille.
+    const requestedMode = targetMode || data.currentMode || gameState.mode || "daily";
+    if (requestedMode === "daily") {
+      const todayParis = getParisTodayDate();
+      if (sessionToLoad.puzzleDate && sessionToLoad.puzzleDate !== todayParis) {
+        modeSessions.daily = null;
+        return false;
+      }
+    }
 
     if (sessionToLoad.savedAt && (Date.now() - sessionToLoad.savedAt > 24 * 3600 * 1000)) {
       return false;
@@ -964,7 +989,6 @@ function renderLeaderboard() {
         <div class="guess-left" style="display: flex; align-items: center; gap: 0.65rem;">
           <span class="guess-order" style="font-weight: 700; color: ${rankColor};">#${item.rank}</span>
           <span class="guess-player-name" style="font-size: 0.88rem; font-weight: 600; text-transform: none; ${isMe ? "color: var(--accent); font-weight: 800;" : ""}">${escapeHtml(item.username)}</span>
-          ${item.is_bot ? '<span style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7;">🤖</span>' : ""}
           ${statusBadge}
         </div>
         <div class="guess-right" style="display: flex; align-items: center; gap: 0.75rem;">

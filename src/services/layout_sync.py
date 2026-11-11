@@ -17,6 +17,8 @@ HEADER_START = "<!-- APP-HEADER:START -->"
 HEADER_END = "<!-- APP-HEADER:END -->"
 NAV_START = "<!-- NAV-TABS:START -->"
 NAV_END = "<!-- NAV-TABS:END -->"
+FOOTER_START = "<!-- APP-FOOTER:START -->"
+FOOTER_END = "<!-- APP-FOOTER:END -->"
 
 TABS_CONFIG = [
     ("tab-dashboard", "dashboard", "", "🎯", "Mot du Jour", None),
@@ -33,7 +35,7 @@ def render_header(depth: str = "") -> str:
     return """  <header class="app-header">
     <div class="header-container">
       <div class="brand">
-        <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;color:inherit;">
+        <a href="/" class="brand-link" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;color:inherit;">
           <img src="/icons/favicon.png" alt="Cémantix Solver" class="brand-icon" width="48" height="48">
           <div class="brand-text">
             <span class="brand-title">Cémantix Solver</span>
@@ -55,11 +57,11 @@ def render_header(depth: str = "") -> str:
         </button>
 
         <button id="theme-toggle" class="btn-icon" aria-label="Changer de thème" title="Basculer Mode Clair / Sombre">
-          <span class="theme-icon">☀️</span>
+          <span class="theme-icon">☼</span>
         </button>
 
         <button id="global-spoiler-toggle" class="btn-icon" aria-label="Mode anti-spoiler" title="Activer / Désactiver le flou anti-spoiler">
-          <span class="spoiler-icon">🛡️</span>
+          <span class="spoiler-icon">🔒</span>
         </button>
       </div>
     </div>
@@ -99,6 +101,7 @@ def render_footer(depth: str = "") -> str:
         <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. Projets <a href="https://github.com/Cyrilpop" target="_blank" rel="noopener noreferrer" class="footer-author-link">Github</a> · <a href="/#confidentialite" class="footer-author-link">Politique de confidentialité</a> · <a href="/#conditions-utilisation" class="footer-author-link">Conditions d'utilisation</a></span>
       </div>
       <div class="footer-right">
+        <span id="app-version" class="footer-time">v--</span>
         <a href="/" class="btn btn-ghost btn-sm" title="Mot du Jour">
           <span>🎯</span> Mot du Jour
         </a>
@@ -141,6 +144,16 @@ def sync_html_file(file_path: Path, depth: str, active_tab: str) -> bool:
         if pattern.search(content):
             content = pattern.sub(f"{NAV_START}\n{nav_html}\n    {NAV_END}", content, count=1)
 
+    # 3. Remplacement ou balisage du Footer universel
+    footer_html = render_footer(depth)
+    if FOOTER_START in content and FOOTER_END in content:
+        pattern = re.compile(rf"{re.escape(FOOTER_START)}.*?{re.escape(FOOTER_END)}", re.DOTALL)
+        content = pattern.sub(f"{FOOTER_START}\n{footer_html}\n  {FOOTER_END}", content, count=1)
+    else:
+        pattern = re.compile(r"<footer\s+class=[\"']app-footer[\"'].*?</footer>", re.DOTALL)
+        if pattern.search(content):
+            content = pattern.sub(f"{FOOTER_START}\n{footer_html}\n  {FOOTER_END}", content, count=1)
+
     if content != original:
         file_path.write_text(content, encoding="utf-8")
     return True
@@ -155,6 +168,7 @@ def sync_all_pages(web_root: Optional[Path] = None) -> Dict[str, bool]:
         ("battle/index.html", "../", "battle"),
         ("multi/index.html", "../", "multi"),
         ("defi/index.html", "../", "defi"),
+        ("puzzles/index.html", "../", "archives"),
     ]
     results = {}
     for rel_path, depth, active_tab in pages:

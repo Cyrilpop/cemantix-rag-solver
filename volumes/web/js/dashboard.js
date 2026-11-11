@@ -16,6 +16,24 @@ export const dashboardState = {
   historyPageSize: 10,
 };
 
+let cachedAppVersion = null;
+
+async function loadAppVersion() {
+  if (cachedAppVersion) return cachedAppVersion;
+  try {
+    const res = await fetch("/version.json", { cache: "no-cache" });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.version) {
+        cachedAppVersion = `v${data.version}`;
+        return cachedAppVersion;
+      }
+    }
+  } catch (_) {}
+  cachedAppVersion = "v0.0.000000";
+  return cachedAppVersion;
+}
+
 export function isTodayEntry(entry) {
   if (!entry) return false;
   if (entry.word_hidden) return true;
@@ -337,8 +355,10 @@ export function revealSecretWord() {
 
 export function fetchDashboardData(isManual = false) {
   const lastUpdated = document.getElementById("last-updated");
-  if (isManual && lastUpdated) {
-    lastUpdated.textContent = "Actualisation...";
+  if (isManual && lastUpdated && !lastUpdated.textContent.startsWith("v0.")) {
+    loadAppVersion().then((ver) => {
+      if (lastUpdated) lastUpdated.textContent = ver;
+    });
   }
 
   fetch("/api/daily")
@@ -439,9 +459,10 @@ export function renderDashboard(data) {
 
   renderHistoryTable();
 
-  const now = new Date();
   if (lastUpdated) {
-    lastUpdated.textContent = `Dernière synchro : ${now.toLocaleTimeString("fr-FR")}`;
+    loadAppVersion().then((ver) => {
+      if (lastUpdated) lastUpdated.textContent = ver;
+    });
   }
 }
 
@@ -523,7 +544,8 @@ export function renderClues(currentOrGuesses, aiHintsParam = null) {
       const meta = DASHBOARD_AI_META[level] || DASHBOARD_AI_META[1];
       const rawPhrase = String(hint.hint_phrase || "").trim();
       const cleanPhrase = rawPhrase.replace(/^[«"'\s]+|[»"'\s]+$/g, "");
-      const formattedPhrase = cleanPhrase ? `« ${escapeHtml(cleanPhrase)} »` : "";
+      const escapedPhrase = escapeHtml(cleanPhrase).replace(/\s([^\s]+)$/, "&nbsp;$1");
+      const formattedPhrase = cleanPhrase ? `«&nbsp;${escapedPhrase}&nbsp;»` : "";
       const rawWord = String(hint.hint_word || "").trim();
       const formattedWord = rawWord ? escapeHtml(rawWord.charAt(0).toUpperCase() + rawWord.slice(1).toLowerCase()) : "";
 
