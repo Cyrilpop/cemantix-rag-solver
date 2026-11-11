@@ -1147,6 +1147,18 @@ _AI_HINT_LEVELS_META = {
 }
 
 
+def format_hint_phrase(phrase: str) -> str:
+    """Met en forme une phrase indice avec guillemets français et espace insécable final."""
+    clean = str(phrase or "").strip().strip('«»"\' ')
+    if not clean:
+        return ""
+    escaped = escape(clean)
+    if " " in escaped:
+        head, tail = escaped.rsplit(" ", 1)
+        escaped = f"{head}&nbsp;{tail}"
+    return f"«&nbsp;{escaped}&nbsp;»"
+
+
 def render_hints_component(
     *,
     guesses: list,
@@ -1171,16 +1183,7 @@ def render_hints_component(
                 "weight": f"Poids {float(h.get('weight', 0)):.2f}",
             })
             raw_phrase = str(h.get("hint_phrase") or h.get("phrase") or "").strip()
-            clean_phrase = raw_phrase.strip('«»"\' ')
-            if clean_phrase:
-                # Espace insécable devant le dernier mot et guillemets français avec insécables
-                escaped_body = escape(clean_phrase)
-                if " " in escaped_body:
-                    head, tail = escaped_body.rsplit(" ", 1)
-                    escaped_body = f"{head}&nbsp;{tail}"
-                formatted_phrase = f"«&nbsp;{escaped_body}&nbsp;»"
-            else:
-                formatted_phrase = ""
+            formatted_phrase = format_hint_phrase(raw_phrase)
 
             raw_word = str(h.get("hint_word") or h.get("word") or "").strip()
             formatted_word = escape(raw_word.capitalize()) if raw_word else ""

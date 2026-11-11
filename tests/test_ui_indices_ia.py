@@ -20,7 +20,7 @@ if str(tests_dir) not in sys.path:
 
 import _context  # noqa: F401
 from src.services.seo_hubs import build_mot_du_jour_page
-from src.services.seo_templates import render_hints_component
+from src.services.seo_templates import render_hints_component, format_hint_phrase
 
 SAMPLE_ENTRY = {
     "date": "2026-11-06",
@@ -132,11 +132,11 @@ class TestUiIndicesIa(unittest.TestCase):
         self.assertIn("tier-fire", html)
 
         # Contenus associés
-        self.assertIn("Permet d&#x27;explorer sans se perdre sur les mers.", html)
+        self.assertIn(format_hint_phrase(SAMPLE_AI_HINTS[0]["hint_phrase"]), html)
         self.assertIn("Navigation", html)
-        self.assertIn("Indique toujours la même direction cardinale.", html)
+        self.assertIn(format_hint_phrase(SAMPLE_AI_HINTS[1]["hint_phrase"]), html)
         self.assertIn("Orientation", html)
-        self.assertIn("Son aiguille magnétique réagit au pôle terrestre.", html)
+        self.assertIn(format_hint_phrase(SAMPLE_AI_HINTS[2]["hint_phrase"]), html)
         self.assertIn("Aimant", html)
 
     def test_anti_spoiler_masking_by_default(self):
