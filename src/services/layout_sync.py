@@ -101,7 +101,6 @@ def render_footer(depth: str = "") -> str:
         <span class="footer-sub">Conçu par <a href="https://cyril-randon.fr" target="_blank" rel="noopener noreferrer" class="footer-author-link">Cyril RANDON</a>. Projets <a href="https://github.com/Cyrilpop" target="_blank" rel="noopener noreferrer" class="footer-author-link">Github</a> · <a href="/#confidentialite" class="footer-author-link">Politique de confidentialité</a> · <a href="/#conditions-utilisation" class="footer-author-link">Conditions d'utilisation</a></span>
       </div>
       <div class="footer-right">
-        <span id="app-version" class="footer-time">v--</span>
         <a href="/" class="btn btn-ghost btn-sm" title="Mot du Jour">
           <span>🎯</span> Mot du Jour
         </a>
@@ -111,6 +110,7 @@ def render_footer(depth: str = "") -> str:
         <a href="/battle/" class="btn btn-ghost btn-sm" title="Mode Battle">
           <span>⚔️</span> Battle
         </a>
+        <span id="app-version" class="footer-time">v--</span>
       </div>
     </div>
   </footer>"""
