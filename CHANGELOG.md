@@ -4,7 +4,7 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
-## [Non publié] - 2026-11-10 · Correction de la réinitialisation et synchronisation du Défi du Jour après minuit
+## [Non publié] - 2026-11-11 · Correction de la réinitialisation du Défi du Jour, harmonisation du Layout et fiabilisation Gemini
 
 **Branche :** `fix/daily-puzzle-midnight-reset-persistence`
 
@@ -13,6 +13,12 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
   - **Frontend (`volumes/web/js/game.js`)** : calcul de la date courante de référence (`Europe/Paris`) via `getParisTodayDate()`. Si la session sauvegardée dans le `localStorage` appartient à un jour antérieur, elle est immédiatement déclarée caduque lors du chargement : l'écran de victoire de la veille n'est plus restauré et les inputs ne sont plus bloqués.
   - **Backend (`src/api/routes/solo.py`)** : dans la route `/api/game/resume`, si une demande de reprise de partie en mode `daily` comporte un identifiant ou une date obsolète, le serveur bascule automatiquement sur la session officielle du jour (`daily-{today_str}`) pour le joueur au lieu d'ignorer la mise à jour.
   - **Backend (`src/game/manager.py`)** : dans `get_session()`, extraction systématique du `player_id` même en présence d'un ancien identifiant de partie journalière pour restaurer correctement la partie du jour sans orphelin.
+- **Fiabilisation des indices IA Gemini 3.8 Flash (`AI-01`)** :
+  - Prolongation du timeout HTTP REST à 30 secondes pour absorber les générations riches de JSON structuré sans interruption prématurée.
+  - Optimisation de la chaîne de repli : bascule sur `gemini-2.5-flash-lite` (réponse en 1.2s) et `gemini-3.5-flash`, retrait du modèle déprécié 1.5.
+- **Harmonisation et standardisation universelle du layout (`UI-01`)** :
+  - Unification stricte des balises d'encadrement canoniques `<!-- APP-HEADER:START -->`, `<!-- NAV-TABS:START -->` et `<!-- APP-FOOTER:START -->` à travers toutes les pages statiques et dynamiques (y compris l'index paginé `puzzles/index.html`).
+  - Alignement des icônes de thème statiques du header (`☼` et `🔒`) en conformité parfaite avec `theme.js`.
 
 ## 2026-11-09 · Découvrabilité agents IA : `llms.txt` et catalogue ARD enfin livrables (`SEO-22` à `SEO-25`)
 

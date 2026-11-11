@@ -77,7 +77,7 @@ class TestModelSelector(unittest.TestCase):
     def test_default_constants(self):
         self.assertEqual(DEFAULT_MODEL, "gemini-3.8-flash")
         self.assertEqual(DEFAULT_TEMPERATURE, 0.3)
-        self.assertEqual(DEFAULT_TIMEOUT_SECONDS, 10.0)
+        self.assertEqual(DEFAULT_TIMEOUT_SECONDS, 30.0)
 
     def test_model_endpoint(self):
         endpoint = get_model_endpoint("gemini-3.8-flash")
@@ -90,7 +90,7 @@ class TestModelSelector(unittest.TestCase):
         info = get_model_info()
         self.assertIn("model", info)
         self.assertEqual(info["temperature"], 0.3)
-        self.assertEqual(info["timeout"], 10.0)
+        self.assertEqual(info["timeout"], 30.0)
 
 
 class TestPromptsAndLeakGuard(unittest.TestCase):
