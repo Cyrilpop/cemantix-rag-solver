@@ -17,6 +17,8 @@ HEADER_START = "<!-- APP-HEADER:START -->"
 HEADER_END = "<!-- APP-HEADER:END -->"
 NAV_START = "<!-- NAV-TABS:START -->"
 NAV_END = "<!-- NAV-TABS:END -->"
+FOOTER_START = "<!-- APP-FOOTER:START -->"
+FOOTER_END = "<!-- APP-FOOTER:END -->"
 
 TABS_CONFIG = [
     ("tab-dashboard", "dashboard", "", "🎯", "Mot du Jour", None),
@@ -141,6 +143,16 @@ def sync_html_file(file_path: Path, depth: str, active_tab: str) -> bool:
         pattern = re.compile(r"<nav\s+class=[\"']nav-tabs[\"'].*?</nav>", re.DOTALL)
         if pattern.search(content):
             content = pattern.sub(f"{NAV_START}\n{nav_html}\n    {NAV_END}", content, count=1)
+
+    # 3. Remplacement ou balisage du Footer universel
+    footer_html = render_footer(depth)
+    if FOOTER_START in content and FOOTER_END in content:
+        pattern = re.compile(rf"{re.escape(FOOTER_START)}.*?{re.escape(FOOTER_END)}", re.DOTALL)
+        content = pattern.sub(f"{FOOTER_START}\n{footer_html}\n  {FOOTER_END}", content, count=1)
+    else:
+        pattern = re.compile(r"<footer\s+class=[\"']app-footer[\"'].*?</footer>", re.DOTALL)
+        if pattern.search(content):
+            content = pattern.sub(f"{FOOTER_START}\n{footer_html}\n  {FOOTER_END}", content, count=1)
 
     if content != original:
         file_path.write_text(content, encoding="utf-8")

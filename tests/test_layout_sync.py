@@ -6,10 +6,13 @@ from pathlib import Path
 import _context  # noqa: F401
 
 from src.services.layout_sync import (
+    FOOTER_END,
+    FOOTER_START,
     HEADER_END,
     HEADER_START,
     NAV_END,
     NAV_START,
+    render_footer,
     render_header,
     render_nav_tabs,
     sync_html_file,
@@ -56,6 +59,7 @@ class TestLayoutSync(unittest.TestCase):
     <nav class="nav-tabs">Old Tabs</nav>
     <div>Page Content</div>
   </main>
+  <footer class="app-footer">Old Footer</footer>
 </body>
 </html>"""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -71,6 +75,9 @@ class TestLayoutSync(unittest.TestCase):
             self.assertIn(HEADER_END, synced)
             self.assertIn(NAV_START, synced)
             self.assertIn(NAV_END, synced)
+            self.assertIn(FOOTER_START, synced)
+            self.assertIn(FOOTER_END, synced)
+            self.assertIn('id="app-version"', synced)
             self.assertIn('id="tab-play" class="nav-tab active"', synced)
             self.assertIn("<div>Page Content</div>", synced)  # contenu préservé !
 
