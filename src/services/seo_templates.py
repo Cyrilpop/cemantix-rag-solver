@@ -937,7 +937,7 @@ def render_page(
   <style>{_load_style_tokens()}{PAGE_CSS}{_load_auth_css()}{_load_puzzle_css()}</style>
 {json_ld}
   <script type="module">
-    import { initTheme } from "{home}js/theme.js";
+    import {{ initTheme }} from "{home}js/theme.js";
     initTheme();
   </script>
   <script>
