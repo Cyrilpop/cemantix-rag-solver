@@ -936,33 +936,12 @@ def render_page(
   <link rel="apple-touch-icon" href="{home}icons/apple-touch-icon.png">
   <style>{_load_style_tokens()}{PAGE_CSS}{_load_auth_css()}{_load_puzzle_css()}</style>
 {json_ld}
+  <script type="module">
+    import { initTheme } from "{home}js/theme.js";
+    initTheme();
+  </script>
   <script>
     document.addEventListener("DOMContentLoaded", function() {{
-      var toggle = document.getElementById("theme-toggle");
-      if (toggle) {{
-        toggle.addEventListener("click", function() {{
-          var current = document.documentElement.getAttribute("data-theme") || "dark";
-          var next = current === "dark" ? "light" : "dark";
-          document.documentElement.setAttribute("data-theme", next);
-          try {{ localStorage.setItem("cemantix_theme", next); }} catch(e) {{}}
-        }});
-      }}
-      try {{
-        var saved = localStorage.getItem("cemantix_theme");
-        if (saved) document.documentElement.setAttribute("data-theme", saved);
-      }} catch(e) {{}}
-
-      try {{
-        fetch("/version.json", {{ cache: "no-cache" }})
-          .then(function(r) {{ return r.ok ? r.json() : null; }})
-          .then(function(d) {{
-            if (d && d.version) {{
-              var v = document.getElementById("app-version") || document.getElementById("last-updated");
-              if (v) v.textContent = "v" + d.version;
-            }}
-          }})
-          .catch(function() {{}});
-      }} catch(e) {{}}
 
       // M13 — Double Commutateur Dynamique & Masquage Anti-Spoiler
       var tabAi = document.getElementById("tab-hints-ai");

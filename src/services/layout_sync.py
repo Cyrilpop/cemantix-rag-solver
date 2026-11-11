@@ -168,6 +168,7 @@ def sync_all_pages(web_root: Optional[Path] = None) -> Dict[str, bool]:
         ("battle/index.html", "../", "battle"),
         ("multi/index.html", "../", "multi"),
         ("defi/index.html", "../", "defi"),
+        ("puzzles/index.html", "../", "archives"),
     ]
     results = {}
     for rel_path, depth, active_tab in pages:
