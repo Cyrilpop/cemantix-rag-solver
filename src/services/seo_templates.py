@@ -894,9 +894,9 @@ def render_page(
         for label, target in NAV_LINKS
     )
     home = resolve("")
-    header_html = render_header(depth=home)
-    nav_tabs = render_nav_tabs(depth=home, active_tab=active_tab)
-    footer_html = render_footer(depth=home)
+    header_html = f"<!-- APP-HEADER:START -->\n{render_header(depth=home)}\n<!-- APP-HEADER:END -->"
+    nav_tabs = f"<!-- NAV-TABS:START -->\n{render_nav_tabs(depth=home, active_tab=active_tab)}\n<!-- NAV-TABS:END -->"
+    footer_html = f"<!-- APP-FOOTER:START -->\n{render_footer(depth=home)}\n<!-- APP-FOOTER:END -->"
     breadcrumbs_block = (
         f'    <nav class="breadcrumbs" aria-label="Fil d\'Ariane">{breadcrumbs}</nav>\n'
         if breadcrumbs
