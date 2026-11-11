@@ -141,6 +141,27 @@ class TestPageArchive(unittest.TestCase):
         self.assertIn('content="noindex, follow"', html)
         self.assertIn(f"<title>{TITRE_PAGE_ATTENDU}</title>", html)
 
+    def test_archive_avec_indices_ia_affiche_commutateur(self):
+        ai_hints = [
+            {"hint_level": 1, "weight": 0.33, "hint_word": "bâtiment", "hint_phrase": "Une structure pour vivre."},
+            {"hint_level": 2, "weight": 0.66, "hint_word": "abri", "hint_phrase": "Protège des intempéries."},
+            {"hint_level": 3, "weight": 1.0, "hint_word": "demeure", "hint_phrase": "Lieu de résidence principal."},
+        ]
+        html = build_archive_page(_entry(), None, None, ai_hints=ai_hints)
+        self.assertIn('id="hints-hub"', html)
+        self.assertIn('id="tab-hints-ai"', html)
+        self.assertIn('id="tab-hints-rag"', html)
+        self.assertIn('id="hints-ai-format"', html)
+        self.assertIn('Une structure pour&nbsp;vivre.', html)
+        self.assertIn('Bâtiment', html)
+        self.assertIn('id="panel-hints-rag"', html)
+
+    def test_archive_sans_indices_ia_repli_rag(self):
+        html = build_archive_page(_entry(), None, None, ai_hints=[])
+        # Repli gracieux : le tableau RAG est affiché
+        self.assertIn("🌡️ Les 2 indices du mot du jour", html)
+        self.assertIn("cabane", html)
+
 
 class TestIndexDesArchives(unittest.TestCase):
     def setUp(self):

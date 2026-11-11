@@ -7,6 +7,11 @@ Génère les pages individuelles d'archives pour chaque puzzle quotidien résolu
 from html import escape
 from typing import Optional
 
+try:
+    from ..db import get_daily_ai_hints
+except (ImportError, ValueError):
+    from src.db import get_daily_ai_hints
+
 from .seo_templates import (
     ARCHIVES_PAGE_SIZE,
     SITE_ORIGIN,
@@ -23,11 +28,17 @@ from .seo_templates import (
     format_date_fr,
     format_date_short_fr,
     format_duration_fr,
+    render_hints_component,
     render_page,
 )
 
 
-def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]) -> str:
+def build_archive_page(
+    entry: dict,
+    older: Optional[dict],
+    newer: Optional[dict],
+    ai_hints: Optional[list] = None,
+) -> str:
     """Génère la page HTML indexable d'un puzzle résolu (`/puzzles/AAAA-MM-JJ/`)."""
     date_str = str(entry.get("date"))
     date_fr = format_date_fr(date_str)
@@ -38,6 +49,14 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
     duration = format_duration_fr(entry.get("duration_seconds"))
     guesses = extract_clue_guesses(entry)
     source_label = "Hybride RAG + LLM" if entry.get("source") == "llm" else "100 % RAG pur"
+
+    if ai_hints is None and date_str:
+        try:
+            ai_hints = get_daily_ai_hints(date_str)
+        except Exception:
+            ai_hints = []
+    elif ai_hints is None:
+        ai_hints = []
 
     puzzle_label = f"Puzzle {str(puzzle).lstrip('#').strip()}" if puzzle else "Puzzle du jour"
     puzzle_ref = f" {str(puzzle).lstrip('#').strip()}" if puzzle else ""
@@ -123,24 +142,13 @@ def build_archive_page(entry: dict, older: Optional[dict], newer: Optional[dict]
         else '<span class="badge">⏳ Non résolu</span>'
     )
 
-    clues_html = ""
-    if guesses:
-        clues_html = f"""      <section class="card">
-        <h2>🌡️ Les {min(len(guesses), 10)} mots les plus proches du mot secret</h2>
-        <p>Le thermomètre sémantique officiel de Cémantix : plus le score en pour mille
-        (‰) approche 1000, plus le mot est proche du mot secret. Le mot cible vaut
-        exactement 1000 ‰.</p>
-        <table>
-          <caption>Indices de proximité sémantique mesurés par le solveur RAG</caption>
-          <thead>
-            <tr><th scope="col">#</th><th scope="col">Mot</th><th scope="col">Score</th><th scope="col">Similarité</th></tr>
-          </thead>
-          <tbody>
-{_clue_rows(guesses, limit=10, secret_word=word)}
-          </tbody>
-        </table>
-      </section>
-"""
+    clues_html = render_hints_component(
+        guesses=guesses,
+        ai_hints=ai_hints,
+        date_fr=date_fr,
+        secret_word=word,
+        rel_methode=_rel("methode/"),
+    )
 
     solution_html = ""
     if word:
