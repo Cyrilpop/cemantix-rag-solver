@@ -35,7 +35,7 @@ def render_header(depth: str = "") -> str:
     return """  <header class="app-header">
     <div class="header-container">
       <div class="brand">
-        <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;color:inherit;">
+        <a href="/" class="brand-link" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;color:inherit;">
           <img src="/icons/favicon.png" alt="Cémantix Solver" class="brand-icon" width="48" height="48">
           <div class="brand-text">
             <span class="brand-title">Cémantix Solver</span>

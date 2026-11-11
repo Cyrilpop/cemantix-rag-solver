@@ -718,7 +718,7 @@ PAGE_CSS = """
           border-color: var(--accent);
         }
 
-        a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand) {
+        a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):not(.brand-link):not(.brand a) {
           color: #58a6ff;
           text-decoration: underline;
           text-underline-offset: 3px;
@@ -727,14 +727,14 @@ PAGE_CSS = """
           display: inline;
           transition: color 0.25s ease, text-shadow 0.25s ease;
         }
-        [data-theme="light"] a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand) {
+        [data-theme="light"] a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):not(.brand-link):not(.brand a) {
           color: #0969da;
         }
-        a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):hover {
+        a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):not(.brand-link):not(.brand a):hover {
           color: #a5d6ff;
           text-shadow: 0 0 12px var(--accent-glow);
         }
-        [data-theme="light"] a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):hover {
+        [data-theme="light"] a:not(.archive-list a):not(.pager a):not(.nav-tab):not(.brand):not(.brand-link):not(.brand a):hover {
           color: #0550ae;
           text-shadow: 0 0 8px rgba(9, 105, 218, 0.25);
         }
