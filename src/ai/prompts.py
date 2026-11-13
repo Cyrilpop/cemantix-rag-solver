@@ -26,39 +26,52 @@ RÈGLES D'OR DE SÉCURITÉ ET DE RÉDACTION :
 
 GRADUATION STRICTE DES 3 NIVEAUX (MILLIÈMES CROISSANTS OBLIGATOIRES) :
 Les 3 indices doivent impérativement avoir une proximité croissante dans l'espace sémantique :
-millième(Niveau 1) ~700‰ < millième(Niveau 2) ~825‰ < millième(Niveau 3) ~950‰.
+millième(Niveau 1) ~350 à 500‰ < millième(Niveau 2) ~500 à 750‰ < millième(Niveau 3) > 900‰.
 
-• NIVEAU 1 (weight = 0.33) — ZONE TIÈDE (Cible ~700‰) :
+• NIVEAU 1 (weight = 0.33) — ZONE TIÈDE (Cible ~350 à 500‰) :
   - Rôle : Ambiance générale, toile de fond thématique ou domaine abstrait.
-  - "word" : Un concept ou terme général ciblant environ 700‰.
+  - "word" : Un concept ou terme général dont la proximité sémantique est tiède (~350 à 500 millièmes).
   - "phrase" : Une énigme d'atmosphère lointaine.
 
-• NIVEAU 2 (weight = 0.66) — ZONE CHAUDE (Cible ~825‰) :
+• NIVEAU 2 (weight = 0.66) — ZONE CHAUDE (Cible ~500 à 750‰) :
   - Rôle : Vocation pratique, rôle sociétal, usage ou contexte d'action.
-  - "word" : Une fonction, un rôle ou un attribut marquant ciblant environ 825‰ (strictement plus chaud que le niveau 1).
+  - "word" : Une fonction, un rôle ou un attribut marquant dont la proximité sémantique est chaude (~500 à 750 millièmes, strictement plus chaud que le niveau 1).
   - "phrase" : Décrit une situation d'usage sans décrire l'objet littéralement.
 
-• NIVEAU 3 (weight = 1.00) — ZONE BRÛLANTE (Cible ~950‰) :
+• NIVEAU 3 (weight = 1.00) — ZONE BRÛLANTE (Cible > 900‰) :
   - Rôle : L'étincelle finale. Composant emblématique, analogie saisissante ou propriété distinctive majeure.
-  - "word" : Un terme très proche dans l'espace sémantique ciblant environ 950‰ (très chaud sans être synonyme direct ni solution immédiate).
+  - "word" : Un terme très proche dans l'espace sémantique (> 900 millièmes, brûlant sans être synonyme direct ni solution immédiate).
   - "phrase" : Une énigme resserrée et précise qui permet de déclencher l'illumination sans donner une simple définition.
 
 Format JSON STRICT attendu :
 {
   "secret_word": "<mot>",
   "hints": [
-    {"level": 1, "weight": 0.33, "word": "<mot_concept_environ_700>", "phrase": "<phrase_enigme_lointaine>"},
-    {"level": 2, "weight": 0.66, "word": "<mot_usage_environ_825>", "phrase": "<phrase_enigme_usage>"},
-    {"level": 3, "weight": 1.00, "word": "<mot_proche_environ_950>", "phrase": "<phrase_enigme_declic>"}
+    {"level": 1, "weight": 0.33, "word": "<mot_concept_zone_tiede_350_500>", "phrase": "<phrase_enigme_lointaine>"},
+    {"level": 2, "weight": 0.66, "word": "<mot_usage_zone_chaude_500_750>", "phrase": "<phrase_enigme_usage>"},
+    {"level": 3, "weight": 1.00, "word": "<mot_declic_zone_brulante_sup_900>", "phrase": "<phrase_enigme_declic>"}
   ]
 }"""
 
 
-def build_user_prompt(secret_word: str) -> str:
+def build_user_prompt(secret_word: str, feedback: Optional[str] = None) -> str:
     """Construit le prompt utilisateur pour générer les 3 indices gradués."""
+    feedback_section = ""
+    if feedback:
+        feedback_section = f"""
+
+ATTENTION - RECTIFICATIONS OBLIGATOIRES SUITE À L'ANALYSE SÉMANTIQUE :
+{feedback.strip()}
+Assure-toi que les 3 mots choisis respectent strictement leurs plages de millièmes respectives."""
+
     return f"""Génère les 3 indices gradués pour le mot secret français suivant :
 MOT_SECRET : "{secret_word}"
 Applique strictement les règles de retenue, le style d'énigme et l'absence totale de synonyme en niveaux 1 et 2.
+
+CALIBRATION SÉMANTIQUE STRICTE DES 3 MOTS-INDICES :
+- Indice #1 (weight = 0.33) : zone TIÈDE (~350 à 500 millièmes).
+- Indice #2 (weight = 0.66) : zone CHAUDE (~500 à 750 millièmes, strictement plus chaud que l'indice #1).
+- Indice #3 (weight = 1.00) : zone BRÛLANTE (> 900 millièmes, sans être le mot secret ni un synonyme direct).{feedback_section}
 
 Format JSON attendu :
 {{
@@ -67,19 +80,19 @@ Format JSON attendu :
     {{
       "level": 1,
       "weight": 0.33,
-      "word": "<mot_concept_abstrait>",
+      "word": "<mot_concept_zone_tiede_350_500>",
       "phrase": "<phrase_enigme_lointaine>"
     }},
     {{
       "level": 2,
       "weight": 0.66,
-      "word": "<mot_fonction_usage>",
+      "word": "<mot_fonction_zone_chaude_500_750>",
       "phrase": "<phrase_enigme_usage>"
     }},
     {{
       "level": 3,
       "weight": 1.00,
-      "word": "<mot_proche_declic>",
+      "word": "<mot_declic_zone_brulante_sup_900>",
       "phrase": "<phrase_enigme_declic>"
     }}
   ]

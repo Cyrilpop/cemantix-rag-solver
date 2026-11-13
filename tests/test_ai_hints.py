@@ -39,10 +39,12 @@ from src.db.daily import (
     save_daily_ai_hints,
     save_daily_puzzle,
 )
+from src.engine.ranking import WordScorer
 from src.services.ai_hints import (
     backfill_ai_hints,
     generate_ai_hints_cli,
     generate_and_store_ai_hints,
+    generate_calibrated_ai_hints,
 )
 
 
@@ -414,6 +416,199 @@ class TestOrchestrationService(unittest.TestCase):
             # Exécution sans lever d'exception
             generate_ai_hints_cli(target_date="2026-11-06", force=True)
             mock_gen.assert_called_once_with("2026-11-06", "boussole", force=True)
+
+
+class TestWordScorerAndCalibratedHints(unittest.TestCase):
+    """Vérifie le calcul de score/permille et le calibrage sémantique des indices IA."""
+
+    def setUp(self):
+        import numpy as np
+
+        class TinyMockStore:
+            def __init__(self):
+                self.words = ["secret", "w_tiede", "w_chaud", "w_brulant", "w_autre"]
+                self.vec_map = {
+                    "secret": np.array([1.0, 0.0, 0.0, 0.0]),
+                    "w_tiede": np.array([0.4, 0.9165, 0.0, 0.0]),
+                    "w_chaud": np.array([0.65, 0.7599, 0.0, 0.0]),
+                    "w_brulant": np.array([0.95, 0.3122, 0.0, 0.0]),
+                    "w_autre": np.array([0.1, 0.995, 0.0, 0.0]),
+                }
+                self.vecs = np.vstack([self.vec_map[w] for w in self.words])
+
+            def normalize(self, w):
+                return str(w or "").strip().lower()
+
+            def __contains__(self, w):
+                return self.normalize(w) in self.words
+
+            def vec(self, w):
+                return self.vec_map[self.normalize(w)]
+
+        self.mock_store = TinyMockStore()
+
+    def test_word_scorer_computation(self):
+        ws = WordScorer("secret", self.mock_store)
+        self.assertTrue(ws.is_valid)
+
+        # Mot très proche
+        score_b, permille_b = ws.score("w_brulant")
+        self.assertAlmostEqual(score_b, 95.0, places=1)
+        self.assertIsNotNone(permille_b)
+
+        # Mot tiède
+        score_t, permille_t = ws.score("w_tiede")
+        self.assertAlmostEqual(score_t, 40.0, places=1)
+
+        # Mot inconnu
+        score_unk, permille_unk = ws.score("mot_inexistant")
+        self.assertEqual(score_unk, 0.0)
+        self.assertIsNone(permille_unk)
+
+    def test_calibrated_hints_out_of_order_reorganization(self):
+        """Si Gemini renvoie 3 indices aux bonnes températures mais désordonnés, réorganisation stricte."""
+        client = mock.MagicMock(spec=GeminiClient)
+        client.is_configured.return_value = True
+
+        # Gemini renvoie : 1=brûlant, 2=tiède, 3=chaud
+        client.generate_hints.return_value = [
+            {"level": 1, "weight": 0.33, "word": "brulant", "phrase": "phrase brulante"},
+            {"level": 2, "weight": 0.66, "word": "tiede", "phrase": "phrase tiede"},
+            {"level": 3, "weight": 1.00, "word": "chaud", "phrase": "phrase chaude"},
+        ]
+
+        # Simuler les scores sémantiques cibles
+        permille_map = {
+            "tiede": (25.0, 420),
+            "chaud": (45.0, 650),
+            "brulant": (85.0, 950),
+        }
+
+        with mock.patch("src.services.ai_hints.WordScorer") as MockScorerClass:
+            mock_scorer = MockScorerClass.return_value
+            mock_scorer.score.side_effect = lambda w: permille_map.get(w, (0.0, None))
+
+            hints = generate_calibrated_ai_hints("boussole", store=self.mock_store, client=client, max_calls=5)
+
+            self.assertIsNotNone(hints)
+            self.assertEqual(len(hints), 3)
+            self.assertEqual(client.generate_hints.call_count, 1)
+
+            # Vérifier l'ordre croissant et l'association mot + phrase intacte
+            self.assertEqual(hints[0]["hint_level"], 1)
+            self.assertEqual(hints[0]["word"], "tiede")
+            self.assertEqual(hints[0]["phrase"], "phrase tiede")
+            self.assertEqual(hints[0]["weight"], 0.33)
+            self.assertEqual(hints[0]["permille"], 420)
+
+            self.assertEqual(hints[1]["hint_level"], 2)
+            self.assertEqual(hints[1]["word"], "chaud")
+            self.assertEqual(hints[1]["phrase"], "phrase chaude")
+            self.assertEqual(hints[1]["weight"], 0.66)
+            self.assertEqual(hints[1]["permille"], 650)
+
+            self.assertEqual(hints[2]["hint_level"], 3)
+            self.assertEqual(hints[2]["word"], "brulant")
+            self.assertEqual(hints[2]["phrase"], "phrase brulante")
+            self.assertEqual(hints[2]["weight"], 1.00)
+            self.assertEqual(hints[2]["permille"], 950)
+
+            self.assertLess(hints[0]["permille"], hints[1]["permille"])
+            self.assertLess(hints[1]["permille"], hints[2]["permille"])
+
+    def test_calibrated_hints_retry_loop_with_feedback(self):
+        """Si la tentative 1 est hors plages, relance avec feedback et réussit à la tentative 2."""
+        client = mock.MagicMock(spec=GeminiClient)
+        client.is_configured.return_value = True
+
+        # Tentative 1 : mots hors plages (800, 810, 820)
+        hints_attempt1 = [
+            {"level": 1, "weight": 0.33, "word": "bad1", "phrase": "phrase bad1"},
+            {"level": 2, "weight": 0.66, "word": "bad2", "phrase": "phrase bad2"},
+            {"level": 3, "weight": 1.00, "word": "bad3", "phrase": "phrase bad3"},
+        ]
+        # Tentative 2 : mots conformes (400, 600, 930)
+        hints_attempt2 = [
+            {"level": 1, "weight": 0.33, "word": "good1", "phrase": "phrase good1"},
+            {"level": 2, "weight": 0.66, "word": "good2", "phrase": "phrase good2"},
+            {"level": 3, "weight": 1.00, "word": "good3", "phrase": "phrase good3"},
+        ]
+        client.generate_hints.side_effect = [hints_attempt1, hints_attempt2]
+
+        permille_map = {
+            "bad1": (50.0, 800),
+            "bad2": (52.0, 810),
+            "bad3": (54.0, 820),
+            "good1": (20.0, 400),
+            "good2": (40.0, 600),
+            "good3": (80.0, 930),
+        }
+
+        with mock.patch("src.services.ai_hints.WordScorer") as MockScorerClass:
+            mock_scorer = MockScorerClass.return_value
+            mock_scorer.score.side_effect = lambda w: permille_map.get(w, (0.0, None))
+
+            hints = generate_calibrated_ai_hints("boussole", store=self.mock_store, client=client, max_calls=5)
+
+            self.assertIsNotNone(hints)
+            self.assertEqual(client.generate_hints.call_count, 2)
+
+            # Vérifier que le second appel a reçu un prompt avec feedback
+            second_call_prompt = client.generate_hints.call_args_list[1].kwargs.get("user_prompt")
+            self.assertIsNotNone(second_call_prompt)
+            self.assertIn("ATTENTION", second_call_prompt)
+
+            # Vérifier les indices finaux
+            self.assertEqual(hints[0]["word"], "good1")
+            self.assertEqual(hints[0]["phrase"], "phrase good1")
+            self.assertEqual(hints[1]["word"], "good2")
+            self.assertEqual(hints[1]["phrase"], "phrase good2")
+            self.assertEqual(hints[2]["word"], "good3")
+            self.assertEqual(hints[2]["phrase"], "phrase good3")
+
+    def test_calibrated_hints_quota_guard_and_fallback(self):
+        """Au-delà de 5 appels sans triplet parfait, sélection des 3 candidats les plus proches dans l'ordre."""
+        client = mock.MagicMock(spec=GeminiClient)
+        client.is_configured.return_value = True
+
+        # Générer 5 retours avec des mots différents mais hors plages parfaites
+        def fake_hints(secret_word, user_prompt=None):
+            idx = client.generate_hints.call_count
+            return [
+                {"level": 1, "weight": 0.33, "word": f"w_a_{idx}", "phrase": f"phrase a {idx}"},
+                {"level": 2, "weight": 0.66, "word": f"w_b_{idx}", "phrase": f"phrase b {idx}"},
+                {"level": 3, "weight": 1.00, "word": f"w_c_{idx}", "phrase": f"phrase c {idx}"},
+            ]
+        client.generate_hints.side_effect = fake_hints
+
+        # Attribution des scores
+        def fake_score(w):
+            if "w_a" in w:
+                return (15.0, 250)
+            if "w_b" in w:
+                return (35.0, 480)
+            if "w_c" in w:
+                return (55.0, 820)
+            return (0.0, None)
+
+        with mock.patch("src.services.ai_hints.WordScorer") as MockScorerClass:
+            mock_scorer = MockScorerClass.return_value
+            mock_scorer.score.side_effect = fake_score
+
+            hints = generate_calibrated_ai_hints("boussole", store=self.mock_store, client=client, max_calls=5)
+
+            # Vérifier quota strict de 5 appels
+            self.assertEqual(client.generate_hints.call_count, 5)
+
+            # Vérifier présence de 3 indices dans l'ordre strictement croissant
+            self.assertIsNotNone(hints)
+            self.assertEqual(len(hints), 3)
+            p1, p2, p3 = hints[0]["permille"], hints[1]["permille"], hints[2]["permille"]
+            self.assertLess(p1, p2)
+            self.assertLess(p2, p3)
+            # Intégrité mot + phrase
+            for h in hints:
+                self.assertTrue(h["phrase"].startswith(f"phrase {h['word'].split('_')[1]}"))
 
 
 if __name__ == "__main__":

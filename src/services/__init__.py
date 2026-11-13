@@ -38,6 +38,7 @@ from .ai_hints import (
     backfill_ai_hints,
     generate_ai_hints_cli,
     generate_and_store_ai_hints,
+    generate_calibrated_ai_hints,
     has_daily_ai_hints,
 )
 from .solo_daily import (
@@ -128,6 +129,7 @@ __all__ = [
     "generate_hints_for_word",
     "backfill_puzzle_hints",
     "generate_and_store_ai_hints",
+    "generate_calibrated_ai_hints",
     "has_daily_ai_hints",
     "backfill_ai_hints",
     "generate_ai_hints_cli",

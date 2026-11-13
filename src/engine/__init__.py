@@ -10,6 +10,7 @@ Sous-paquet regroupant l'intelligence artificielle et l'espace sémantique :
 - solvers : Orchestration autonome Cémantix (Solver / CemantixSolver)
 """
 from .clients import CemantixClient, MockClient
+from .ranking import WordScorer
 from .solvers import (
     CemantixSolver,
     RagDuelPlayer,
@@ -25,6 +26,7 @@ __all__ = [
     "CemantixClient",
     "MockClient",
     "VocabStore",
+    "WordScorer",
     "ensure_lexique",
     "load_lexique",
     "strip_accents",

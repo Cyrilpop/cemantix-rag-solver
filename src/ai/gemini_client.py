@@ -50,11 +50,11 @@ class GeminiClient:
         """Indique si la clé d'API est présente et configurée."""
         return bool(self.api_key)
 
-    def request_hints(self, secret_word: str) -> Optional[List[Dict[str, Any]]]:
+    def request_hints(self, secret_word: str, user_prompt: Optional[str] = None) -> Optional[List[Dict[str, Any]]]:
         """Génère et valide les 3 indices pour un mot secret (alias de generate_hints)."""
-        return self.generate_hints(secret_word)
+        return self.generate_hints(secret_word, user_prompt=user_prompt)
 
-    def generate_hints(self, secret_word: str) -> Optional[List[Dict[str, Any]]]:
+    def generate_hints(self, secret_word: str, user_prompt: Optional[str] = None) -> Optional[List[Dict[str, Any]]]:
         """Appelle l'API Gemini pour générer les 3 indices gradués pour le mot secret donné.
 
         Effectue un retry modéré en cas de saturation (503/429) et bascule sur un modèle
@@ -73,6 +73,8 @@ class GeminiClient:
             if fb not in models_chain:
                 models_chain.append(fb)
 
+        prompt_text = user_prompt if user_prompt is not None else build_user_prompt(secret_word)
+
         payload = {
             "systemInstruction": {
                 "parts": [{"text": SYSTEM_PROMPT}]
@@ -80,7 +82,7 @@ class GeminiClient:
             "contents": [
                 {
                     "role": "user",
-                    "parts": [{"text": build_user_prompt(secret_word)}]
+                    "parts": [{"text": prompt_text}]
                 }
             ],
             "generationConfig": get_generation_config(self.temperature),
