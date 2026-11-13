@@ -382,7 +382,7 @@ class TestSoloGameAPIRoutes(unittest.TestCase):
 
     def test_daily_hints_strictly_increasing_and_calibrated(self, mock_gemini):
         """Vérifie que les 3 indices du jour ont des millièmes strictement croissants :
-        #1 ~700‰ < #2 ~825‰ < #3 ~950‰.
+        #1 ~350-500‰ < #2 ~500-750‰ < #3 > 900‰.
         """
         from src.services.solo_daily import ensure_solo_daily_puzzle, get_solo_ai_hints, get_current_paris_date
         today_str = get_current_paris_date()
@@ -398,10 +398,14 @@ class TestSoloGameAPIRoutes(unittest.TestCase):
         self.assertIsNotNone(p2)
         self.assertIsNotNone(p3)
 
-        # #1 proche des 700‰
-        self.assertLessEqual(abs(p1 - 700), 50)
-        # #3 proche des 950‰
-        self.assertLessEqual(abs(p3 - 950), 20)
+        # #1 dans zone tiède ~350-500‰
+        self.assertGreaterEqual(p1, 350)
+        self.assertLessEqual(p1, 500)
+        # #2 dans zone chaude ~500-750‰
+        self.assertGreaterEqual(p2, 500)
+        self.assertLessEqual(p2, 750)
+        # #3 dans zone brûlante > 900‰
+        self.assertGreater(p3, 900)
         # Strictement croissant
         self.assertLess(p1, p2)
         self.assertLess(p2, p3)
@@ -423,13 +427,13 @@ class TestSoloGameAPIRoutes(unittest.TestCase):
         self.assertEqual(h2["hint_type"], "word")
         self.assertEqual(h2["hint_level"], 2)
 
-        # Indice #3 au format mot -> calibré à ~950‰
+        # Indice #3 au format mot -> calibré à > 900‰
         h3, code3 = handle_solo_post(self.manager, "/api/game/hint", {"game_id": game_id, "type": "word", "level": 3})
         self.assertEqual(code3, 200)
         self.assertEqual(h3["hint_type"], "word")
         self.assertEqual(h3["hint_level"], 3)
         self.assertIsNotNone(h3.get("permille"))
-        self.assertLessEqual(abs(h3["permille"] - 950), 20)
+        self.assertGreater(h3["permille"], 900)
 
     def test_daily_puzzle_non_replayable_once_finished(self, mock_gemini):
         """Vérifie qu'une partie du jour gagnée ou abandonnée est verrouillée et non rejouable."""

@@ -103,11 +103,12 @@ def ensure_solo_daily_puzzle(
         p2 = h2.get("permille") if h2 else None
         p3 = h3.get("permille") if h3 else None
 
-        # Exigence stricte : p1 ~700, p3 ~950, et p1 < p2 < p3 croissant
+        # Exigence stricte : p1 ~350-500, p2 ~500-750, p3 > 900, et p1 < p2 < p3 croissant
         if not (
             p1 is not None and p2 is not None and p3 is not None
-            and 650 <= p1 <= 750
-            and 935 <= p3 <= 965
+            and 300 <= p1 <= 550
+            and 450 <= p2 <= 800
+            and p3 >= 850
             and p1 < p2 < p3
         ):
             needs_generation = True
@@ -124,7 +125,7 @@ def ensure_solo_daily_puzzle(
 def _find_word_at_permille(
     store: Any,
     norm_secret: str,
-    target_permille: int = 950,
+    target_permille: int = 500,
     excluded_words: Optional[set] = None,
     min_permille: Optional[int] = None,
     max_permille: Optional[int] = None,
@@ -186,36 +187,27 @@ def _find_word_at_permille(
 
 def _generate_and_store_hints(puzzle_date: str, secret_word: str, store: Any = None) -> None:
     """Génère les 3 indices IA et précalcule leurs scores sémantiques et millièmes croissants :
-    - Indice #1 : proche des 700‰
-    - Indice #2 : intermédiaire croissant (~825‰)
-    - Indice #3 : proche de 950‰
+    - Indice #1 : ~350 - 500‰
+    - Indice #2 : ~500 - 750‰
+    - Indice #3 : > 900‰
     """
-    hints_to_save: List[Dict[str, Any]] = []
+    if store is None:
+        from ..engine.vocab import VocabStore
+        store = VocabStore(with_chroma=False)
+
+    from .ai_hints import generate_calibrated_ai_hints
     client = GeminiClient()
+    hints_to_save: Optional[List[Dict[str, Any]]] = None
 
     if client.is_configured():
-        try:
-            raw_hints = client.generate_hints(secret_word)
-            if raw_hints and len(raw_hints) >= 3:
-                for h in raw_hints:
-                    hints_to_save.append({
-                        "hint_level": int(h.get("level") or h.get("hint_level") or 1),
-                        "weight": float(h.get("weight") or 1.0),
-                        "hint_word": str(h.get("word") or h.get("hint_word") or ""),
-                        "hint_phrase": str(h.get("phrase") or h.get("hint_phrase") or ""),
-                    })
-        except Exception as e:
-            log(f"⚠️  [SOLO] Erreur génération indices Gemini : {e}")
-
-    # Tri par niveau
-    hints_to_save.sort(key=lambda h: h["hint_level"])
+        hints_to_save = generate_calibrated_ai_hints(secret_word, store=store, client=client, max_calls=5)
 
     # Repli algorithmique si Gemini indisponible ou incomplet
-    if len(hints_to_save) < 3 and store:
+    if not hints_to_save or len(hints_to_save) < 3:
         norm_secret = store.normalize(secret_word)
-        w1, s1, p1 = _find_word_at_permille(store, norm_secret, target_permille=700, max_permille=750)
-        w2, s2, p2 = _find_word_at_permille(store, norm_secret, target_permille=825, min_permille=(p1 or 680) + 20, max_permille=900, excluded_words={w1})
-        w3, s3, p3 = _find_word_at_permille(store, norm_secret, target_permille=950, min_permille=max(935, (p2 or 800) + 15), max_permille=965, excluded_words={w1, w2})
+        w1, s1, p1 = _find_word_at_permille(store, norm_secret, target_permille=425, min_permille=350, max_permille=500)
+        w2, s2, p2 = _find_word_at_permille(store, norm_secret, target_permille=625, min_permille=max(500, (p1 or 400) + 20), max_permille=750, excluded_words={w1})
+        w3, s3, p3 = _find_word_at_permille(store, norm_secret, target_permille=930, min_permille=max(901, (p2 or 700) + 15), max_permille=980, excluded_words={w1, w2})
 
         hints_to_save = [
             {
@@ -243,90 +235,6 @@ def _generate_and_store_hints(puzzle_date: str, secret_word: str, store: Any = N
                 "permille": p3,
             },
         ]
-
-    # Calcul des scores réels et calibrage strict des millièmes croissants
-    if hints_to_save and store:
-        norm_secret = store.normalize(secret_word)
-        if norm_secret in store:
-            v_secret = store.vec(norm_secret)
-            all_cos = store.vecs @ v_secret
-            k = min(1000, len(all_cos))
-            threshold = float(np.partition(all_cos, -k)[-k])
-            top_scores = np.sort(all_cos[all_cos >= threshold])
-
-            for h in hints_to_save:
-                hw = store.normalize(h["hint_word"])
-                if hw in store:
-                    cos_val = float(store.vec(hw) @ v_secret)
-                    h["score"] = round(cos_val * 100, 2)
-                    if cos_val >= threshold:
-                        pm = int(np.searchsorted(top_scores, cos_val))
-                        h["permille"] = min(999, max(1, pm))
-                    else:
-                        h["permille"] = None
-                else:
-                    h["score"] = 0.0
-                    h["permille"] = None
-
-            h1 = next((h for h in hints_to_save if h.get("hint_level") == 1), None)
-            h2 = next((h for h in hints_to_save if h.get("hint_level") == 2), None)
-            h3 = next((h for h in hints_to_save if h.get("hint_level") == 3), None)
-
-            # 1. Calibrage Indice #1 proche de 700‰
-            if h1:
-                p1 = h1.get("permille")
-                if p1 is None or p1 < 650 or p1 > 750:
-                    w_cal, s_cal, p_cal = _find_word_at_permille(store, norm_secret, target_permille=700, max_permille=750)
-                    if w_cal:
-                        h1["hint_word"] = w_cal
-                        h1["score"] = s_cal
-                        h1["permille"] = p_cal
-
-            # 2. Calibrage Indice #2 intermédiaire croissant (> p1 et ~825‰)
-            if h2 and h1:
-                p1 = h1.get("permille") or 700
-                p2 = h2.get("permille")
-                if p2 is None or p2 <= p1 or p2 > 910:
-                    w_cal, s_cal, p_cal = _find_word_at_permille(
-                        store, norm_secret, target_permille=825,
-                        min_permille=p1 + 20, max_permille=900,
-                        excluded_words={h1.get("hint_word")}
-                    )
-                    if w_cal:
-                        h2["hint_word"] = w_cal
-                        h2["score"] = s_cal
-                        h2["permille"] = p_cal
-
-            # 3. Calibrage Indice #3 proche de 950‰ et strictement > p2
-            if h3 and h2:
-                p2 = h2.get("permille") or 825
-                p3 = h3.get("permille")
-                if p3 is None or abs(p3 - 950) > 15 or p3 <= p2:
-                    w_cal, s_cal, p_cal = _find_word_at_permille(
-                        store, norm_secret, target_permille=950,
-                        min_permille=max(935, p2 + 10), max_permille=965,
-                        excluded_words={h1.get("hint_word") if h1 else "", h2.get("hint_word")}
-                    )
-                    if w_cal:
-                        h3["hint_word"] = w_cal
-                        h3["score"] = s_cal
-                        h3["permille"] = p_cal
-
-            # 4. Garde-fou absolu de stricte croissance : p1 < p2 < p3
-            p1_final = h1.get("permille") if h1 else None
-            p2_final = h2.get("permille") if h2 else None
-            p3_final = h3.get("permille") if h3 else None
-
-            if not (p1_final and p2_final and p3_final and p1_final < p2_final < p3_final):
-                w1_f, s1_f, p1_f = _find_word_at_permille(store, norm_secret, target_permille=700, max_permille=750)
-                w2_f, s2_f, p2_f = _find_word_at_permille(store, norm_secret, target_permille=825, min_permille=(p1_f or 680) + 20, max_permille=900, excluded_words={w1_f})
-                w3_f, s3_f, p3_f = _find_word_at_permille(store, norm_secret, target_permille=950, min_permille=max(935, (p2_f or 800) + 15), max_permille=965, excluded_words={w1_f, w2_f})
-                if h1 and w1_f:
-                    h1.update({"hint_word": w1_f, "score": s1_f, "permille": p1_f})
-                if h2 and w2_f:
-                    h2.update({"hint_word": w2_f, "score": s2_f, "permille": p2_f})
-                if h3 and w3_f:
-                    h3.update({"hint_word": w3_f, "score": s3_f, "permille": p3_f})
 
     if hints_to_save:
         save_solo_ai_hints(puzzle_date, hints_to_save)
