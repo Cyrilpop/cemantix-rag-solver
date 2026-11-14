@@ -6,7 +6,7 @@
  * et le tableau de bord des statistiques de jeu personnelles.
  */
 import { initAuth, openPlayerModal } from "./auth.js";
-import { showToast } from "./utils.js";
+import { showToast, showConfirmDialog } from "./utils.js";
 
 const SESSION_KEY = "cemantix_player_session";
 
@@ -243,7 +243,15 @@ function initRecoveryActions() {
 
   if (regenBtn) {
     regenBtn.addEventListener("click", async () => {
-      if (!confirm("Attention : générer une nouvelle phrase de secours invalidera définitivement la précédente. Continuer ?")) {
+      const confirmed = await showConfirmDialog({
+        title: "Remplacer la phrase de secours ?",
+        message: "Attention : générer une nouvelle phrase de secours invalidera définitivement la précédente. Êtes-vous sûr de vouloir continuer ?",
+        icon: "🔑",
+        confirmText: "Générer une nouvelle phrase",
+        cancelText: "Annuler",
+        confirmType: "danger",
+      });
+      if (!confirmed) {
         return;
       }
 
@@ -345,7 +353,15 @@ async function loadStats() {
 // --- Déconnexion -------------------------------------------------------------
 
 async function handleLogout() {
-  if (!confirm("Voulez-vous vraiment vous déconnecter de votre compte ?")) {
+  const confirmed = await showConfirmDialog({
+    title: "Se déconnecter ?",
+    message: "Voulez-vous vraiment vous déconnecter de votre compte ?",
+    icon: "🚪",
+    confirmText: "Se déconnecter",
+    cancelText: "Rester connecté",
+    confirmType: "danger",
+  });
+  if (!confirmed) {
     return;
   }
 
