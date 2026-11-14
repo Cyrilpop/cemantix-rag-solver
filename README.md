@@ -736,6 +736,21 @@ Le système d'identité joueur offre une expérience sans friction, ludique et s
    - Affichage responsive CSS natif : bouton PC `🔗 Copier le lien` sur grand écran (> 768px), et groupe mobile `📲 Inviter un ami` (Web Share API natif avec repli presse-papier) + `📋` sur mobile/tactile (<= 768px).
    - Optimisation du palmarès des défis : affichage instantané du mot vainqueur (bypass cache `?fresh=1`, TTL KPIs 2s, insertion optimiste), suppression du scroll horizontal et masquage visuel des barres de défilement.
 
+### Espace « Mon compte », Sécurité & Statistiques Personnelles (Jalon M16)
+La gestion du joueur est centralisée sur une interface dédiée `/account/` avec un menu vertical ergonomique :
+1. **Séparation claire de l'onboarding et de la gestion de profil :**
+   - Le badge du header est dynamique : il affiche `[ 👤 Connexion / Inscription ]` pour les visiteurs invités, et `[ 👤 Mon compte ▾ ]` dès qu'un joueur est authentifié.
+   - La modale d'accès rapide est épurée en 2 flux directs : **Se connecter** (avec bascule vers réinitialisation 4 mots) et **S'inscrire** (création rapide de compte/mot de passe).
+   - Les utilisateurs connectés accèdent à la page `/account/` pour personnaliser leur pseudo, changer de mot de passe, gérer leurs mots de secours et consulter leurs statistiques.
+2. **Sécurité cryptographique & Mots de récupération système :**
+   - Tirage aléatoire par le système de 4 mots de secours concrets issus du dictionnaire actif (`secrets.choice`), hachés en base via PBKDF2-HMAC-SHA256 (200 000 itérations).
+   - Révélation unique dans l'interface (avec dialogue de confirmation et bouton de copie rapide) sans persistance en clair.
+   - Modification sécurisée du mot de passe avec validation de l'ancien mot de passe en temps constant et traçabilité temporelle (`password_updated_at`, `last_login_at`).
+3. **Tableau de bord statistique personnel :**
+   - Métriques consolidées en direct : parties jouées, victoires, taux de victoire, moyenne d'essais, meilleur score et temps moyen de résolution.
+4. **Intégration UI & Confort visuel :**
+   - Neutralisation complète du fond blanc d'autofill navigateur (`:-webkit-autofill`) sur tous les formulaires sombres (`color-scheme: dark`).
+
 ### Cache HTTP : cohérence avec la politique « no-cache »
 Le projet applique `Cache-Control: "no-cache, must-revalidate"` sur le code applicatif
 (voir l'encadré « Pourquoi aucun paramètre de version (`?v=...`) » plus haut) : la
@@ -754,7 +769,7 @@ Deux points de vigilance propres aux pages d'archives :
 
 ```caddy
     # Pages du site (URL sans extension servies via try_files) : même traitement que le HTML
-    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/*
+    @pages path / /puzzles /puzzles/* /play /play/* /battle /battle/* /multi /multi/* /account /account/*
     header @pages Cache-Control "no-cache, must-revalidate"
 ```
 
