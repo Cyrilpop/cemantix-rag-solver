@@ -172,11 +172,19 @@ def get_recovery_status(player_id: str) -> dict:
         WHERE player_id = %s
     """
     row = db.fetch_one(sql, (player_id,))
-    if not row or not row.get("count"):
+    cnt = int(row["count"]) if row and row.get("count") else 0
+    created_at = row.get("created_at") if row else None
+
+    # Compatibilité avec le hash initial généré lors du claim M14 (players.recovery_key_hash)
+    if cnt == 0:
+        player = get_player_by_id(player_id)
+        if player and player.get("recovery_key_hash"):
+            cnt = 4
+            created_at = player.get("created_at")
+
+    if cnt == 0:
         return {"configured": False, "count": 0, "createdAt": None}
 
-    cnt = int(row["count"])
-    created_at = row.get("created_at")
     created_at_str = created_at.isoformat() if isinstance(created_at, datetime) else str(created_at or "")
 
     return {
@@ -205,6 +213,19 @@ def regenerate_recovery_words(player_id: str, count: int = 4) -> Tuple[bool, str
     success = save_player_recovery_words(player_id, words)
     if not success:
         return False, "Erreur lors de l'enregistrement des mots de récupération.", []
+
+    # Synchronisation de players.recovery_key_hash pour la compatibilité avec /api/player/reset-password
+    try:
+        from ..services.player_auth import hash_recovery_phrase
+        phrase = " ".join(words)
+        rec_hash = hash_recovery_phrase(phrase)
+        placeholder = "?" if db.is_sqlite else "%s"
+        db.execute(
+            f"UPDATE players SET recovery_key_hash = {placeholder} WHERE id = {placeholder}",
+            (rec_hash, player_id),
+        )
+    except Exception:
+        pass
 
     return True, "Nouveaux mots de récupération générés avec succès.", words
 

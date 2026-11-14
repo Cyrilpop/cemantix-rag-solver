@@ -11,8 +11,8 @@ Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/)
 
 ### Ajouté
 - **Espace dédié « Mon compte » (`/account/`) (`ACC-05`)** :
-  - Interface complète à 4 sections avec navigation par menu vertical ergonomique : Profil, Sécurité & Mot de passe, Mots de récupération, Statistiques personnelles de jeu.
-  - Système d'affichage unique sécurisé des mots de récupération avec boîte modale de confirmation, bouton de copie rapide et avertissement cryptographique.
+  - Interface complète à 3 sections avec navigation par menu vertical ergonomique : Profil, Sécurité & Accès, Statistiques personnelles de jeu.
+  - Section Phrase de secours intégrée dans « Sécurité & Accès » avec rappel explicite de non-conservation en clair des mots hachés et bouton de remplacement sécurisé avec affichage unique.
   - Tableau de bord statistique personnel complet : parties jouées, victoires, taux de victoire, moyenne d'essais, meilleur score, temps moyen et indices utilisés.
 - **DAO & Sécurité Cryptographique (`ACC-02`)** :
   - Tirage aléatoire et cryptographique de 4 mots de récupération système depuis le dictionnaire français actif.

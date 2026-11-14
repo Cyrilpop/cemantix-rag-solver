@@ -71,7 +71,7 @@ function initTabs() {
 
       // Chargement à la demande
       if (targetTab === "profile") loadProfile();
-      else if (targetTab === "recovery") loadRecoveryStatus();
+      else if (targetTab === "security") loadRecoveryStatus();
       else if (targetTab === "stats") loadStats();
     });
   });
@@ -205,6 +205,7 @@ function initSecurityForm() {
 async function loadRecoveryStatus() {
   const statusEl = document.getElementById("recovery-status-text");
   const dateEl = document.getElementById("recovery-status-date");
+  const regenBtn = document.getElementById("btn-regenerate-recovery");
 
   const { ok, data } = await apiFetch("/api/account/recovery");
   if (!ok) {
@@ -214,20 +215,17 @@ async function loadRecoveryStatus() {
 
   if (statusEl) {
     if (data.configured) {
-      statusEl.innerHTML = `<span style="color:var(--success);">✓ ${data.count} mots de récupération configurés</span>`;
+      statusEl.innerHTML = `<span style="color:var(--success);">✓ Phrase de secours active (${data.count} mots)</span>`;
+      if (regenBtn) regenBtn.textContent = "🎲 Remplacer ma phrase de secours";
     } else {
-      statusEl.innerHTML = `<span style="color:var(--warning);">⚠️ Aucun mot de récupération configuré</span>`;
+      statusEl.innerHTML = `<span style="color:var(--warning);">⚠️ Aucune phrase de secours configurée</span>`;
+      if (regenBtn) regenBtn.textContent = "🎲 Configurer ma phrase de secours";
     }
   }
 
   if (dateEl) {
-    if (data.createdAt) {
-      try {
-        const d = new Date(data.createdAt);
-        dateEl.textContent = `Dernière génération : ${d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}`;
-      } catch {
-        dateEl.textContent = "";
-      }
+    if (data.configured) {
+      dateEl.textContent = "Pour votre sécurité, vos 4 mots sont protégés cryptographiquement et ne peuvent pas être ré-affichés.";
     } else {
       dateEl.textContent = "Générez vos mots pour pouvoir restaurer votre compte en cas d'oubli.";
     }
@@ -245,7 +243,7 @@ function initRecoveryActions() {
 
   if (regenBtn) {
     regenBtn.addEventListener("click", async () => {
-      if (!confirm("Attention : générer de nouveaux mots de récupération invalidera définitivement les précédents. Continuer ?")) {
+      if (!confirm("Attention : générer une nouvelle phrase de secours invalidera définitivement la précédente. Continuer ?")) {
         return;
       }
 
@@ -276,7 +274,7 @@ function initRecoveryActions() {
         }
 
         loadRecoveryStatus();
-        showToast("✓ Nouveaux mots générés");
+        showToast("✓ Nouvelle phrase de secours générée");
       } catch {
         alert("Erreur de connexion au serveur.");
       } finally {

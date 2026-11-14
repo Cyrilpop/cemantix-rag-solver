@@ -135,10 +135,6 @@
             <span class="account-nav-icon">🔒</span>
             <span>Sécurité & Accès</span>
           </button>
-          <button type="button" class="account-nav-btn" data-tab="recovery">
-            <span class="account-nav-icon">🔑</span>
-            <span>Mots de Secours</span>
-          </button>
           <button type="button" class="account-nav-btn" data-tab="stats">
             <span class="account-nav-icon">📊</span>
             <span>Mes Statistiques</span>
@@ -188,77 +184,86 @@
             </div>
           </div>
 
-          <!-- 2. Sécurité -->
+          <!-- 2. Sécurité & Accès -->
           <div id="tab-security" class="account-tab-pane">
             <div class="account-pane-header">
-              <h2>🔒 Sécurité du Compte</h2>
-              <p>Modifiez votre mot de passe pour sécuriser votre accès multi-appareils.</p>
+              <h2>🔒 Sécurité & Accès</h2>
+              <p>Gérez votre mot de passe et votre phrase de secours pour sécuriser votre compte.</p>
             </div>
 
-            <form id="account-pwd-form" class="account-form" autocomplete="off">
-              <div id="pwd-form-feedback" class="account-feedback"></div>
+            <div class="card" style="margin-bottom: 1.5rem;">
+              <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem;">Modifier mon mot de passe</h3>
+              <form id="account-pwd-form" class="account-form" autocomplete="off">
+                <div id="pwd-form-feedback" class="account-feedback"></div>
 
-              <div class="account-form-group">
-                <label for="input-current-password">Mot de passe actuel :</label>
-                <input type="password" id="input-current-password" class="account-form-input" placeholder="••••••••" required>
-              </div>
-
-              <div class="account-form-group">
-                <label for="input-new-password">Nouveau mot de passe (8 car. min) :</label>
-                <input type="password" id="input-new-password" class="account-form-input" minlength="8" placeholder="••••••••" required>
-              </div>
-
-              <div class="account-form-group">
-                <label for="input-confirm-password">Confirmer le nouveau mot de passe :</label>
-                <input type="password" id="input-confirm-password" class="account-form-input" minlength="8" placeholder="••••••••" required>
-              </div>
-
-              <div class="account-form-actions">
-                <button type="submit" id="btn-submit-password" class="btn btn-primary">
-                  Enregistrer le mot de passe
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- 3. Mots de Récupération -->
-          <div id="tab-recovery" class="account-tab-pane">
-            <div class="account-pane-header">
-              <h2>🔑 Mots de Récupération</h2>
-              <p>Mots de passe de secours générés aléatoirement par le système en cas d'oubli de vos identifiants.</p>
-            </div>
-
-            <div class="recovery-status-card">
-              <div class="recovery-status-left">
-                <div class="recovery-status-title">
-                  <span>🛡️</span>
-                  <span id="recovery-status-text">Vérification de l'état...</span>
+                <div class="account-form-group">
+                  <label for="input-current-password">Mot de passe actuel :</label>
+                  <input type="password" id="input-current-password" class="account-form-input" placeholder="••••••••" required>
                 </div>
-                <div id="recovery-status-date" class="recovery-status-desc">
-                  Les mots de secours permettent de restaurer votre compte sans adresse email.
+
+                <div class="account-form-group">
+                  <label for="input-new-password">Nouveau mot de passe (8 car. min) :</label>
+                  <input type="password" id="input-new-password" class="account-form-input" minlength="8" placeholder="••••••••" required>
                 </div>
-              </div>
-              <button type="button" id="btn-regenerate-recovery" class="btn btn-primary">
-                🎲 Régénérer mes 4 mots
-              </button>
+
+                <div class="account-form-group">
+                  <label for="input-confirm-password">Confirmer le nouveau mot de passe :</label>
+                  <input type="password" id="input-confirm-password" class="account-form-input" minlength="8" placeholder="••••••••" required>
+                </div>
+
+                <div class="account-form-actions">
+                  <button type="submit" id="btn-submit-password" class="btn btn-primary">
+                    Enregistrer le mot de passe
+                  </button>
+                </div>
+              </form>
             </div>
 
-            <!-- Boîte de révélation unique des mots -->
-            <div id="recovery-reveal-box" class="recovery-reveal-box" style="display:none;">
-              <div class="recovery-warning-banner">
-                <span>⚠️</span>
-                <span>Attention : ces 4 mots ne seront affichés qu'une seule et unique fois. Notez-les en lieu sûr !</span>
+            <!-- Phrase de Secours (4 mots) -->
+            <div class="card">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                <div>
+                  <h3 style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                    <span>🔑</span> Phrase de secours (4 mots)
+                  </h3>
+                  <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.2rem;">
+                    Permet de restaurer votre compte en cas d'oubli de mot de passe, sans adresse email.
+                  </p>
+                </div>
+                <button type="button" id="btn-regenerate-recovery" class="btn btn-secondary btn-sm">
+                  🎲 Remplacer ma phrase de secours
+                </button>
               </div>
 
-              <div id="recovery-words-grid" class="recovery-words-grid"></div>
+              <div class="recovery-status-card" style="margin-top: 0.5rem;">
+                <div class="recovery-status-left">
+                  <div class="recovery-status-title">
+                    <span>🛡️</span>
+                    <span id="recovery-status-text">Vérification de l'état...</span>
+                  </div>
+                  <div id="recovery-status-date" class="recovery-status-desc">
+                    Pour votre sécurité, vos 4 mots sont protégés cryptographiquement et ne peuvent pas être ré-affichés.
+                  </div>
+                </div>
+              </div>
 
-              <div class="recovery-reveal-actions">
-                <button type="button" id="btn-copy-recovery-words" class="btn btn-secondary">
-                  📋 Copier les mots
-                </button>
-                <button type="button" id="btn-dismiss-recovery-words" class="btn btn-primary btn-sm">
-                  ✓ J'ai bien noté mes mots
-                </button>
+              <!-- Boîte de révélation unique des mots -->
+              <div id="recovery-reveal-box" class="recovery-reveal-box" style="display:none; margin-top: 1rem;">
+                <div class="recovery-warning-banner">
+                  <span>⚠️</span>
+                  <span>Attention : ces 4 mots ne seront affichés qu'une seule et unique fois. Notez-les immédiatement en lieu sûr !</span>
+                </div>
+
+                <div id="recovery-words-grid" class="recovery-words-grid"></div>
+
+                <div class="recovery-reveal-actions">
+                  <button type="button" id="btn-copy-recovery-words" class="btn btn-secondary">
+                    📋 Copier les mots
+                  </button>
+                  <button type="button" id="btn-dismiss-recovery-words" class="btn btn-primary btn-sm">
+                    ✓ J'ai bien noté mes mots
+                  </button>
+                </div>
               </div>
             </div>
           </div>
