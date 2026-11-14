@@ -7,6 +7,7 @@ Exporte l'ensemble des contrôleurs modulaires d'API :
 - battle : /api/battle/* (Duel Joueur vs Bot IA RAG)
 - multi  : /api/multi/* (Mode Multijoueur 1v1 joueurs réels)
 """
+from .account import handle_account_get, handle_account_post
 from .battle import handle_battle_post
 from .challenge import handle_challenge_get, handle_challenge_post, handle_challenge_stream
 from .admin import (
@@ -22,6 +23,8 @@ from .solo import handle_solo_get, handle_solo_post
 from .system import handle_system_get, handle_system_post
 
 __all__ = [
+    "handle_account_get",
+    "handle_account_post",
     "handle_system_get",
     "handle_system_post",
     "handle_admin_get",

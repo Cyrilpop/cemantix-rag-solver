@@ -4,6 +4,47 @@ Toutes les modifications notables apportées à ce projet sont documentées dans
 
 Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/).
 
+## [Non publié] - 2026-11-14 · Espace « Mon compte », Gestion Avancée du Profil, Sécurité, Mots de Récupération & Statistiques de Jeu (Jalon M16)
+
+**Évolution :** [docs/roadmap/2026-11-10-espace-mon-compte](docs/roadmap/2026-11-10-espace-mon-compte/01-plan.md) ·
+**Branche :** `feature/m16-espace-mon-compte`
+
+### Ajouté
+- **Espace dédié « Mon compte » (`/account/`) (`ACC-05`)** :
+  - Interface complète à 3 sections avec navigation par menu vertical ergonomique : Profil, Sécurité & Accès, Statistiques personnelles de jeu.
+  - Section Phrase de secours intégrée dans « Sécurité & Accès » avec rappel explicite de non-conservation en clair des mots hachés et bouton de remplacement sécurisé avec affichage unique.
+  - Tableau de bord statistique personnel complet : parties jouées, victoires, taux de victoire, moyenne d'essais, meilleur score, temps moyen et indices utilisés.
+- **DAO & Sécurité Cryptographique (`ACC-02`)** :
+  - Tirage aléatoire et cryptographique de 4 mots de récupération système depuis le dictionnaire français actif.
+  - Hachage sécurisé PBKDF2-HMAC-SHA256 (200 000 itérations) des mots de récupération stockés dans la nouvelle table `player_recovery_words`.
+  - Modification sécurisée du mot de passe avec validation de l'ancien mot de passe en temps constant et contrôle de robustesse (minimum 8 caractères).
+  - Traçabilité temporelle du compte avec mise à jour automatique de `password_updated_at` et `last_login_at`.
+- **Endpoints REST dédiés `/api/account/*` (`ACC-03`)** :
+  - `GET /api/account/profile` : renvoie les données complètes du profil authentifié.
+  - `POST /api/account/password` : valide et modifie le mot de passe du compte revendiqué.
+  - `GET /api/account/recovery` : consulte le statut des mots de récupération sans jamais les exposer.
+  - `POST /api/account/recovery` : génère ou régénère un lot de 4 mots aléatoires uniques avec purge atomique.
+  - `GET /api/account/stats` : calcule et retourne les statistiques personnelles de jeu.
+  - `POST /api/account/logout` : déconnexion idempotente avec instruction d'invalidation locale.
+  - En-têtes HTTP de sécurité `Cache-Control: no-store, private` systématiques sur les réponses sensibles.
+- **Routage dynamique Header & Double infrastructure de proxy (`ACC-04`, `ACC-06`)** :
+  - Aiguillage intelligent du badge « Mon compte » : redirection vers `/account/` si le profil est revendiqué, ouverture de la modale d'inscription rapide si compte invité.
+  - Sanctuarisation du moteur global de modales (`modal.css`) pour l'onboarding et les indices M15.
+  - Prise en charge double cible : `local/smoke-test.sh` pour l'environnement local/test sous Nginx, et directive `@pages` enrichie dans le `Caddyfile` racine iso prod hors Git (`/account /account/*`).
+- **Schéma relationnel idempotent (`ACC-01`)** :
+  - Table `player_recovery_words` créée avec contrainte d'unicité `(player_id, word_hash)` et index de recherche.
+  - Colonnes `password_updated_at` et `last_login_at` ajoutées conditionnellement sur la table `players` (PostgreSQL & SQLite).
+- **Suite de tests automatisés sous Docker (`ACC-07`, `ACC-08`)** :
+  - 15 tests unitaires et d'intégration dédiés dans `tests/test_account.py` (schéma, DAO, API REST, erreurs 401/403/400).
+  - Intégration et compilation du bundle `account.css` (40,957 o) dans `tools/build_css_bundles.py` et validation `check_docs.py`.
+
+### Modifié
+- **Header universel dynamique** : Le badge d'authentification s'adapte à l'état du joueur — affiche `Connexion / Inscription` pour les invités non connectés, et bascule sur `Mon compte` une fois authentifié.
+- **Modale d'authentification rapide** : Refonte en parcours ciblé à 2 onglets (`Se connecter` avec bascule vers la réinitialisation par phrase de 4 mots, et `S'inscrire` pour la création de compte), déléguant la gestion complète du profil et les KPIs à la page dédiée `/account/`.
+
+### Corrigé
+- **Neutralisation de l'autofill navigateur** : Élimination du fond blanc/bleu ciel injecté par Chromium/WebKit (`:-webkit-autofill`) sur les champs de saisie (pseudo et mot de passe) dans les formulaires d'authentification et de gestion de compte, assurant un rendu sombre fluide et homogène (`color-scheme: dark`).
+
 ## [Non publié] - 2026-11-11 · Architecture CSS modulaire, parité visuelle universelle et correctifs UI
 
 **Branche :** `feat/seo-modular-css-architecture`

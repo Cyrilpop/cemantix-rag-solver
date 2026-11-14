@@ -54,19 +54,26 @@ function updateHeaderBadge(username) {
   const badgeNameEl = document.getElementById("player-badge-name");
   const badgeBtn = document.getElementById("player-badge");
   const welcomeNameEl = document.getElementById("player-welcome-name");
+  const session = currentSession || getStoredSession();
+  const isClaimed = Boolean(session && session.is_claimed);
 
   if (badgeNameEl) {
-    badgeNameEl.textContent = "Mon compte";
+    badgeNameEl.textContent = isClaimed ? "Mon compte" : "Connexion / Inscription";
   }
   if (badgeBtn) {
-    badgeBtn.title = username ? `Mon compte (${username})` : "Mon compte";
-    badgeBtn.setAttribute("aria-label", "Mon compte");
+    if (isClaimed) {
+      badgeBtn.title = username ? `Mon compte (${username})` : "Mon compte";
+      badgeBtn.setAttribute("aria-label", "Mon compte");
+    } else {
+      badgeBtn.title = "Connexion ou inscription";
+      badgeBtn.setAttribute("aria-label", "Connexion / Inscription");
+    }
   }
   if (welcomeNameEl && username) {
     welcomeNameEl.textContent = username;
   }
   try {
-    window.dispatchEvent(new CustomEvent("cemantix:auth-changed", { detail: { username } }));
+    window.dispatchEvent(new CustomEvent("cemantix:auth-changed", { detail: { username, isClaimed } }));
   } catch (e) {}
 }
 
@@ -143,94 +150,19 @@ function ensurePlayerModal() {
   modal.innerHTML = `
     <div class="player-modal-card">
       <div class="player-modal-header">
-        <h3>👤 Mon compte</h3>
+        <h3>🔐 Connexion / Inscription</h3>
         <button type="button" id="modal-close-cross" class="btn-icon btn-sm" aria-label="Fermer la modale">✕</button>
       </div>
 
-      <nav class="player-nav-tabs" aria-label="Onglets profil">
-        <button type="button" class="player-tab-btn active" data-tab="profile">Mon Profil</button>
-        <button type="button" class="player-tab-btn" data-tab="claim">🔒 Protéger</button>
-        <button type="button" class="player-tab-btn" data-tab="login">📱 Connexion</button>
+      <nav class="player-nav-tabs" aria-label="Onglets connexion et inscription">
+        <button type="button" class="player-tab-btn active" data-tab="login">📱 Se connecter</button>
+        <button type="button" class="player-tab-btn" data-tab="claim">✨ S'inscrire</button>
       </nav>
 
-      <!-- Onglet 1 : Profil & Renommage -->
-      <div id="tab-profile" class="player-tab-pane active">
-        <div class="player-profile-summary">
-          <div class="player-profile-info">
-            <span class="player-field-note">Pseudo actuel :</span>
-            <span id="player-modal-current-name" class="player-profile-name">Profil invité</span>
-          </div>
-          <span id="player-modal-status-badge" class="player-badge-status status-guest">Invité</span>
-        </div>
-
-        <div id="player-rename-container" class="player-field-group">
-          <label for="input-player-rename">Personnaliser mon pseudo (8 à 24 car.) :</label>
-          <input type="text" id="input-player-rename" class="player-input" minlength="8" maxlength="24" placeholder="Ex: PanthereAgile" autocomplete="off">
-          <span class="player-field-note">⚠️ Attention : la personnalisation est définitive (possible une seule fois).</span>
-          <button type="button" id="btn-player-rename" class="btn btn-primary btn-sm" style="margin-top: 0.5rem;">Enregistrer mon pseudo</button>
-        </div>
-
-        <div id="player-rename-locked" class="player-msg is-success" style="display: none;">
-          ✓ Pseudo personnalisé et verrouillé.
-        </div>
-
-        <div id="player-rename-msg" class="player-msg"></div>
-
-        <div class="player-actions-row" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem;">
-          <button type="button" id="btn-player-claim-shortcut" class="btn btn-secondary btn-sm">🔒 Protéger par mot de passe</button>
-          <button type="button" id="btn-player-login-shortcut" class="btn btn-secondary btn-sm">📱 Changer d'appareil / Se connecter</button>
-        </div>
-
-        <div class="player-danger-zone">
-          <button type="button" id="btn-player-delete-account" class="btn btn-ghost btn-sm" style="color: var(--danger);">🗑️ Réinitialiser mon profil</button>
-        </div>
-      </div>
-
-      <!-- Onglet 2 : Protection par Mot de Passe & 4 Mots -->
-      <div id="tab-claim" class="player-tab-pane">
-        <div id="claim-form-container">
-          <p class="player-field-note" style="line-height: 1.4;">
-            Définissez un mot de passe pour retrouver vos parties et statistiques sur un autre appareil. 
-            <strong>Aucun email n'est collecté :</strong> une phrase secrète de 4 mots vous sera remise pour récupérer l'accès en cas d'oubli.
-          </p>
-          <div class="player-field-group" style="margin-top: 0.5rem;">
-            <label for="input-claim-pwd">Mot de passe (8 caractères min.) :</label>
-            <input type="password" id="input-claim-pwd" class="player-input" minlength="8" placeholder="••••••••">
-          </div>
-          <div class="player-field-group">
-            <label for="input-claim-pwd2">Confirmer le mot de passe :</label>
-            <input type="password" id="input-claim-pwd2" class="player-input" minlength="8" placeholder="••••••••">
-          </div>
-          <button type="button" id="btn-player-claim-submit" class="btn btn-primary btn-sm" style="margin-top: 0.5rem;">
-            🔒 Activer la protection
-          </button>
-        </div>
-
-        <!-- Encart de phrase secrète une fois claim réussi -->
-        <div id="claim-success-container" style="display: none; flex-direction: column; gap: 0.85rem;">
-          <div class="player-msg is-success" style="display: block;">
-            ✓ Compte protégé avec succès !
-          </div>
-          <div class="recovery-box">
-            <span class="player-field-note">🔑 Votre phrase secrète de secours (4 mots) :</span>
-            <div id="claim-recovery-phrase" class="recovery-phrase">mot1 mot2 mot3 mot4</div>
-            <button type="button" id="btn-copy-recovery-phrase" class="btn btn-secondary btn-sm">📋 Copier la phrase</button>
-          </div>
-          <p class="player-field-note" style="color: var(--warning); line-height: 1.4;">
-            ⚠️ <strong>Important :</strong> Conservez précieusement ces 4 mots ! En l'absence d'adresse email, ils constituent votre unique moyen de réinitialiser votre mot de passe.
-          </p>
-        </div>
-
-        <div id="player-claim-msg" class="player-msg"></div>
-      </div>
-
-      <!-- Onglet 3 : Connexion Multi-Appareils & Récupération -->
-      <div id="tab-login" class="player-tab-pane">
-        <p class="player-field-note" style="line-height: 1.4; margin-bottom: 0.75rem;">
-          Vous changez d'appareil ou souhaitez retrouver votre progression ? Connectez-vous ici avec votre pseudo et votre mot de passe :
-        </p>
+      <!-- Onglet 1 : Connexion Multi-Appareils & Récupération -->
+      <div id="tab-login" class="player-tab-pane active">
         <div class="pill-group" style="width: 100%; margin-bottom: 0.5rem;">
-          <button type="button" class="pill-btn active" id="btn-subtab-login" style="flex: 1;">Se connecter</button>
+          <button type="button" class="pill-btn active" id="btn-subtab-login" style="flex: 1;">Identifiant &amp; Mot de passe</button>
           <button type="button" class="pill-btn" id="btn-subtab-reset" style="flex: 1;">Mot de passe oublié (4 mots)</button>
         </div>
 
@@ -238,34 +170,83 @@ function ensurePlayerModal() {
         <div id="subpane-login" style="display: flex; flex-direction: column; gap: 0.75rem;">
           <div class="player-field-group">
             <label for="input-login-user">Pseudo :</label>
-            <input type="text" id="input-login-user" class="player-input" placeholder="Votre pseudo">
+            <input type="text" id="input-login-user" class="player-input" placeholder="Votre pseudo" autocomplete="username">
           </div>
           <div class="player-field-group">
             <label for="input-login-pwd">Mot de passe :</label>
-            <input type="password" id="input-login-pwd" class="player-input" placeholder="••••••••">
+            <input type="password" id="input-login-pwd" class="player-input" placeholder="••••••••" autocomplete="current-password">
           </div>
-          <button type="button" id="btn-player-login-submit" class="btn btn-primary btn-sm">Se connecter</button>
+          <button type="button" id="btn-player-login-submit" class="btn btn-primary btn-sm" style="margin-top: 0.25rem;">Se connecter</button>
+          <div style="text-align: center; margin-top: 0.35rem;">
+            <button type="button" id="btn-switch-to-register" class="btn btn-ghost btn-sm" style="font-size: 0.82rem;">Pas encore de compte ? <strong style="color: var(--accent);">S'inscrire</strong></button>
+          </div>
         </div>
 
         <!-- Formulaire Réinitialisation 4 mots -->
         <div id="subpane-reset" style="display: none; flex-direction: column; gap: 0.75rem;">
-          <p class="player-field-note">Restaurez l'accès grâce à vos 4 mots de secours :</p>
+          <p class="player-field-note" style="line-height: 1.4;">Restaurez l'accès à votre compte grâce à vos 4 mots de secours :</p>
           <div class="player-field-group">
             <label for="input-reset-user">Pseudo :</label>
-            <input type="text" id="input-reset-user" class="player-input" placeholder="Votre pseudo">
+            <input type="text" id="input-reset-user" class="player-input" placeholder="Votre pseudo" autocomplete="username">
           </div>
           <div class="player-field-group">
             <label for="input-reset-phrase">Phrase de secours (4 mots) :</label>
-            <input type="text" id="input-reset-phrase" class="player-input" placeholder="ex: navire falaise citron vortex">
+            <input type="text" id="input-reset-phrase" class="player-input" placeholder="ex: navire falaise citron vortex" autocomplete="off">
           </div>
           <div class="player-field-group">
             <label for="input-reset-pwd">Nouveau mot de passe :</label>
-            <input type="password" id="input-reset-pwd" class="player-input" minlength="8" placeholder="••••••••">
+            <input type="password" id="input-reset-pwd" class="player-input" minlength="8" placeholder="••••••••" autocomplete="new-password">
           </div>
           <button type="button" id="btn-player-reset-submit" class="btn btn-primary btn-sm">Réinitialiser et se connecter</button>
         </div>
 
         <div id="player-login-msg" class="player-msg"></div>
+      </div>
+
+      <!-- Onglet 2 : Inscription / Création de compte -->
+      <div id="tab-claim" class="player-tab-pane">
+        <div id="claim-form-container">
+          <p class="player-field-note" style="line-height: 1.4; margin-bottom: 0.75rem;">
+            Créez votre mot de passe pour enregistrer votre progression, vos statistiques et jouer sur tous vos appareils :
+          </p>
+          <div class="player-field-group">
+            <label for="input-claim-username">Pseudo souhaité :</label>
+            <input type="text" id="input-claim-username" class="player-input" minlength="8" maxlength="24" placeholder="Votre pseudo" autocomplete="username">
+            <span id="claim-username-note" class="player-field-note" style="display: none;">⚠️ Attention : le pseudo ne pourra plus être modifié après validation.</span>
+          </div>
+          <div class="player-field-group">
+            <label for="input-claim-pwd">Mot de passe (8 caractères min.) :</label>
+            <input type="password" id="input-claim-pwd" class="player-input" minlength="8" placeholder="••••••••" autocomplete="new-password">
+          </div>
+          <div class="player-field-group">
+            <label for="input-claim-pwd2">Confirmer le mot de passe :</label>
+            <input type="password" id="input-claim-pwd2" class="player-input" minlength="8" placeholder="••••••••" autocomplete="new-password">
+          </div>
+          <button type="button" id="btn-player-claim-submit" class="btn btn-primary btn-sm" style="margin-top: 0.5rem;">
+            ✨ Créer mon compte
+          </button>
+          <div style="text-align: center; margin-top: 0.35rem;">
+            <button type="button" id="btn-switch-to-login" class="btn btn-ghost btn-sm" style="font-size: 0.82rem;">Déjà un compte ? <strong style="color: var(--accent);">Se connecter</strong></button>
+          </div>
+        </div>
+
+        <!-- Encart de phrase secrète une fois claim réussi -->
+        <div id="claim-success-container" style="display: none; flex-direction: column; gap: 0.85rem;">
+          <div class="player-msg is-success" style="display: block;">
+            ✓ Compte créé et protégé avec succès !
+          </div>
+          <div class="recovery-box">
+            <span class="player-field-note">🔑 Vos mots de secours (4 mots à conserver) :</span>
+            <div id="claim-recovery-phrase" class="recovery-phrase">mot1 mot2 mot3 mot4</div>
+            <button type="button" id="btn-copy-recovery-phrase" class="btn btn-secondary btn-sm">📋 Copier la phrase</button>
+          </div>
+          <p class="player-field-note" style="color: var(--warning); line-height: 1.4;">
+            ⚠️ <strong>Important :</strong> Conservez précieusement ces 4 mots ! En l'absence d'adresse email, ils constituent votre unique moyen de réinitialiser votre mot de passe en cas d'oubli.
+          </p>
+          <button type="button" id="btn-claim-go-account" class="btn btn-primary btn-sm">Accéder à Mon Compte</button>
+        </div>
+
+        <div id="player-claim-msg" class="player-msg"></div>
       </div>
     </div>
   `;
@@ -324,31 +305,32 @@ function attachModalEvents(modal) {
     });
   }
 
-  // Raccourci vers la protection depuis le profil
-  const btnClaimShortcut = modal.querySelector("#btn-player-claim-shortcut");
-  if (btnClaimShortcut) {
-    btnClaimShortcut.addEventListener("click", () => {
+  // Bascule rapide entre Connexion et Inscription
+  const btnSwitchRegister = modal.querySelector("#btn-switch-to-register");
+  if (btnSwitchRegister) {
+    btnSwitchRegister.addEventListener("click", () => {
       const claimTabBtn = modal.querySelector('.player-tab-btn[data-tab="claim"]');
       if (claimTabBtn) claimTabBtn.click();
     });
   }
 
-  // Raccourci vers la connexion sur un autre appareil
-  const btnLoginShortcut = modal.querySelector("#btn-player-login-shortcut");
-  if (btnLoginShortcut) {
-    btnLoginShortcut.addEventListener("click", () => {
+  const btnSwitchLogin = modal.querySelector("#btn-switch-to-login");
+  if (btnSwitchLogin) {
+    btnSwitchLogin.addEventListener("click", () => {
       const loginTabBtn = modal.querySelector('.player-tab-btn[data-tab="login"]');
       if (loginTabBtn) loginTabBtn.click();
     });
   }
 
-  // Action Renommage
-  const btnRename = modal.querySelector("#btn-player-rename");
-  if (btnRename) {
-    btnRename.addEventListener("click", handleRenameAction);
+  const btnGoAccount = modal.querySelector("#btn-claim-go-account");
+  if (btnGoAccount) {
+    btnGoAccount.addEventListener("click", () => {
+      modal.close();
+      window.location.href = "/account/";
+    });
   }
 
-  // Action Protection
+  // Action Inscription / Protection
   const btnClaim = modal.querySelector("#btn-player-claim-submit");
   if (btnClaim) {
     btnClaim.addEventListener("click", handleClaimAction);
@@ -381,12 +363,6 @@ function attachModalEvents(modal) {
   if (btnReset) {
     btnReset.addEventListener("click", handleResetAction);
   }
-
-  // Action Suppression / Droit à l'effacement
-  const btnDelete = modal.querySelector("#btn-player-delete-account");
-  if (btnDelete) {
-    btnDelete.addEventListener("click", handleDeleteAccountAction);
-  }
 }
 
 /**
@@ -396,49 +372,23 @@ function refreshModalView() {
   const modal = document.getElementById("player-modal");
   if (!modal) return;
 
-  const currentNameEl = modal.querySelector("#player-modal-current-name");
-  const statusBadgeEl = modal.querySelector("#player-modal-status-badge");
-  const renameContainer = modal.querySelector("#player-rename-container");
-  const renameLocked = modal.querySelector("#player-rename-locked");
-  const renameMsg = modal.querySelector("#player-rename-msg");
-  const btnClaimShortcut = modal.querySelector("#btn-player-claim-shortcut");
+  const claimUserEl = modal.querySelector("#input-claim-username");
+  const claimUserNote = modal.querySelector("#claim-username-note");
 
-  if (!currentSession) {
-    if (currentNameEl) currentNameEl.textContent = "Chargement du compte…";
-    return;
+  if (!currentSession) return;
+
+  if (claimUserEl && (!claimUserEl.value || claimUserEl.value === "Votre pseudo")) {
+    claimUserEl.value = currentSession.username || "";
   }
-
-  if (currentNameEl) currentNameEl.textContent = currentSession.username;
-  if (renameMsg) {
-    renameMsg.style.display = "none";
-    renameMsg.textContent = "";
-  }
-
-  if (statusBadgeEl) {
-    if (currentSession.is_claimed) {
-      statusBadgeEl.className = "player-badge-status status-claimed";
-      statusBadgeEl.textContent = "Protégé 🔒";
-      if (btnClaimShortcut) btnClaimShortcut.style.display = "none";
-    } else {
-      statusBadgeEl.className = "player-badge-status status-guest";
-      statusBadgeEl.textContent = "Invité";
-      if (btnClaimShortcut) btnClaimShortcut.style.display = "inline-flex";
-    }
-  }
-
-  if (currentSession.can_change_username) {
-    if (renameContainer) renameContainer.style.display = "flex";
-    if (renameLocked) renameLocked.style.display = "none";
-  } else {
-    if (renameContainer) renameContainer.style.display = "none";
-    if (renameLocked) renameLocked.style.display = "block";
+  if (claimUserNote) {
+    claimUserNote.style.display = currentSession.can_change_username ? "block" : "none";
   }
 }
 
 /**
- * Ouvre la modale de profil joueur.
+ * Ouvre la modale de connexion / inscription.
  */
-export async function openPlayerModal(tab = "profile") {
+export async function openPlayerModal(tab = "login") {
   const modal = ensurePlayerModal();
   if (!currentSession && initAuthPromise) {
     try {
@@ -448,7 +398,8 @@ export async function openPlayerModal(tab = "profile") {
     }
   }
   refreshModalView();
-  const tabBtn = modal.querySelector(`.player-tab-btn[data-tab="${tab}"]`);
+  const effectiveTab = (tab === "claim" || tab === "register") ? "claim" : "login";
+  const tabBtn = modal.querySelector(`.player-tab-btn[data-tab="${effectiveTab}"]`);
   if (tabBtn) tabBtn.click();
   modal.showModal();
 }
@@ -505,10 +456,18 @@ async function handleRenameAction() {
  */
 async function handleClaimAction() {
   const modal = document.getElementById("player-modal");
+  const chosenUser = (modal.querySelector("#input-claim-username")?.value || "").trim();
   const pwd1 = modal.querySelector("#input-claim-pwd")?.value || "";
   const pwd2 = modal.querySelector("#input-claim-pwd2")?.value || "";
   const msgEl = modal.querySelector("#player-claim-msg");
   const btn = modal.querySelector("#btn-player-claim-submit");
+
+  if (chosenUser && currentSession && currentSession.can_change_username && chosenUser !== currentSession.username) {
+    if (chosenUser.length < 8 || chosenUser.length > 24) {
+      showMsg(msgEl, "Le pseudo doit comporter entre 8 et 24 caractères.", "error");
+      return;
+    }
+  }
 
   if (pwd1.length < 8) {
     showMsg(msgEl, "Le mot de passe doit comporter au moins 8 caractères.", "error");
@@ -520,9 +479,31 @@ async function handleClaimAction() {
   }
 
   btn.disabled = true;
-  btn.textContent = "Sécurisation en cours…";
+  btn.textContent = "Création du compte…";
 
   try {
+    // Si un pseudo personnalisé a été saisi
+    if (chosenUser && currentSession && currentSession.can_change_username && chosenUser !== currentSession.username) {
+      const renameRes = await fetch(`${API_BASE}/rename`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentSession.auth_token}`,
+        },
+        body: JSON.stringify({ new_username: chosenUser }),
+      });
+      const renameData = await renameRes.json();
+      if (!renameRes.ok) {
+        showMsg(msgEl, renameData.error || "Erreur lors de la personnalisation du pseudo.", "error");
+        btn.disabled = false;
+        btn.textContent = "✨ Créer mon compte";
+        return;
+      }
+      currentSession.username = renameData.username;
+      currentSession.can_change_username = false;
+      saveStoredSession(currentSession);
+    }
+
     const res = await fetch(`${API_BASE}/claim`, {
       method: "POST",
       headers: {
@@ -533,12 +514,13 @@ async function handleClaimAction() {
     });
     const data = await res.json();
     if (!res.ok) {
-      showMsg(msgEl, data.error || "Erreur lors de la protection du compte.", "error");
+      showMsg(msgEl, data.error || "Erreur lors de la création du compte.", "error");
       return;
     }
 
     currentSession.is_claimed = true;
     saveStoredSession(currentSession);
+    updateHeaderBadge(currentSession.username);
     refreshModalView();
 
     // Affichage de la phrase de secours
@@ -553,7 +535,7 @@ async function handleClaimAction() {
     showMsg(msgEl, "Erreur réseau. Veuillez réessayer.", "error");
   } finally {
     btn.disabled = false;
-    btn.textContent = "🔒 Activer la protection";
+    btn.textContent = "✨ Créer mon compte";
   }
 }
 
@@ -707,13 +689,22 @@ export async function initAuth() {
   const badgeBtn = document.getElementById("player-badge");
   if (badgeBtn && !badgeBtn.dataset.authBound) {
     badgeBtn.dataset.authBound = "true";
-    badgeBtn.addEventListener("click", () => openPlayerModal("profile"));
+    badgeBtn.addEventListener("click", () => {
+      const s = getStoredSession();
+      if (s && s.is_claimed) {
+        if (!window.location.pathname.includes("/account")) {
+          window.location.href = "/account/";
+          return;
+        }
+      }
+      openPlayerModal("login");
+    });
   }
 
   const welcomeBadge = document.getElementById("player-welcome-badge");
   if (welcomeBadge && !welcomeBadge.dataset.authBound) {
     welcomeBadge.dataset.authBound = "true";
-    welcomeBadge.addEventListener("click", () => openPlayerModal("profile"));
+    welcomeBadge.addEventListener("click", () => openPlayerModal("login"));
   }
 
   // Pré-chargement immédiat depuis le localStorage

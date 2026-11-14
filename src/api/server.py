@@ -24,6 +24,8 @@ from ..config import log
 from ..game import GameManager
 from .routes import (
     ADMIN_BASE_PATH,
+    handle_account_get,
+    handle_account_post,
     handle_admin_delete,
     handle_admin_get,
     handle_admin_post,
@@ -278,6 +280,10 @@ class GameAPIHandler(BaseHTTPRequestHandler):
         if path in ("/api/health", "/api/healthcheck", "/api/daily", "/api/dashboard"):
             if_none_match = self.headers.get("If-None-Match")
             res, status, etag = handle_system_get(_manager, path, query, if_none_match=if_none_match)
+        elif path.startswith("/api/account/"):
+            res, status = handle_account_get(path, query=query, headers=self.headers)
+            self._send_player_json(res, status=status)
+            return
         elif path.startswith("/api/game/") or path.startswith("/api/solo/"):
             res, status = handle_solo_get(_manager, path, query=query, headers=self.headers)
         elif path.startswith("/api/multi/"):
@@ -316,6 +322,11 @@ class GameAPIHandler(BaseHTTPRequestHandler):
         data, rejected = self._read_json()
         if rejected:
             return  # _read_json a déjà renvoyé l'erreur 413.
+
+        if path.startswith("/api/account/"):
+            res, status = handle_account_post(path, data, self.headers)
+            self._send_player_json(res, status=status)
+            return
 
         if path.startswith("/api/player/"):
             res, status = handle_player_post(path, data, self.headers)

@@ -66,6 +66,7 @@ BUNDLES = {
     "play": ["variables.css", "base.css", "layout.css", "auth.css", "game.css", "modal.css"],
     "battle": ["variables.css", "base.css", "layout.css", "auth.css", "game.css", "modal.css", "battle.css"],
     "multi": ["variables.css", "base.css", "layout.css", "auth.css", "game.css", "modal.css", "multi.css"],
+    "account": ["variables.css", "base.css", "layout.css", "auth.css", "account.css", "modal.css"],
     "modal": ["modal.css"],
     "puzzle": ["puzzle.css"],
 }
@@ -98,6 +99,11 @@ CRITICAL_PAGES = {
         WEB_DIR / "defi" / "index.html",
         "../",
         ["variables.css", "base.css", "layout.css", "auth.css", "game.css"],
+    ),
+    "account": (
+        WEB_DIR / "account" / "index.html",
+        "../",
+        ["variables.css", "base.css", "layout.css", "auth.css", "account.css"],
     ),
 }
 

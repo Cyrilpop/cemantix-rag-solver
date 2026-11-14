@@ -28,7 +28,7 @@ check() {   # check "libellé" "attendu" "obtenu"
 }
 
 echo "=== 1. Statuts HTTP (nginx -> fichiers statiques) ==="
-for pair in "/:200" "/play/:200" "/battle/:200" "/multi/:200" \
+for pair in "/:200" "/play/:200" "/battle/:200" "/multi/:200" "/account/:200" \
             "/robots.txt:200" "/sitemap.xml:200" "/llms.txt:200" \
             "/ai-catalog.json:404" "/.well-known/ai-catalog.json:200" \
             "/css/variables.css:200" "/js/app.js:200" \
@@ -132,7 +132,7 @@ if printf '%s' "$RID" | grep -qE '^DUEL-[0-9A-F]{4,8}$'; then
     KEY=$(printf '%s' "$ROOM" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("player_key",""))' 2>/dev/null)
     KEYLEN=${#KEY}
     if [ "$KEYLEN" -ge 20 ]; then
-        check "longueur de cle joueur (SEC-05)" ">=20" "$KEYLEN"
+        check "longueur de cle joueur (SEC-05)" ">=20" ">=20"
     else
         check "longueur de cle joueur (SEC-05)" ">=20" "$KEYLEN (dettable)"
     fi

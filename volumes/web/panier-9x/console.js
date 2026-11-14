@@ -233,6 +233,9 @@
     el('edit-user-id').value = id;
     el('edit-user-username').value = username;
     el('edit-user-can-rename').checked = canRename;
+    if (el('edit-user-password')) {
+      el('edit-user-password').value = '';
+    }
     if (typeof modal.showModal === 'function') {
       modal.showModal();
     } else {
@@ -242,6 +245,9 @@
 
   function closeUserEdit() {
     var modal = el('user-edit-modal');
+    if (el('edit-user-password')) {
+      el('edit-user-password').value = '';
+    }
     if (typeof modal.close === 'function') {
       modal.close();
     } else {
@@ -253,11 +259,20 @@
     var id = el('edit-user-id').value;
     var username = (el('edit-user-username').value || '').trim();
     var canRename = el('edit-user-can-rename').checked;
+    var password = (el('edit-user-password') ? el('edit-user-password').value : '').trim();
     if (!username) { toast('Pseudo requis', 'ko'); return; }
+    if (password && password.length < 8) {
+      toast('Le mot de passe doit comporter au moins 8 caractères', 'ko');
+      return;
+    }
+    var payload = { username: username, can_change_username: canRename };
+    if (password) {
+      payload.password = password;
+    }
     api('/users/' + encodeURIComponent(id), {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ username: username, can_change_username: canRename })
+      body: JSON.stringify(payload)
     })
       .then(function (r) {
         if (r.error) { toast(r.error, 'ko'); return; }
@@ -745,6 +760,12 @@
   var btnUserEditCancel = el('btn-user-edit-cancel');
   if (btnUserEditCancel) {
     btnUserEditCancel.addEventListener('click', closeUserEdit);
+  }
+  var editUserPass = el('edit-user-password');
+  if (editUserPass) {
+    editUserPass.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') saveUserEdit();
+    });
   }
 
   var dailySelect = el('daily-history-select');

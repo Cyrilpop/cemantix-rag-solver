@@ -87,6 +87,7 @@ class TestRessourcesAnnounceesLivrables(unittest.TestCase):
             self.assertIn("/methode/", texte, nom)
 
 
+@unittest.skipUnless(README.exists(), "README.md non accessible dans ce conteneur (hors image de prod)")
 class TestContratDeLivraisonProxy(unittest.TestCase):
     """`SEO-23` : le proxy ne doit jamais répondre la page d'accueil à un robot."""
 

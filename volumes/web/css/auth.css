@@ -172,6 +172,7 @@
   max-width: 520px;
   width: 92vw;
   margin: auto;
+  color-scheme: dark;
 }
 
 .player-modal::backdrop {
@@ -340,11 +341,44 @@
   font-size: 0.9rem;
   outline: none;
   transition: var(--transition);
+  color-scheme: dark;
+}
+
+[data-theme="light"] .player-input {
+  color-scheme: light;
 }
 
 .player-input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 10px var(--accent-glow);
+}
+
+/* Neutralisation du fond blanc d'autofill navigateur (Chrome / WebKit / Firefox) */
+.player-input:-webkit-autofill,
+.player-input:-webkit-autofill:hover,
+.player-input:-webkit-autofill:focus,
+.player-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+  box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+  -webkit-text-fill-color: var(--text-main) !important;
+  caret-color: var(--text-main) !important;
+  border-color: var(--border-color) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.player-input:autofill,
+.player-input:autofill:hover,
+.player-input:autofill:focus,
+.player-input:autofill:active {
+  box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+  -webkit-text-fill-color: var(--text-main) !important;
+  caret-color: var(--text-main) !important;
+}
+
+.player-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset, 0 0 10px var(--accent-glow) !important;
+  box-shadow: 0 0 0 1000px var(--bg-input) inset, 0 0 10px var(--accent-glow) !important;
+  border-color: var(--accent) !important;
 }
 
 .player-field-note {

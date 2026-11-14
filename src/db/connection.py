@@ -195,6 +195,8 @@ CREATE TABLE IF NOT EXISTS players (
     google_sub VARCHAR(64) UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_seen_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    password_updated_at TIMESTAMPTZ,
+    last_login_at TIMESTAMPTZ,
     renamed_at TIMESTAMPTZ
 );
 CREATE INDEX IF NOT EXISTS idx_players_token ON players(auth_token);
@@ -282,6 +284,16 @@ CREATE TABLE IF NOT EXISTS solo_player_guesses (
 CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_game ON solo_player_guesses(game_id);
 CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_player_date ON solo_player_guesses(player_id, puzzle_date);
 CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_word ON solo_player_guesses(word);
+
+-- M16: Table des mots de récupération système & suivi de sécurité
+CREATE TABLE IF NOT EXISTS player_recovery_words (
+    id SERIAL PRIMARY KEY,
+    player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    word_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(player_id, word_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_player_recovery_words_player ON player_recovery_words(player_id);
 """
 
 SQLITE_SCHEMA = """
@@ -424,6 +436,8 @@ CREATE TABLE IF NOT EXISTS players (
     google_sub TEXT UNIQUE,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    password_updated_at TEXT,
+    last_login_at TEXT,
     renamed_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_players_token ON players(auth_token);
@@ -511,8 +525,17 @@ CREATE TABLE IF NOT EXISTS solo_player_guesses (
 CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_game ON solo_player_guesses(game_id);
 CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_player_date ON solo_player_guesses(player_id, puzzle_date);
 CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_word ON solo_player_guesses(word);
-"""
 
+-- M16: Table des mots de récupération système & suivi de sécurité
+CREATE TABLE IF NOT EXISTS player_recovery_words (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    word_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(player_id, word_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_player_recovery_words_player ON player_recovery_words(player_id);
+"""
 
 class DatabaseManager:
     """Gestionnaire de connexion thread-safe avec support Postgres et SQLite."""
@@ -799,6 +822,9 @@ class DatabaseManager:
                         cur.execute("ALTER TABLE solo_player_guesses ALTER COLUMN weather TYPE VARCHAR(32);")
                         cur.execute("ALTER TABLE bot_challenge_guesses ALTER COLUMN weather TYPE VARCHAR(32);")
                         cur.execute("CREATE INDEX IF NOT EXISTS idx_players_created_at ON players(created_at);")
+                        # Migration idempotente M16 (Sécurité & horodatage compte)
+                        cur.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS password_updated_at TIMESTAMPTZ;")
+                        cur.execute("ALTER TABLE players ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;")
                     conn.commit()
 
                 else:
@@ -819,6 +845,18 @@ class DatabaseManager:
                     try:
                         cur = conn.cursor()
                         cur.execute("ALTER TABLE bot_challenges ADD COLUMN player_name TEXT;")
+                        conn.commit()
+                    except Exception:
+                        pass
+                    try:
+                        cur = conn.cursor()
+                        cur.execute("ALTER TABLE players ADD COLUMN password_updated_at TEXT;")
+                        conn.commit()
+                    except Exception:
+                        pass
+                    try:
+                        cur = conn.cursor()
+                        cur.execute("ALTER TABLE players ADD COLUMN last_login_at TEXT;")
                         conn.commit()
                     except Exception:
                         pass
