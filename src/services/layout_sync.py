@@ -50,9 +50,9 @@ def render_header(depth: str = "") -> str:
           <span class="welcome-text">Bienvenue <strong id="player-welcome-name">Joueur</strong></span>
         </div>
 
-        <button id="player-badge" class="player-badge" aria-label="Mon compte" title="Mon compte">
+        <button id="player-badge" class="player-badge" aria-label="Connexion ou inscription" title="Connexion ou inscription">
           <span class="player-icon">👤</span>
-          <span id="player-badge-name" class="player-name">Mon compte</span>
+          <span id="player-badge-name" class="player-name">Connexion / Inscription</span>
           <span class="player-caret">▾</span>
         </button>
 
@@ -169,6 +169,7 @@ def sync_all_pages(web_root: Optional[Path] = None) -> Dict[str, bool]:
         ("multi/index.html", "../", "multi"),
         ("defi/index.html", "../", "defi"),
         ("puzzles/index.html", "../", "archives"),
+        ("account/index.html", "../", "account"),
     ]
     results = {}
     for rel_path, depth, active_tab in pages:
