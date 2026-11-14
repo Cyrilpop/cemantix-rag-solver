@@ -460,7 +460,7 @@ def handle_admin_get(
         search = params.get("search", "").strip() or None
         filter_type = params.get("filter", "").strip() or None
         users = list_players(limit=limit, offset=offset, search=search, filter_type=filter_type)
-        safe_users = [{k: v for k, v in u.items() if k not in ("password_hash", "recovery_key_hash")} for u in users]
+        safe_users = [{k: v for k, v in u.items() if k not in ("password_hash", "recovery_key_hash")} | {"has_password": bool(u.get("password_hash"))} for u in users]
         total = count_players(search=search, filter_type=filter_type)
         stats = get_players_stats()
         send_json({"users": safe_users, "total": total, "limit": limit, "offset": offset, "stats": stats}, 200)
@@ -472,6 +472,7 @@ def handle_admin_get(
             send_json({"error": "Joueur introuvable"}, 404)
             return
         safe_player = {k: v for k, v in player.items() if k not in ("password_hash", "recovery_key_hash")}
+        safe_player["has_password"] = bool(player.get("password_hash"))
         send_json({"user": safe_player}, 200)
     elif sub in ("daily-history", "daily"):
         from ...db.solo import get_admin_daily_history
@@ -575,6 +576,7 @@ def handle_admin_post(manager, path: str, data: dict, headers, client_ip: str) -
 
     if sub.startswith("users/"):
         from ...db import admin_update_player, get_player_by_id
+        from ...services.player_auth import hash_password
         player_id = sub.split("/", 1)[1]
         player = get_player_by_id(player_id)
         if not player:
@@ -582,16 +584,27 @@ def handle_admin_post(manager, path: str, data: dict, headers, client_ip: str) -
         username = data.get("username")
         can_change = data.get("can_change_username")
         is_claimed = data.get("is_claimed")
+        password = data.get("password")
+
+        password_hash = None
+        if password is not None and str(password).strip():
+            pwd_clean = str(password).strip()
+            if len(pwd_clean) < 8:
+                return {"error": "Le mot de passe doit comporter au moins 8 caractères."}, 400
+            password_hash = hash_password(pwd_clean)
+
         try:
             updated = admin_update_player(
                 player_id,
                 username=str(username).strip() if username is not None else None,
                 can_change_username=bool(can_change) if can_change is not None else None,
                 is_claimed=bool(is_claimed) if is_claimed is not None else None,
+                password_hash=password_hash,
             )
             if updated:
                 player = get_player_by_id(player_id)
                 safe_player = {k: v for k, v in player.items() if k not in ("password_hash", "recovery_key_hash")}
+                safe_player["has_password"] = bool(player.get("password_hash"))
                 log(f"🛡️  [ADMIN] Joueur mis à jour : {player['username']} (id {player_id})")
                 return {"success": True, "user": safe_player}, 200
             return {"error": "Aucune modification effectuée"}, 400

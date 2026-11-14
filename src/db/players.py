@@ -548,8 +548,9 @@ def admin_update_player(
     username: Optional[str] = None,
     can_change_username: Optional[bool] = None,
     is_claimed: Optional[bool] = None,
+    password_hash: Optional[str] = None,
 ) -> bool:
-    """Mise à jour administrative d'un joueur (pseudo, droit de renommage, statut)."""
+    """Mise à jour administrative d'un joueur (pseudo, droit de renommage, statut, mot de passe)."""
     player = get_player_by_id(player_id)
     if not player:
         return False
@@ -573,6 +574,13 @@ def admin_update_player(
         val = bool(can_change_username) if engine == "postgres" else (1 if can_change_username else 0)
         updates.append("can_change_username = %s")
         params.append(val)
+
+    if password_hash is not None:
+        updates.append("password_hash = %s")
+        params.append(password_hash)
+        updates.append("password_updated_at = CURRENT_TIMESTAMP")
+        if is_claimed is None and not bool(player.get("is_claimed", False)):
+            is_claimed = True
 
     if is_claimed is not None:
         val = bool(is_claimed) if engine == "postgres" else (1 if is_claimed else 0)
