@@ -248,6 +248,32 @@ CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_game ON solo_player_guesses(g
 CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_player_date ON solo_player_guesses(player_id, puzzle_date);
 CREATE INDEX IF NOT EXISTS idx_solo_player_guesses_word ON solo_player_guesses(word);
 
+-- ============================================================================
+-- 12. Extensions de Sécurité et Mots de Récupération Compte (Jalon M16)
+-- ============================================================================
+
+-- A. Table des mots de récupération aléatoires associés au profil joueur
+CREATE TABLE IF NOT EXISTS player_recovery_words (
+    id          SERIAL PRIMARY KEY,
+    player_id   UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    word_hash   VARCHAR(255) NOT NULL,          -- Hash sécurisé du mot aléatoire de récupération
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(player_id, word_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_player_recovery_words_player ON player_recovery_words(player_id);
+
+-- B. Ajout de colonnes de suivi de sécurité dans la table players si non présentes
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='players' AND column_name='password_updated_at') THEN
+        ALTER TABLE players ADD COLUMN password_updated_at TIMESTAMPTZ DEFAULT NULL;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='players' AND column_name='last_login_at') THEN
+        ALTER TABLE players ADD COLUMN last_login_at TIMESTAMPTZ DEFAULT NULL;
+    END IF;
+END $$;
+
+
 
 
 
