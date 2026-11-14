@@ -117,6 +117,17 @@ from .players import (
     update_player_password,
     update_player_username,
 )
+from .account import (
+    change_account_password,
+    generate_system_recovery_words,
+    get_account_profile,
+    get_account_stats,
+    get_recovery_status,
+    regenerate_recovery_words,
+    save_player_recovery_words,
+    touch_last_login,
+    verify_recovery_words,
+)
 
 __all__ = [
     "db",
@@ -220,4 +231,14 @@ __all__ = [
     "get_players_stats",
     "admin_update_player",
     "admin_create_player",
+    # Espace Compte M16
+    "get_account_profile",
+    "touch_last_login",
+    "change_account_password",
+    "generate_system_recovery_words",
+    "save_player_recovery_words",
+    "get_recovery_status",
+    "regenerate_recovery_words",
+    "verify_recovery_words",
+    "get_account_stats",
 ]

@@ -142,6 +142,8 @@ def _row_to_player(row: dict) -> dict:
         "created_at": str(row.get("created_at") or ""),
         "last_seen_at": str(row.get("last_seen_at") or ""),
         "renamed_at": str(row.get("renamed_at") or "") if row.get("renamed_at") else None,
+        "password_updated_at": str(row.get("password_updated_at") or "") if row.get("password_updated_at") else None,
+        "last_login_at": str(row.get("last_login_at") or "") if row.get("last_login_at") else None,
     }
 
 
